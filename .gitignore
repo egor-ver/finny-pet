@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+
+# Локальная конфигурация машины
+local.properties
+
+# Подпись релиза — никогда в репозиторий
+*.jks
+*.keystore
+keystore.properties
+app/release/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
