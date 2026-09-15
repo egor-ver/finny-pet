@@ -5,6 +5,7 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GrowthStage
 
 class GameBalanceTest {
 
@@ -12,10 +13,12 @@ class GameBalanceTest {
         growthThresholds: List<Int> = listOf(0, 10, 25),
         growthForMandatoryCovered: Int = 2,
         unexpectedExpenseChance: Int = 15,
+        initialStat: Int = 70,
     ) = GameBalance(
         startingBalance = Coins(100),
         periodIncome = Coins(60),
         taskReward = Coins(15),
+        initialStat = initialStat,
         growthForMandatoryCovered = growthForMandatoryCovered,
         growthForPlanFollowed = 2,
         growthForSavingsKept = 1,
@@ -30,8 +33,18 @@ class GameBalanceTest {
     }
 
     @Test
-    fun `меньше трёх порогов не допускается`() {
+    fun `порогов столько же сколько стадий`() {
+        assertEquals(GrowthStage.entries.size, balance().growthThresholds.size)
+    }
+
+    @Test
+    fun `меньше порогов чем стадий не допускается`() {
         assertThrows(IllegalArgumentException::class.java) { balance(growthThresholds = listOf(0, 10)) }
+    }
+
+    @Test
+    fun `больше порогов чем стадий не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(growthThresholds = listOf(0, 10, 25, 40)) }
     }
 
     @Test
@@ -47,6 +60,16 @@ class GameBalanceTest {
     @Test
     fun `повторяющиеся пороги не допускаются`() {
         assertThrows(IllegalArgumentException::class.java) { balance(growthThresholds = listOf(0, 10, 10)) }
+    }
+
+    @Test
+    fun `стартовый показатель выше шкалы не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(initialStat = 101) }
+    }
+
+    @Test
+    fun `стартовый показатель ниже шкалы не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(initialStat = -1) }
     }
 
     @Test
@@ -71,7 +94,7 @@ class GameBalanceTest {
 
     @Test
     fun `PLACEHOLDER не нарушает собственных инвариантов`() {
-        assertTrue(GameBalance.PLACEHOLDER.growthThresholds.size >= 3)
+        assertTrue(GameBalance.PLACEHOLDER.growthThresholds.size == GrowthStage.entries.size)
     }
 
     @Test

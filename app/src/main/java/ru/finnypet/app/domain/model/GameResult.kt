@@ -15,4 +15,10 @@ sealed interface Change {
     data class Savings(val from: Coins, val to: Coins) : Change {
         val delta: Int get() = to.amount - from.amount
     }
+
+    data class PetStat(val kind: PetStatKind, val from: Stat, val to: Stat) : Change {
+        val delta: Int get() = to.value - from.value
+    }
+
+    data class Stage(val from: GrowthStage, val to: GrowthStage) : Change
 }
