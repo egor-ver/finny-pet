@@ -1,0 +1,11 @@
+{
+  "bodies": [
+    { "id": "owl", "titleKey": "pet.body.owl" }
+  ],
+  "colors": [
+    { "id": "mint", "titleKey": "pet.color.mint" }
+  ],
+  "accessories": [
+    { "id": "scarf", "titleKey": "pet.accessory.scarf" }
+  ]
+}

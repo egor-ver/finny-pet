@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "id": "food-porridge",
+      "titleKey": "shop.food_porridge",
+      "price": 12,
+      "category": "MANDATORY",
+      "effects": [
+        { "stat": "SATIETY", "delta": 20 }
+      ]
+    },
+    {
+      "id": "toy-ball",
+      "titleKey": "shop.toy_ball",
+      "price": 18,
+      "category": "OPTIONAL",
+      "effects": [
+        { "stat": "MOOD", "delta": 15 }
+      ]
+    }
+  ]
+}

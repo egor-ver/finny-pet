@@ -1,0 +1,29 @@
+{
+  "purchase.done": "Купили! Осталось {balance} монет.",
+  "purchase.rejected": "Не хватает {shortfall} монет. Вот что можно сделать:",
+  "balance.credited": "Пришло {amount} монет.",
+
+  "savings.deposited": "Отложили {amount}. В копилке {saved}, до цели ещё {remaining}.",
+  "savings.goal_reached": "Цель собрана! В копилке {saved} монет.",
+  "savings.withdrawn": "Взяли из копилки {amount}. Осталось {saved}, до цели {remaining}.",
+
+  "pet.state_changed": "Питомец почувствовал заботу.",
+  "pet.missed_mandatory": "Питомцу не хватило еды и ухода.",
+  "pet.plan_followed": "План сошёлся — питомец доволен.",
+  "pet.period_closed": "День закончился.",
+
+  "growth.stage_up": "Питомец подрос!",
+  "growth.points_added": "Питомец стал немного взрослее: +{earned}.",
+  "growth.no_points": "В этот раз питомец не подрос.",
+
+  "period.missed_mandatory": "Обязательное осталось неоплаченным.",
+  "period.stage_up": "За несколько дней питомец вырос!",
+  "period.plan_followed": "Ты сделал всё, как задумал.",
+  "period.closed": "День закрыт.",
+
+  "recovery.DO_TASK": "Выполнить задание и заработать",
+  "recovery.POSTPONE_PURCHASE": "Отложить покупку на потом",
+  "recovery.ADJUST_NEXT_PLAN": "Поправить план на следующий день",
+  "recovery.WITHDRAW_FROM_SAVINGS": "Взять из копилки",
+  "recovery.CHOOSE_CHEAPER": "Выбрать что-то подешевле"
+}

@@ -1,0 +1,33 @@
+{
+  "tasks": [
+    {
+      "id": "plan-pocket-money",
+      "topic": "PLANNING",
+      "introKey": "task.plan_pocket_money.intro",
+      "steps": [
+        {
+          "type": "DISTRIBUTE",
+          "promptKey": "task.plan_pocket_money.step1",
+          "budget": 40
+        }
+      ],
+      "outcomes": [
+        {
+          "id": "saved_enough",
+          "condition": { "type": "SAVED_AT_LEAST", "amount": 10 },
+          "reward": 15,
+          "explanationKey": "task.plan_pocket_money.saved",
+          "effects": [
+            { "stat": "MOOD", "delta": 5 }
+          ]
+        },
+        {
+          "id": "otherwise",
+          "condition": { "type": "OTHERWISE" },
+          "reward": 5,
+          "explanationKey": "task.plan_pocket_money.otherwise"
+        }
+      ]
+    }
+  ]
+}

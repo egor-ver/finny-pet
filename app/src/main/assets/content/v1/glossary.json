@@ -1,0 +1,9 @@
+{
+  "terms": [
+    {
+      "id": "budget",
+      "titleKey": "glossary.budget.title",
+      "bodyKey": "glossary.budget.body"
+    }
+  ]
+}

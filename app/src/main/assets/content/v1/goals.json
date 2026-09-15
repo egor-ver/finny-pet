@@ -1,0 +1,9 @@
+{
+  "goals": [
+    {
+      "id": "bike",
+      "titleKey": "goal.bike",
+      "price": 120
+    }
+  ]
+}
