@@ -50,7 +50,7 @@ data class GameBalance(
     companion object {
 
         val PLACEHOLDER = GameBalance(
-            startingBalance = Coins(100),
+            startingBalance = Coins(20),
             periodIncome = Coins(60),
             taskReward = Coins(15),
             initialStat = 70,
