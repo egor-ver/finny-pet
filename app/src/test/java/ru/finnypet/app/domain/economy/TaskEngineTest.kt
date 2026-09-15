@@ -1,0 +1,246 @@
+package ru.finnypet.app.domain.economy
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import ru.finnypet.app.domain.model.BudgetPlan
+import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.LearningTask
+import ru.finnypet.app.domain.model.OutcomeCondition
+import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.StepAnswer
+import ru.finnypet.app.domain.model.TaskAttempt
+import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.TaskOption
+import ru.finnypet.app.domain.model.TaskOutcome
+import ru.finnypet.app.domain.model.TaskStep
+import ru.finnypet.app.domain.model.TaskTopic
+import ru.finnypet.app.domain.model.TransactionType
+
+class TaskEngineTest {
+
+    private val now = 1_700_000_000L
+    private val engine = TaskEngine(GameClock { now })
+
+    private val distributeStep = TaskStep.Distribute(promptKey = "step.distribute", budget = Coins(60))
+
+    private val savedEnough = TaskOutcome(
+        id = "saved",
+        condition = OutcomeCondition.SavedAtLeast(Coins(10)),
+        reward = Coins(15),
+        explanationKey = "task.saved",
+        effects = listOf(PetEffect(PetStatKind.MOOD, 5)),
+    )
+
+    private val fallback = TaskOutcome(
+        id = "spent_all",
+        condition = OutcomeCondition.Otherwise,
+        reward = Coins(5),
+        explanationKey = "task.spent_all",
+    )
+
+    private fun task(
+        steps: List<TaskStep> = listOf(distributeStep),
+        outcomes: List<TaskOutcome> = listOf(savedEnough, fallback),
+    ) = LearningTask(
+        id = TaskId("plan_01"),
+        topic = TaskTopic.PLANNING,
+        introKey = "task.intro",
+        steps = steps,
+        outcomes = outcomes,
+    )
+
+    private fun allocated(mandatory: Int, optional: Int, savings: Int) = TaskAttempt(
+        listOf(
+            StepAnswer.Allocated(
+                BudgetPlan(Coins(mandatory), Coins(optional), Coins(savings)),
+            ),
+        ),
+    )
+
+    @Test
+    fun `выполненное условие выбирает свой исход`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals("saved", result.value.outcome.id)
+    }
+
+    @Test
+    fun `невыполненное условие уводит в исход по умолчанию`() {
+        val result = engine.evaluate(task(), allocated(40, 20, 0), Coins(60), periodId = 1)
+        assertEquals("spent_all", result.value.outcome.id)
+    }
+
+    @Test
+    fun `условие на границе считается выполненным`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals("saved", result.value.outcome.id)
+    }
+
+    @Test
+    fun `нехватка одной монеты до условия уводит в исход по умолчанию`() {
+        val result = engine.evaluate(task(), allocated(31, 20, 9), Coins(60), periodId = 1)
+        assertEquals("spent_all", result.value.outcome.id)
+    }
+
+    @Test
+    fun `исход по умолчанию проверяется последним даже если записан первым`() {
+        val reordered = task(outcomes = listOf(fallback, savedEnough))
+        val result = engine.evaluate(reordered, allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals("saved", result.value.outcome.id)
+    }
+
+    @Test
+    fun `награда увеличивает баланс`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals(Coins(75), result.value.newBalance)
+    }
+
+    @Test
+    fun `награда порождает транзакцию дохода за задание`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 7)
+        val transaction = requireNotNull(result.value.transaction)
+        assertEquals(TransactionType.INCOME_TASK, transaction.type)
+        assertEquals(Coins(15), transaction.amount)
+        assertEquals(7L, transaction.periodId)
+        assertEquals(now, transaction.createdAt)
+    }
+
+    @Test
+    fun `нулевая награда не порождает транзакцию`() {
+        val free = task(outcomes = listOf(savedEnough, fallback.copy(reward = Coins.ZERO)))
+        val result = engine.evaluate(free, allocated(40, 20, 0), Coins(60), periodId = 1)
+        assertNull(result.value.transaction)
+        assertTrue(result.changes.isEmpty())
+    }
+
+    @Test
+    fun `награда сообщается изменением баланса`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals(listOf(Change.Balance(from = Coins(60), to = Coins(75))), result.changes)
+    }
+
+    @Test
+    fun `эффекты исхода переносятся в результат`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals(listOf(PetEffect(PetStatKind.MOOD, 5)), result.value.effects)
+    }
+
+    @Test
+    fun `объяснение берётся у исхода и несёт награду`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals("task.saved", result.explanation.key)
+        assertEquals("15", result.explanation.args["reward"])
+        assertEquals("75", result.explanation.args["balance"])
+    }
+
+    @Test
+    fun `ошибочный ответ тоже получает объяснение`() {
+        val result = engine.evaluate(task(), allocated(40, 20, 0), Coins(60), periodId = 1)
+        assertEquals("task.spent_all", result.explanation.key)
+    }
+
+    @Test
+    fun `выбранный вариант находит свой исход`() {
+        val choice = TaskStep.Choice(
+            promptKey = "step.choice",
+            options = listOf(TaskOption("save", "opt.save"), TaskOption("spend", "opt.spend")),
+        )
+        val chosen = TaskOutcome(
+            id = "chose_save",
+            condition = OutcomeCondition.OptionChosen("save"),
+            reward = Coins(10),
+            explanationKey = "task.chose_save",
+        )
+        val withChoice = task(steps = listOf(choice), outcomes = listOf(chosen, fallback))
+        val attempt = TaskAttempt(listOf(StepAnswer.Chosen("save")))
+        assertEquals("chose_save", engine.evaluate(withChoice, attempt, Coins(60), 1).value.outcome.id)
+    }
+
+    @Test
+    fun `условие на потраченное не больше проверяется по обоим направлениям`() {
+        val thrifty = TaskOutcome(
+            id = "thrifty",
+            condition = OutcomeCondition.SpentAtMost(Coins(45)),
+            reward = Coins(10),
+            explanationKey = "task.thrifty",
+        )
+        val withLimit = task(outcomes = listOf(thrifty, fallback))
+        assertEquals("thrifty", engine.evaluate(withLimit, allocated(30, 15, 10), Coins(60), 1).value.outcome.id)
+        assertEquals("spent_all", engine.evaluate(withLimit, allocated(30, 16, 10), Coins(60), 1).value.outcome.id)
+    }
+
+    @Test
+    fun `число ответов должно совпадать с числом шагов`() {
+        val twoSteps = task(steps = listOf(distributeStep, distributeStep))
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(twoSteps, allocated(30, 20, 10), Coins(60), periodId = 1)
+        }
+    }
+
+    @Test
+    fun `ответ не того вида не принимается`() {
+        val attempt = TaskAttempt(listOf(StepAnswer.Chosen("save")))
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(task(), attempt, Coins(60), periodId = 1)
+        }
+    }
+
+    @Test
+    fun `выбор варианта которого нет в шаге не принимается`() {
+        val choice = TaskStep.Choice(
+            promptKey = "step.choice",
+            options = listOf(TaskOption("save", "opt.save"), TaskOption("spend", "opt.spend")),
+        )
+        val withChoice = task(steps = listOf(choice))
+        val attempt = TaskAttempt(listOf(StepAnswer.Chosen("fly_away")))
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(withChoice, attempt, Coins(60), periodId = 1)
+        }
+    }
+
+    @Test
+    fun `распределение сверх бюджета шага не принимается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(task(), allocated(40, 20, 10), Coins(100), periodId = 1)
+        }
+    }
+
+    @Test
+    fun `распределение ровно в бюджет шага принимается`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+        assertEquals("saved", result.value.outcome.id)
+    }
+
+    @Test
+    fun `набор товаров сверх бюджета шага не принимается`() {
+        val pick = TaskStep.PickItems(
+            promptKey = "step.pick",
+            itemIds = listOf(ItemId("apple"), ItemId("toy")),
+            budget = Coins(50),
+        )
+        val withPick = task(steps = listOf(pick))
+        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf(ItemId("apple")), Coins(51))))
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(withPick, attempt, Coins(60), periodId = 1)
+        }
+    }
+
+    @Test
+    fun `товар не из списка шага не принимается`() {
+        val pick = TaskStep.PickItems(
+            promptKey = "step.pick",
+            itemIds = listOf(ItemId("apple"), ItemId("toy")),
+            budget = Coins(50),
+        )
+        val withPick = task(steps = listOf(pick))
+        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf(ItemId("rocket")), Coins(10))))
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(withPick, attempt, Coins(60), periodId = 1)
+        }
+    }
+}
