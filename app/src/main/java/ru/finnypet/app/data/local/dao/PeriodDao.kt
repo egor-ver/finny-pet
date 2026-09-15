@@ -24,8 +24,9 @@ interface PeriodDao {
     @Insert
     suspend fun insert(period: PeriodEntity): Long
 
+    /** Возвращает число изменённых строк: ноль означает, что периода в базе нет. */
     @Update
-    suspend fun update(period: PeriodEntity)
+    suspend fun update(period: PeriodEntity): Int
 
     @Query("SELECT * FROM periods WHERE id = :id")
     suspend fun byId(id: Long): PeriodEntity?
