@@ -25,8 +25,9 @@ data class PlanFactReport(
 ) {
 
     init {
-        require(lines.map { it.category }.toSet() == SpendCategory.entries.toSet()) {
-            "Отчёт обязан содержать строку по каждому направлению, получено: ${lines.map { it.category }}"
+        require(lines.map { it.category } == SpendCategory.entries) {
+            "Отчёт обязан содержать ровно по одной строке на направление в порядке " +
+                "${SpendCategory.entries}, получено: ${lines.map { it.category }}"
         }
     }
 

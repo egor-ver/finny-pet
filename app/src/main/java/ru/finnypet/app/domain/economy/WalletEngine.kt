@@ -27,6 +27,11 @@ sealed interface PurchaseResult {
     ) : PurchaseResult
 }
 
+data class CreditOutcome(
+    val balance: Coins,
+    val transaction: Transaction,
+)
+
 class WalletEngine(private val clock: GameClock) {
 
     fun purchase(
@@ -61,11 +66,37 @@ class WalletEngine(private val clock: GameClock) {
         )
     }
 
-    fun credit(type: TransactionType, amount: Coins, currentBalance: Coins): GameResult<Coins> {
-        require(type.isIncome) { "Начисление возможно только доходным типом, получен: ${type.name}" }
+    /**
+     * Начисляет доход и порождает транзакцию: баланс считается только по ним,
+     * поэтому доход обязан попасть в историю, а не остаться голым числом.
+     *
+     * [TransactionType.SAVINGS_WITHDRAW] сюда не принимается, хотя и помечен доходом:
+     * снятие меняет ещё и копилку, и живёт в [SavingsEngine.withdraw].
+     */
+    fun credit(
+        type: TransactionType,
+        amount: Coins,
+        currentBalance: Coins,
+        periodId: Long,
+    ): GameResult<CreditOutcome> {
+        require(type in CREDITABLE) {
+            "Начислить можно только доход периода или награду за задание, получен: ${type.name}"
+        }
+        require(amount > Coins.ZERO) { "Начисление нуля не имеет смысла" }
+
         val newBalance = currentBalance + amount
         return GameResult(
-            value = newBalance,
+            value = CreditOutcome(
+                balance = newBalance,
+                transaction = Transaction(
+                    id = UNSAVED,
+                    periodId = periodId,
+                    type = type,
+                    amount = amount,
+                    reasonKey = KEY_CREDITED,
+                    createdAt = clock.now(),
+                ),
+            ),
             explanation = Explanation(
                 key = KEY_CREDITED,
                 args = mapOf(
@@ -117,6 +148,7 @@ class WalletEngine(private val clock: GameClock) {
 
     private companion object {
         const val UNSAVED = 0L
+        val CREDITABLE = setOf(TransactionType.INCOME_PERIOD, TransactionType.INCOME_TASK)
         const val KEY_DONE = "purchase.done"
         const val KEY_REJECTED = "purchase.rejected"
         const val KEY_CREDITED = "balance.credited"

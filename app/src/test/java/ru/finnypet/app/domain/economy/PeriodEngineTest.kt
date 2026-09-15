@@ -222,4 +222,65 @@ class PeriodEngineTest {
         assertNull(next.closedAt)
     }
 
+    @Test
+    fun `период на этапе планирования закрыть нельзя`() {
+        val planning = period.copy(status = PeriodStatus.PLANNING)
+        assertThrows(IllegalArgumentException::class.java) {
+            engine().close(planning, plan, onPlan, state, PetGrowth.INITIAL)
+        }
+    }
+
+    @Test
+    fun `уже закрытый период закрыть повторно нельзя`() {
+        val closed = period.copy(status = PeriodStatus.CLOSED, closedAt = 1)
+        assertThrows(IllegalArgumentException::class.java) {
+            engine().close(closed, plan, onPlan, state, PetGrowth.INITIAL)
+        }
+    }
+
+    @Test
+    fun `пустой план закрыть нельзя`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine().close(period, BudgetPlan.EMPTY, onPlan, state, PetGrowth.INITIAL)
+        }
+    }
+
+    @Test
+    fun `операции чужого периода не принимаются`() {
+        val alien = transaction(TransactionType.PURCHASE_MANDATORY, Coins(10)).copy(periodId = 999)
+        assertThrows(IllegalArgumentException::class.java) {
+            engine().close(period, plan, onPlan + alien, state, PetGrowth.INITIAL)
+        }
+    }
+
+    @Test
+    fun `подтверждение плана переводит период в работу`() {
+        val planning = period.copy(status = PeriodStatus.PLANNING)
+        assertEquals(PeriodStatus.RUNNING, engine().confirmPlan(planning).status)
+    }
+
+    @Test
+    fun `подтверждение плана не трогает остальные поля периода`() {
+        val planning = period.copy(status = PeriodStatus.PLANNING)
+        val confirmed = engine().confirmPlan(planning)
+        assertEquals(planning.copy(status = PeriodStatus.RUNNING), confirmed)
+    }
+
+    @Test
+    fun `подтверждённый план повторно не подтверждается`() {
+        assertThrows(IllegalArgumentException::class.java) { engine().confirmPlan(period) }
+    }
+
+    @Test
+    fun `закрытый период не возвращается в работу`() {
+        val closed = period.copy(status = PeriodStatus.CLOSED, closedAt = 1)
+        assertThrows(IllegalArgumentException::class.java) { engine().confirmPlan(closed) }
+    }
+
+    @Test
+    fun `подтверждённый план можно закрыть`() {
+        val planning = period.copy(status = PeriodStatus.PLANNING)
+        val running = engine().confirmPlan(planning)
+        assertEquals(PeriodStatus.CLOSED, engine().close(running, plan, onPlan, state, PetGrowth.INITIAL).value.closedPeriod.status)
+    }
 }

@@ -167,26 +167,44 @@ class WalletEngineTest {
 
     @Test
     fun `начисление увеличивает баланс`() {
-        val result = engine.credit(TransactionType.INCOME_TASK, Coins(15), Coins(60))
-        assertEquals(Coins(75), result.value)
+        val result = engine.credit(TransactionType.INCOME_TASK, Coins(15), Coins(60), periodId = 1)
+        assertEquals(Coins(75), result.value.balance)
+    }
+
+    @Test
+    fun `начисление порождает транзакцию своего типа`() {
+        val result = engine.credit(TransactionType.INCOME_PERIOD, Coins(60), Coins(15), periodId = 7)
+        val transaction = result.value.transaction
+        assertEquals(TransactionType.INCOME_PERIOD, transaction.type)
+        assertEquals(Coins(60), transaction.amount)
+        assertEquals(7L, transaction.periodId)
+        assertEquals(now, transaction.createdAt)
     }
 
     @Test
     fun `начисление сообщает изменение баланса`() {
-        val result = engine.credit(TransactionType.INCOME_PERIOD, Coins(60), Coins(15))
+        val result = engine.credit(TransactionType.INCOME_PERIOD, Coins(60), Coins(15), periodId = 1)
         assertEquals(listOf(Change.Balance(from = Coins(15), to = Coins(75))), result.changes)
     }
 
     @Test
     fun `начисление расходным типом не допускается`() {
         assertThrows(IllegalArgumentException::class.java) {
-            engine.credit(TransactionType.PURCHASE_MANDATORY, Coins(15), Coins(60))
+            engine.credit(TransactionType.PURCHASE_MANDATORY, Coins(15), Coins(60), periodId = 1)
         }
     }
 
     @Test
-    fun `снятие с накоплений начисляется как доход`() {
-        val result = engine.credit(TransactionType.SAVINGS_WITHDRAW, Coins(10), Coins(20))
-        assertEquals(Coins(30), result.value)
+    fun `снятие с накоплений через начисление не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.credit(TransactionType.SAVINGS_WITHDRAW, Coins(10), Coins(20), periodId = 1)
+        }
+    }
+
+    @Test
+    fun `начисление нуля не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.credit(TransactionType.INCOME_TASK, Coins.ZERO, Coins(60), periodId = 1)
+        }
     }
 }

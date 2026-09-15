@@ -190,4 +190,30 @@ class SavingsEngineTest {
         val result = engine.withdraw(Coins(60), Coins(10), progress(Coins(60)), goal, periodId = 1)
         assertEquals(Coins.ZERO, result.value.progress.saved)
     }
+
+    @Test
+    fun `снятие из перенакопленной копилки сохраняет признак достигнутой цели`() {
+        val result = engine.withdraw(Coins(10), Coins.ZERO, progress(Coins(150)), goal, periodId = 1)
+        assertTrue(result.value.goalReached)
+    }
+
+    @Test
+    fun `снятие ниже цены цели снимает признак достижения`() {
+        val result = engine.withdraw(Coins(10), Coins.ZERO, progress(Coins(105)), goal, periodId = 1)
+        assertFalse(result.value.goalReached)
+    }
+
+    @Test
+    fun `нельзя посмотреть превью снятия нуля`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.previewWithdraw(Coins.ZERO, progress(Coins(60)), goal, avgDeposit = Coins(10))
+        }
+    }
+
+    @Test
+    fun `нельзя снять ноль`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.withdraw(Coins.ZERO, Coins(10), progress(Coins(60)), goal, periodId = 1)
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.economy
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -161,5 +162,42 @@ class BudgetEngineTest {
         assertFalse(report.mandatoryCovered)
         assertFalse(report.savingsKept)
         assertTrue(report.line(SpendCategory.OPTIONAL).followed)
+    }
+
+    @Test
+    fun `отчёт с повторяющимся направлением не собирается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            PlanFactReport(
+                lines = listOf(
+                    PlanFactLine(SpendCategory.MANDATORY, Coins(40), Coins(40)),
+                    PlanFactLine(SpendCategory.MANDATORY, Coins(40), Coins(10)),
+                    PlanFactLine(SpendCategory.OPTIONAL, Coins(20), Coins(20)),
+                    PlanFactLine(SpendCategory.SAVINGS, Coins(10), Coins(10)),
+                ),
+                planTotal = Coins(70),
+                factTotal = Coins(80),
+            )
+        }
+    }
+
+    @Test
+    fun `отчёт с переставленными направлениями не собирается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            PlanFactReport(
+                lines = listOf(
+                    PlanFactLine(SpendCategory.SAVINGS, Coins(10), Coins(10)),
+                    PlanFactLine(SpendCategory.OPTIONAL, Coins(20), Coins(20)),
+                    PlanFactLine(SpendCategory.MANDATORY, Coins(40), Coins(40)),
+                ),
+                planTotal = Coins(70),
+                factTotal = Coins(70),
+            )
+        }
+    }
+
+    @Test
+    fun `движок строит строки в порядке направлений`() {
+        val report = engine.compare(plan, PeriodFact.EMPTY)
+        assertEquals(SpendCategory.entries.toList(), report.lines.map { it.category })
     }
 }

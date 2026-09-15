@@ -1,32 +1,45 @@
 package ru.finnypet.app.domain.economy
 
 import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GameResult
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetGrowth
+import ru.finnypet.app.domain.model.SpendCategory
 
 class GrowthEngine(private val balance: GameBalance) {
 
     fun pointsFor(report: PlanFactReport): Int =
-        (if (report.mandatoryCovered) balance.growthForMandatoryCovered else 0) +
+        (if (report.earnsGrowth(SpendCategory.MANDATORY)) balance.growthForMandatoryCovered else 0) +
             (if (report.planFollowed) balance.growthForPlanFollowed else 0) +
-            (if (report.savingsKept) balance.growthForSavingsKept else 0)
+            (if (report.earnsGrowth(SpendCategory.SAVINGS)) balance.growthForSavingsKept else 0)
+
+    /**
+     * Направление приносит очки, только если по нему было что распределять.
+     * Нулевой план выполняется тривиально (0 >= 0), и награждать за него значит
+     * платить ребёнку за направление, которого он не касался.
+     */
+    private fun PlanFactReport.earnsGrowth(category: SpendCategory): Boolean =
+        line(category).let { it.planned > Coins.ZERO && it.followed }
 
     fun stageFor(points: Int): GrowthStage {
-        val index = balance.growthThresholds.indexOfLast { it <= points }
-        return GrowthStage.entries[index]
+        require(points >= 0) { "Очки роста не могут быть отрицательными: $points" }
+        return GrowthStage.entries[balance.growthThresholds.indexOfLast { it <= points }]
     }
 
+    /**
+     * Стадия берётся как максимум из текущей и посчитанной по очкам: она не падает
+     * даже если пороги изменились после того, как прогресс был сохранён (ТЗ 2.2).
+     */
     fun apply(current: PetGrowth, report: PlanFactReport): GameResult<PetGrowth> {
         val earned = pointsFor(report)
-        val next = PetGrowth(
-            points = current.points + earned,
-            stage = stageFor(current.points + earned),
-        )
-        val grew = next.stage != current.stage
+        val points = current.points + earned
+        val stage = maxOf(current.stage, stageFor(points))
+        val grew = stage != current.stage
+
         return GameResult(
-            value = next,
+            value = PetGrowth(points = points, stage = stage),
             explanation = Explanation(
                 key = when {
                     grew -> KEY_STAGE_UP
@@ -35,10 +48,10 @@ class GrowthEngine(private val balance: GameBalance) {
                 },
                 args = mapOf(
                     "earned" to earned.toString(),
-                    "points" to next.points.toString(),
+                    "points" to points.toString(),
                 ),
             ),
-            changes = if (grew) listOf(Change.Stage(from = current.stage, to = next.stage)) else emptyList(),
+            changes = if (grew) listOf(Change.Stage(from = current.stage, to = stage)) else emptyList(),
         )
     }
 

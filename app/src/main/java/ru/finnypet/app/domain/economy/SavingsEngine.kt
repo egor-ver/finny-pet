@@ -68,6 +68,7 @@ class SavingsEngine(private val clock: GameClock) {
         goal: Goal,
         avgDeposit: Coins,
     ): WithdrawPreview {
+        require(amount > Coins.ZERO) { "Превью снятия нуля не имеет смысла" }
         require(progress.saved.covers(amount)) { "Нельзя снять больше, чем накоплено" }
         val after = progress.copy(saved = progress.saved - amount)
         return WithdrawPreview(
@@ -96,7 +97,7 @@ class SavingsEngine(private val clock: GameClock) {
                 progress = newProgress,
                 balance = newBalance,
                 transaction = transaction(TransactionType.SAVINGS_WITHDRAW, amount, KEY_WITHDRAWN, goal, periodId),
-                goalReached = false,
+                goalReached = newProgress.isReached(goal),
             ),
             explanation = Explanation(
                 key = KEY_WITHDRAWN,

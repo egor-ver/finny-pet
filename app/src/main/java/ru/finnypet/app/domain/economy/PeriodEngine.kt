@@ -42,6 +42,17 @@ class PeriodEngine(
         state: PetState,
         currentGrowth: PetGrowth,
     ): GameResult<PeriodOutcome> {
+        require(period.status == PeriodStatus.RUNNING) {
+            "Закрыть можно только идущий период, а период ${period.number} в статусе ${period.status}"
+        }
+        require(plan.total > Coins.ZERO) {
+            "Период ${period.number} закрывается по неподтверждённому плану: распределено ноль"
+        }
+        require(transactions.all { it.periodId == period.id }) {
+            "В закрытие периода ${period.id} попали чужие операции: " +
+                "${transactions.map { it.periodId }.distinct()}"
+        }
+
         val report = budget.compare(plan, factOf(transactions))
         val petResult = pet.onPeriodClosed(state, report)
         val growthResult = growth.apply(currentGrowth, report)
@@ -59,6 +70,18 @@ class PeriodEngine(
             explanation = headline(report, stageChanged),
             changes = petResult.changes + growthResult.changes,
         )
+    }
+
+    /**
+     * Переводит период из планирования в работу. С этого момента план подтверждён
+     * и служит основой для сравнения с фактом, а период можно закрыть (ТЗ 2.5.5).
+     */
+    fun confirmPlan(period: GamePeriod): GamePeriod {
+        require(period.status == PeriodStatus.PLANNING) {
+            "Подтвердить план можно только на этапе планирования, " +
+                "а период ${period.number} в статусе ${period.status}"
+        }
+        return period.copy(status = PeriodStatus.RUNNING)
     }
 
     fun openNext(previous: GamePeriod, carryOver: Coins): GamePeriod = GamePeriod(

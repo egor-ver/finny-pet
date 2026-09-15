@@ -148,9 +148,17 @@ class FivePeriodRunTest {
                 budgetEngine.check(plan, available) is PlanCheck.Fits,
             )
 
+            val running = periodEngine.confirmPlan(period)
             val transactions = mutableListOf<Transaction>()
-            var cash = period.startBalance + period.income
-            transactions += income(period)
+
+            val credited = walletEngine.credit(
+                type = TransactionType.INCOME_PERIOD,
+                amount = period.income,
+                currentBalance = period.startBalance,
+                periodId = period.id,
+            )
+            var cash = credited.value.balance
+            transactions += credited.value.transaction
 
             val boughtFood = walletEngine.purchase(food, cash, period.id) as PurchaseResult.Success
             cash = boughtFood.newBalance
@@ -172,7 +180,7 @@ class FivePeriodRunTest {
             progress = deposited.value.progress
             transactions += deposited.value.transaction
 
-            val closed = periodEngine.close(period, plan, transactions, state, growth)
+            val closed = periodEngine.close(running, plan, transactions, state, growth)
             state = closed.value.state
             growth = closed.value.growth
 
@@ -187,19 +195,10 @@ class FivePeriodRunTest {
                 carryOver = closed.value.carryOver,
             )
 
-            period = periodEngine.openNext(period, closed.value.carryOver).copy(id = period.id + 1)
+            period = periodEngine.openNext(running, closed.value.carryOver).copy(id = running.id + 1)
         }
         return log
     }
-
-    private fun income(period: GamePeriod) = Transaction(
-        id = 0,
-        periodId = period.id,
-        type = TransactionType.INCOME_PERIOD,
-        amount = period.income,
-        reasonKey = "income.period",
-        createdAt = 0,
-    )
 
     @Test
     fun `пять периодов проигрываются подряд без падений`() {

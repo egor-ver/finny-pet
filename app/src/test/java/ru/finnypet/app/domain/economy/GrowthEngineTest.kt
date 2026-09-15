@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.economy
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.domain.model.Change
@@ -131,5 +132,64 @@ class GrowthEngineTest {
         val result = engine.apply(PetGrowth(points = 3, stage = GrowthStage.CUB), report())
         assertEquals(balance.maxGrowthPerPeriod.toString(), result.explanation.args["earned"])
         assertEquals((3 + balance.maxGrowthPerPeriod).toString(), result.explanation.args["points"])
+    }
+
+    @Test
+    fun `стадия не падает когда пороги подняли под уже сохранённым прогрессом`() {
+        val raised = GrowthEngine(balance.copy(growthThresholds = listOf(0, 20, 40)))
+        val stale = PetGrowth(points = 15, stage = GrowthStage.YOUNG)
+        val result = raised.apply(stale, report(mandatoryOk = false, optionalOk = false, savingsOk = false))
+        assertEquals(GrowthStage.YOUNG, result.value.stage)
+    }
+
+    @Test
+    fun `удержание стадии не объявляется повышением`() {
+        val raised = GrowthEngine(balance.copy(growthThresholds = listOf(0, 20, 40)))
+        val stale = PetGrowth(points = 15, stage = GrowthStage.YOUNG)
+        val result = raised.apply(stale, report(mandatoryOk = false, optionalOk = false, savingsOk = false))
+        assertEquals("growth.no_points", result.explanation.key)
+        assertTrue(result.changes.isEmpty())
+    }
+
+    @Test
+    fun `отрицательные очки не принимаются`() {
+        assertThrows(IllegalArgumentException::class.java) { engine.stageFor(-1) }
+    }
+
+    /** План, где распределены только обязательные: два других направления ребёнок не трогал. */
+    private fun onlyMandatoryPlanned() = PlanFactReport(
+        lines = listOf(
+            PlanFactLine(SpendCategory.MANDATORY, Coins(40), Coins(40)),
+            PlanFactLine(SpendCategory.OPTIONAL, Coins.ZERO, Coins.ZERO),
+            PlanFactLine(SpendCategory.SAVINGS, Coins.ZERO, Coins.ZERO),
+        ),
+        planTotal = Coins(40),
+        factTotal = Coins(40),
+    )
+
+    @Test
+    fun `нераспределённые накопления не приносят очков`() {
+        val expected = balance.growthForMandatoryCovered + balance.growthForPlanFollowed
+        assertEquals(expected, engine.pointsFor(onlyMandatoryPlanned()))
+    }
+
+    @Test
+    fun `нераспределённое направление не даёт максимум очков`() {
+        assertTrue(engine.pointsFor(onlyMandatoryPlanned()) < balance.maxGrowthPerPeriod)
+    }
+
+    @Test
+    fun `нераспределённые обязательные не приносят своих очков`() {
+        val onlySavings = PlanFactReport(
+            lines = listOf(
+                PlanFactLine(SpendCategory.MANDATORY, Coins.ZERO, Coins.ZERO),
+                PlanFactLine(SpendCategory.OPTIONAL, Coins.ZERO, Coins.ZERO),
+                PlanFactLine(SpendCategory.SAVINGS, Coins(15), Coins(15)),
+            ),
+            planTotal = Coins(15),
+            factTotal = Coins(15),
+        )
+        val expected = balance.growthForSavingsKept + balance.growthForPlanFollowed
+        assertEquals(expected, engine.pointsFor(onlySavings))
     }
 }
