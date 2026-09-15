@@ -1,0 +1,165 @@
+package ru.finnypet.app.domain.economy
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import ru.finnypet.app.domain.model.BudgetPlan
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.PeriodFact
+import ru.finnypet.app.domain.model.SpendCategory
+
+class BudgetEngineTest {
+
+    private val engine = BudgetEngine()
+
+    private val plan = BudgetPlan(
+        mandatory = Coins(40),
+        optional = Coins(20),
+        savings = Coins(10),
+    )
+
+    @Test
+    fun `план меньше бюджета укладывается и оставляет остаток`() {
+        assertEquals(PlanCheck.Fits(Coins(30)), engine.check(plan, Coins(100)))
+    }
+
+    @Test
+    fun `план ровно на весь бюджет укладывается с нулевым остатком`() {
+        assertEquals(PlanCheck.Fits(Coins.ZERO), engine.check(plan, Coins(70)))
+    }
+
+    @Test
+    fun `план на монету больше бюджета отклоняется`() {
+        assertEquals(PlanCheck.Exceeds(Coins(1)), engine.check(plan, Coins(69)))
+    }
+
+    @Test
+    fun `отклонённый план сообщает размер превышения`() {
+        assertEquals(PlanCheck.Exceeds(Coins(20)), engine.check(plan, Coins(50)))
+    }
+
+    @Test
+    fun `пустой план укладывается и оставляет весь бюджет`() {
+        assertEquals(PlanCheck.Fits(Coins(100)), engine.check(BudgetPlan.EMPTY, Coins(100)))
+    }
+
+    @Test
+    fun `пустой план при нулевом бюджете укладывается`() {
+        assertEquals(PlanCheck.Fits(Coins.ZERO), engine.check(BudgetPlan.EMPTY, Coins.ZERO))
+    }
+
+    @Test
+    fun `отчёт содержит строку по каждому направлению`() {
+        val report = engine.compare(plan, PeriodFact.of())
+        assertEquals(SpendCategory.entries.toSet(), report.lines.map { it.category }.toSet())
+    }
+
+    @Test
+    fun `отчёт переносит планируемые и фактические суммы`() {
+        val fact = PeriodFact.of(mandatory = Coins(35), optional = Coins(30), savings = Coins(10))
+        val line = engine.compare(plan, fact).line(SpendCategory.OPTIONAL)
+        assertEquals(Coins(20), line.planned)
+        assertEquals(Coins(30), line.actual)
+    }
+
+    @Test
+    fun `отчёт считает итоги плана и факта`() {
+        val fact = PeriodFact.of(mandatory = Coins(35), optional = Coins(30), savings = Coins(10))
+        val report = engine.compare(plan, fact)
+        assertEquals(Coins(70), report.planTotal)
+        assertEquals(Coins(75), report.factTotal)
+    }
+
+    @Test
+    fun `отклонение положительно когда потратил больше плана`() {
+        val fact = PeriodFact.of(optional = Coins(30))
+        assertEquals(10, engine.compare(plan, fact).line(SpendCategory.OPTIONAL).deviation)
+    }
+
+    @Test
+    fun `отклонение отрицательно когда потратил меньше плана`() {
+        val fact = PeriodFact.of(optional = Coins(5))
+        assertEquals(-15, engine.compare(plan, fact).line(SpendCategory.OPTIONAL).deviation)
+    }
+
+    @Test
+    fun `обязательные засчитаны когда потрачено ровно по плану`() {
+        val fact = PeriodFact.of(mandatory = Coins(40))
+        assertTrue(engine.compare(plan, fact).mandatoryCovered)
+    }
+
+    @Test
+    fun `обязательные засчитаны когда потрачено больше плана`() {
+        val fact = PeriodFact.of(mandatory = Coins(45))
+        assertTrue(engine.compare(plan, fact).mandatoryCovered)
+    }
+
+    @Test
+    fun `обязательные не засчитаны когда потрачено меньше плана`() {
+        val fact = PeriodFact.of(mandatory = Coins(39))
+        assertFalse(engine.compare(plan, fact).mandatoryCovered)
+    }
+
+    @Test
+    fun `накопления засчитаны когда отложено не меньше плана`() {
+        val fact = PeriodFact.of(savings = Coins(10))
+        assertTrue(engine.compare(plan, fact).savingsKept)
+    }
+
+    @Test
+    fun `накопления не засчитаны когда отложено меньше плана`() {
+        val fact = PeriodFact.of(savings = Coins(9))
+        assertFalse(engine.compare(plan, fact).savingsKept)
+    }
+
+    @Test
+    fun `необязательные засчитаны когда потрачено меньше плана`() {
+        val fact = PeriodFact.of(optional = Coins(5))
+        assertTrue(engine.compare(plan, fact).line(SpendCategory.OPTIONAL).followed)
+    }
+
+    @Test
+    fun `необязательные засчитаны когда не потрачено ничего`() {
+        val fact = PeriodFact.of(optional = Coins.ZERO)
+        assertTrue(engine.compare(plan, fact).line(SpendCategory.OPTIONAL).followed)
+    }
+
+    @Test
+    fun `необязательные не засчитаны когда потрачено больше плана`() {
+        val fact = PeriodFact.of(optional = Coins(21))
+        assertFalse(engine.compare(plan, fact).line(SpendCategory.OPTIONAL).followed)
+    }
+
+    @Test
+    fun `план исполнен когда все три направления засчитаны`() {
+        val fact = PeriodFact.of(mandatory = Coins(40), optional = Coins(20), savings = Coins(10))
+        assertTrue(engine.compare(plan, fact).planFollowed)
+    }
+
+    @Test
+    fun `план не исполнен когда превышены необязательные`() {
+        val fact = PeriodFact.of(mandatory = Coins(40), optional = Coins(25), savings = Coins(10))
+        assertFalse(engine.compare(plan, fact).planFollowed)
+    }
+
+    @Test
+    fun `план не исполнен когда не закрыты обязательные`() {
+        val fact = PeriodFact.of(mandatory = Coins(30), optional = Coins(20), savings = Coins(10))
+        assertFalse(engine.compare(plan, fact).planFollowed)
+    }
+
+    @Test
+    fun `отказ от необязательной покупки не ломает исполнение плана`() {
+        val fact = PeriodFact.of(mandatory = Coins(40), optional = Coins.ZERO, savings = Coins(10))
+        assertTrue(engine.compare(plan, fact).planFollowed)
+    }
+
+    @Test
+    fun `период без единой траты не засчитывает обязательные и накопления`() {
+        val report = engine.compare(plan, PeriodFact.EMPTY)
+        assertFalse(report.mandatoryCovered)
+        assertFalse(report.savingsKept)
+        assertTrue(report.line(SpendCategory.OPTIONAL).followed)
+    }
+}
