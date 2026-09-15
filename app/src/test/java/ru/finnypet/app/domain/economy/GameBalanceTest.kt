@@ -19,6 +19,8 @@ class GameBalanceTest {
         periodIncome = Coins(60),
         taskReward = Coins(15),
         initialStat = initialStat,
+        statPenaltyMissedMandatory = 15,
+        moodBonusPlanFollowed = 10,
         growthForMandatoryCovered = growthForMandatoryCovered,
         growthForPlanFollowed = 2,
         growthForSavingsKept = 1,

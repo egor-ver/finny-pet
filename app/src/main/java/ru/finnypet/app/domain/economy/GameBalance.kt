@@ -9,6 +9,8 @@ data class GameBalance(
     val periodIncome: Coins,
     val taskReward: Coins,
     val initialStat: Int,
+    val statPenaltyMissedMandatory: Int,
+    val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
     val growthForSavingsKept: Int,
@@ -31,6 +33,9 @@ data class GameBalance(
         require(initialStat in Stat.RANGE) {
             "Стартовый показатель питомца задаётся в пределах ${Stat.RANGE}, задан: $initialStat"
         }
+        require(statPenaltyMissedMandatory >= 0 && moodBonusPlanFollowed >= 0) {
+            "Изменения показателей задаются неотрицательными величинами"
+        }
         require(growthForMandatoryCovered >= 0 && growthForPlanFollowed >= 0 && growthForSavingsKept >= 0) {
             "Очки роста не могут быть отрицательными"
         }
@@ -49,6 +54,8 @@ data class GameBalance(
             periodIncome = Coins(60),
             taskReward = Coins(15),
             initialStat = 70,
+            statPenaltyMissedMandatory = 15,
+            moodBonusPlanFollowed = 10,
             growthForMandatoryCovered = 2,
             growthForPlanFollowed = 2,
             growthForSavingsKept = 1,
