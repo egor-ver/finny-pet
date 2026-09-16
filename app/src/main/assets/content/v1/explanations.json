@@ -1,46 +1,46 @@
 {
-  "purchase.done": "Купили! Осталось {balance} монет.",
-  "purchase.rejected": "Не хватает {shortfall} монет. Вот что можно сделать:",
-  "balance.credited": "Пришло {amount} монет.",
+  "purchase.done": "Отличная покупка! В кошельке осталось {balance} монет.",
+  "purchase.rejected": "Не хватает {shortfall} монет. Ничего страшного, давай решим, как поступить:",
+  "balance.credited": "Ура, в копилку прилетели монетки: +{amount}!",
 
-  "savings.deposited": "Отложили {amount}. В копилке {saved}, до цели ещё {remaining}.",
-  "savings.goal_reached": "Цель собрана! В копилке {saved} монет.",
-  "savings.withdrawn": "Взяли из копилки {amount}. Осталось {saved}, до цели {remaining}.",
+  "savings.deposited": "Отложили {amount} монет в копилку! Всего накоплено {saved}, а до мечты осталось {remaining}.",
+  "savings.goal_reached": "Ура! Цель достигнута! В копилке уже целых {saved} монет!",
+  "savings.withdrawn": "Взяли из копилки {amount} монет. Там осталось {saved}, до цели теперь {remaining}.",
 
-  "pet.state_changed": "Питомец почувствовал заботу.",
-  "pet.missed_mandatory": "Питомцу не хватило еды и ухода.",
-  "pet.plan_followed": "План сошёлся — питомец доволен.",
-  "pet.period_closed": "День закончился.",
+  "pet.state_changed": "Питомец радуется твоей заботе!",
+  "pet.missed_mandatory": "Питомец немного проголодался — завтра накормим его в первую очередь!",
+  "pet.plan_followed": "План отлично сошёлся — питомец весел и полон сил!",
+  "pet.period_closed": "День подошёл к концу, пора подвести итоги.",
 
-  "growth.stage_up": "Питомец подрос!",
-  "growth.points_added": "Питомец стал немного взрослее: +{earned}.",
-  "growth.no_points": "В этот раз питомец не подрос.",
+  "growth.stage_up": "Ура! Твой питомец вырос на целый уровень!",
+  "growth.points_added": "Питомец стал опытнее и взрослее: +{earned} очков роста!",
+  "growth.no_points": "В этот раз питомец отдыхает. В следующем периоде обязательно подрастём!",
 
-  "period.missed_mandatory": "Обязательное осталось неоплаченным.",
-  "period.stage_up": "За несколько дней питомец вырос!",
-  "period.plan_followed": "Ты сделал всё, как задумал.",
-  "period.closed": "День закрыт.",
+  "period.missed_mandatory": "Еда осталась в магазине. Завтра первым делом купим полезный обед!",
+  "period.stage_up": "Здорово! За эти дни питомец заметно подрос и окреп!",
+  "period.plan_followed": "Отличная работа! Ты распределил все монетки в точности по плану.",
+  "period.closed": "День успешно завершён. Посмотрим, что получилось!",
 
-  "recovery.DO_TASK": "Выполнить задание и заработать",
-  "recovery.POSTPONE_PURCHASE": "Отложить покупку на потом",
-  "recovery.ADJUST_NEXT_PLAN": "Поправить план на следующий день",
+  "recovery.DO_TASK": "Выполнить задание",
+  "recovery.POSTPONE_PURCHASE": "Купить попозже",
+  "recovery.ADJUST_NEXT_PLAN": "Пересмотреть план",
   "recovery.WITHDRAW_FROM_SAVINGS": "Взять из копилки",
-  "recovery.CHOOSE_CHEAPER": "Выбрать что-то подешевле",
+  "recovery.CHOOSE_CHEAPER": "Выбрать подешевле",
 
   "pet.body.owl": "Совёнок",
   "pet.color.mint": "Мятный",
   "pet.accessory.scarf": "Шарфик",
 
-  "shop.food_porridge": "Каша",
-  "shop.toy_ball": "Мячик",
+  "shop.food_porridge": "Вкусная каша",
+  "shop.toy_ball": "Яркий мячик",
 
-  "goal.bike": "Самокат",
+  "goal.bike": "Самокат мечты",
 
-  "task.plan_pocket_money.intro": "Тебе дали 40 монет на день. Разложи их.",
-  "task.plan_pocket_money.step1": "Сколько на обязательное, сколько на желаемое, сколько отложить?",
-  "task.plan_pocket_money.saved": "Ты отложил часть денег — так цель становится ближе.",
-  "task.plan_pocket_money.otherwise": "В этот раз отложить не вышло. Попробуй оставить немного в следующий раз.",
+  "task.plan_pocket_money.intro": "Тебе дали 40 монет на весь день. Давай разложим их по полочкам!",
+  "task.plan_pocket_money.step1": "Сколько монет оставим на еду, сколько на игрушки, а сколько спрячем в копилку?",
+  "task.plan_pocket_money.saved": "Ты спрятал часть монет в копилку — теперь твоя мечта стала ещё ближе!",
+  "task.plan_pocket_money.otherwise": "В этот раз всё ушло на покупки. В следующий раз попробуем отложить пару монет в копилку!",
 
   "glossary.budget.title": "Бюджет",
-  "glossary.budget.body": "Это сколько у тебя есть денег и на что ты собираешься их потратить."
+  "glossary.budget.body": "Это сколько у тебя всего есть монеток и на что ты собираешься их потратить."
 }
