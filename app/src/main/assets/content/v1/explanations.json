@@ -2,45 +2,45 @@
   "purchase.done": "Отличная покупка! В кошельке осталось {balance} монет.",
   "purchase.rejected": "Не хватает {shortfall} монет. Ничего страшного, давай решим, как поступить:",
   "balance.credited": "Ура, в копилку прилетели монетки: +{amount}!",
-
   "savings.deposited": "Отложили {amount} монет в копилку! Всего накоплено {saved}, а до мечты осталось {remaining}.",
   "savings.goal_reached": "Ура! Цель достигнута! В копилке уже целых {saved} монет!",
   "savings.withdrawn": "Взяли из копилки {amount} монет. Там осталось {saved}, до цели теперь {remaining}.",
-
   "pet.state_changed": "Питомец радуется твоей заботе!",
   "pet.missed_mandatory": "Питомец немного проголодался — завтра накормим его в первую очередь!",
   "pet.plan_followed": "План отлично сошёлся — питомец весел и полон сил!",
   "pet.period_closed": "День подошёл к концу, пора подвести итоги.",
-
   "growth.stage_up": "Ура! Твой питомец вырос на целый уровень!",
   "growth.points_added": "Питомец стал опытнее и взрослее: +{earned} очков роста!",
   "growth.no_points": "В этот раз питомец отдыхает. В следующем периоде обязательно подрастём!",
-
   "period.missed_mandatory": "Еда осталась в магазине. Завтра первым делом купим полезный обед!",
   "period.stage_up": "Здорово! За эти дни питомец заметно подрос и окреп!",
   "period.plan_followed": "Отличная работа! Ты распределил все монетки в точности по плану.",
   "period.closed": "День успешно завершён. Посмотрим, что получилось!",
-
   "recovery.DO_TASK": "Выполнить задание",
   "recovery.POSTPONE_PURCHASE": "Купить попозже",
   "recovery.ADJUST_NEXT_PLAN": "Пересмотреть план",
   "recovery.WITHDRAW_FROM_SAVINGS": "Взять из копилки",
   "recovery.CHOOSE_CHEAPER": "Выбрать подешевле",
-
   "pet.body.owl": "Совёнок",
   "pet.color.mint": "Мятный",
   "pet.accessory.scarf": "Шарфик",
-
   "shop.food_porridge": "Вкусная каша",
   "shop.toy_ball": "Яркий мячик",
-
   "goal.bike": "Самокат мечты",
-
   "task.plan_pocket_money.intro": "Тебе дали 40 монет на весь день. Давай разложим их по полочкам!",
   "task.plan_pocket_money.step1": "Сколько монет оставим на еду, сколько на игрушки, а сколько спрячем в копилку?",
   "task.plan_pocket_money.saved": "Ты спрятал часть монет в копилку — теперь твоя мечта стала ещё ближе!",
   "task.plan_pocket_money.otherwise": "В этот раз всё ушло на покупки. В следующий раз попробуем отложить пару монет в копилку!",
-
   "glossary.budget.title": "Бюджет",
-  "glossary.budget.body": "Это сколько у тебя всего есть монеток и на что ты собираешься их потратить."
+  "glossary.budget.body": "Это сколько у тебя есть монеток.",
+  "glossary.plan.title": "План",
+  "glossary.plan.body": "Твоя подсказка: сколько монет сразу отложить, а сколько оставить на покупки.",
+  "glossary.savings.title": "Накопления",
+  "glossary.savings.body": "Монетки, которые ты спрятал в копилку и пока не тратишь.",
+  "glossary.goal.title": "Цель",
+  "glossary.goal.body": "Большая мечта или вещь, ради которой ты копишь монетки.",
+  "glossary.mandatory_expenses.title": "Обязательные расходы",
+  "glossary.mandatory_expenses.body": "Самое важное, без чего питомцу не обойтись: еда и забота о здоровье.",
+  "glossary.wants.title": "Желаемое",
+  "glossary.wants.body": "Приятные радости вроде игрушек или наклеек, которые можно купить попозже."
 }

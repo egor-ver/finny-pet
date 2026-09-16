@@ -1,28 +1,3 @@
 <resources>
     <string name="app_name">finny-pet</string>
-    <!-- Словарь терминов -->
-    <!-- Бюджет -->
-    <string name="glossary.budget.title">Бюджет</string>
-    <string name="glossary.budget.body">Это сколько у тебя есть монеток.</string>
-
-    <!-- План -->
-    <string name="glossary.plan.title">План</string>
-    <string name="glossary.plan.body">Твоя подсказка: сколько монет сразу отложить, а сколько оставить на покупки.</string>
-
-    <!-- Накопления -->
-    <string name="glossary.savings.title">Накопления</string>
-    <string name="glossary.savings.body">Монетки, которые ты спрятал в копилку и пока не тратишь.</string>
-
-    <!-- Цель -->
-    <string name="glossary.goal.title">Цель</string>
-    <string name="glossary.goal.body">Большая мечта или вещь, ради которой ты копишь монетки.</string>
-
-    <!-- Обязательные расходы -->
-    <string name="glossary.mandatory_expenses.title">Обязательные расходы</string>
-    <string name="glossary.mandatory_expenses.body">Самое важное, без чего питомцу не обойтись: еда и забота о здоровье.</string>
-
-    <!-- Желаемое -->
-    <string name="glossary.wants.title">Желаемое</string>
-    <string name="glossary.wants.body">Приятные радости вроде игрушек или наклеек, которые можно купить попозже.</string>
-
 </resources>
