@@ -4,6 +4,32 @@
       "id": "budget",
       "titleKey": "glossary.budget.title",
       "bodyKey": "glossary.budget.body"
+    },
+    {
+      "id": "plan",
+      "titleKey": "glossary.plan.title",
+      "bodyKey": "glossary.plan.body"
+    },
+    {
+      "id": "savings",
+      "titleKey": "glossary.savings.title",
+      "bodyKey": "glossary.savings.body"
+    },
+    {
+      "id": "goal",
+      "titleKey": "glossary.goal.title",
+      "bodyKey": "glossary.goal.body"
+    },
+    {
+      "id": "mandatory_expenses",
+      "titleKey": "glossary.mandatory_expenses.title",
+      "bodyKey": "glossary.mandatory_expenses.body"
+    },
+    {
+      "id": "wants",
+      "titleKey": "glossary.wants.title",
+      "bodyKey": "glossary.wants.body"
     }
   ]
 }
+
