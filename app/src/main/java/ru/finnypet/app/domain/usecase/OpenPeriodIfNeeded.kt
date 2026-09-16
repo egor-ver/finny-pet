@@ -5,6 +5,7 @@ import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.repository.PeriodRepository
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Отдаёт период, в котором сейчас идёт игра, открывая самый первый, если игра
@@ -28,22 +29,32 @@ class OpenPeriodIfNeeded(
         // Закрытие периода обязано открывать следующий тем же действием: иначе
         // остаток неистраченных монет не переносится и просто пропадает.
         // Молчаливый первый период вместо потерянного скрыл бы эту ошибку.
-        check(periods.count(profileId) == 0) {
+        check(periods.lastClosed(profileId) == null) {
             "У профиля ${profileId.value} нет открытого периода, но закрытые есть: " +
                 "период закрыли, не открыв следующий, и остаток потерян"
         }
 
-        return periods.open(
-            GamePeriod(
-                id = UNSAVED,
-                profileId = profileId,
-                number = FIRST_NUMBER,
-                income = balance.periodIncome,
-                startBalance = balance.startingBalance,
-                status = PeriodStatus.PLANNING,
-            )
-        )
+        return try {
+            periods.open(firstPeriod(profileId))
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            // Между проверкой и вставкой период мог открыть кто-то ещё —
+            // например, сброс демо-режима при уже открытом главном экране.
+            // Уникальность номера внутри профиля не даст завести дубль, и это
+            // не повод падать: нужный период к этому моменту уже есть.
+            periods.current(profileId) ?: throw error
+        }
     }
+
+    private fun firstPeriod(profileId: ProfileId) = GamePeriod(
+        id = UNSAVED,
+        profileId = profileId,
+        number = FIRST_NUMBER,
+        income = balance.periodIncome,
+        startBalance = balance.startingBalance,
+        status = PeriodStatus.PLANNING,
+    )
 
     private companion object {
         const val UNSAVED = 0L

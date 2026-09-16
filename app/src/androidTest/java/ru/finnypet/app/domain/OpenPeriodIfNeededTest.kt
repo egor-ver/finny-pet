@@ -20,9 +20,12 @@ import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.GameClock
+import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.Profile
+import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import java.io.File
 
@@ -31,9 +34,9 @@ import java.io.File
  * периода не из чего считать баланс — главный экран (ТЗ 2.5.3) остался бы
  * пустым.
  *
- * База настоящая, потому что проверяются в том числе уникальность номера
- * периода внутри профиля и связь со строкой профиля — это ограничения SQLite,
- * а не Kotlin.
+ * База настоящая, а не выдуманный репозиторий: проверяется не только то, какой
+ * период получается, но и то, что он действительно один на профиль — а это
+ * держит уникальный индекс в SQLite, а не код.
  */
 @RunWith(AndroidJUnit4::class)
 class OpenPeriodIfNeededTest {
@@ -100,6 +103,22 @@ class OpenPeriodIfNeededTest {
         assertEquals(1, periods.count(profile.id))
     }
 
+    /**
+     * Самый частый вход в игру: план уже подтверждён и период идёт. Открыть
+     * здесь новый период значило бы обнулить подтверждённый план посреди игры.
+     */
+    @Test
+    fun `в_идущий_период_игра_возвращается_в_него_же`() = runTest {
+        val profile = newProfile()
+        val started = openPeriod(profile.id).copy(status = PeriodStatus.RUNNING)
+        periods.save(started)
+
+        val again = openPeriod(profile.id)
+
+        assertEquals(started, again)
+        assertEquals(1, periods.count(profile.id))
+    }
+
     @Test
     fun `у_каждого_профиля_свой_первый_период`() = runTest {
         val one = newProfile(childName = "Егор")
@@ -113,6 +132,22 @@ class OpenPeriodIfNeededTest {
         assertEquals(1, periodTwo.number)
         assertEquals(1, periods.count(one.id))
         assertEquals(1, periods.count(two.id))
+    }
+
+    /**
+     * Два вызова сразу — например, сброс демо-режима при уже открытом главном
+     * экране. Опоздавший не должен ни падать, ни заводить второй период.
+     */
+    @Test
+    fun `опоздавший_вызов_подхватывает_чужой_период`() = runTest {
+        val profile = newProfile()
+        val existing = openPeriod(profile.id)
+        val late = OpenPeriodIfNeeded(periods = BlindOnce(periods), balance = balance)
+
+        val period = late(profile.id)
+
+        assertEquals(existing, period)
+        assertEquals(1, periods.count(profile.id))
     }
 
     /**
@@ -137,6 +172,24 @@ class OpenPeriodIfNeededTest {
         petName = "Финни",
         appearance = PetAppearance(bodyId = "owl", colorId = "mint", accessoryId = null),
     )
+
+    /**
+     * Настоящее хранилище, но первый вопрос «какой период сейчас» остаётся без
+     * ответа. Так воспроизводится гонка: период уже вставлен, а этот вызов его
+     * ещё не видит и пойдёт вставлять свой.
+     */
+    private class BlindOnce(private val real: PeriodRepository) : PeriodRepository by real {
+
+        private var asked = false
+
+        override suspend fun current(profileId: ProfileId): GamePeriod? {
+            if (!asked) {
+                asked = true
+                return null
+            }
+            return real.current(profileId)
+        }
+    }
 
     private companion object {
         const val FIXED_TIME = 1_700_000_000_000L
