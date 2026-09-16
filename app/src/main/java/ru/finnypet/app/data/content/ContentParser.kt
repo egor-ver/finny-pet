@@ -95,6 +95,13 @@ class ContentParser @Inject constructor() {
     private fun parsePets(raw: String): PetOptions {
         val dto = decode<PetsDto>(PETS, raw)
         return at(PETS, "внешность питомца") {
+            // Без тела или окраса питомца не собрать: экран создания упал бы
+            // на попытке взять первый вариант. Ловим здесь, где ошибка
+            // называет файл, а не в рантайме у ребёнка.
+            require(dto.bodies.isNotEmpty()) { "нет ни одного тела питомца" }
+            require(dto.colors.isNotEmpty()) { "нет ни одного окраса" }
+            // Аксессуары могут отсутствовать: вариант «без» приложение
+            // предлагает само, он всегда доступен.
             PetOptions(
                 bodies = dto.bodies.map { ContentOption(it.id, it.titleKey) }.unique(PETS, "тело"),
                 colors = dto.colors.map { ContentOption(it.id, it.titleKey) }.unique(PETS, "окрас"),

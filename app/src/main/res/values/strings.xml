@@ -32,12 +32,29 @@
     <string name="main_savings">Накоплено</string>
     <string name="main_pet_state">Как себя чувствует Финни</string>
 
-    <!-- Знакомство с игрой -->
-    <string name="onboarding_title">Питомец Финни</string>
-    <string name="onboarding_placeholder">Здесь будет знакомство с игрой</string>
-    <string name="onboarding_three_choices">Три решения: потратить на нужное, потратить на желаемое, отложить.</string>
-
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>
-    <string name="create_pet_placeholder">Здесь будет выбор внешности и имени</string>
+    <string name="create_pet_appearance">Каким он будет?</string>
+    <string name="create_pet_body">Кто это</string>
+    <string name="create_pet_color">Окрас</string>
+    <string name="create_pet_accessory">Аксессуар</string>
+    <string name="create_pet_no_accessory">Без</string>
+    <string name="create_pet_names">Как вас зовут?</string>
+    <string name="create_pet_child_name">Твоё игровое имя</string>
+    <string name="create_pet_pet_name">Имя питомца</string>
+    <string name="create_pet_no_real_name">Настоящее имя писать не нужно — придумай любое</string>
+    <string name="create_pet_image_missing">Картинка питомца пока не добавлена</string>
+    <string name="create_pet_failed">Не получилось сохранить. Попробуй ещё раз.</string>
+
+    <!-- Знакомство с игрой -->
+    <string name="onboarding_title">Питомец Финни</string>
+    <string name="onboarding_goal">Тебе дают монеты. Ты решаешь, на что их потратить, а питомец
+        показывает, что из этого вышло.</string>
+    <string name="onboarding_choice_mandatory_title">Потратить на нужное</string>
+    <string name="onboarding_choice_mandatory_body">Еда и забота. Без этого питомцу плохо.</string>
+    <string name="onboarding_choice_optional_title">Потратить на желаемое</string>
+    <string name="onboarding_choice_optional_body">Игрушки и лакомства. Приятно, но можно и подождать.</string>
+    <string name="onboarding_choice_savings_title">Отложить</string>
+    <string name="onboarding_choice_savings_body">Спрятать монеты в копилку, чтобы собрать на мечту.</string>
+    <string name="onboarding_hint">Эту подсказку можно открыть снова в любой момент.</string>
 </resources>

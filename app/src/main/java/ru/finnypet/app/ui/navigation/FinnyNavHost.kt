@@ -6,9 +6,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import ru.finnypet.app.ui.screens.CreatePetScreen
-import ru.finnypet.app.ui.screens.MainScreen
-import ru.finnypet.app.ui.screens.OnboardingScreen
+import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
+import ru.finnypet.app.ui.screens.main.MainScreen
+import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
 
 /**
  * Граф переходов.
@@ -16,10 +16,8 @@ import ru.finnypet.app.ui.screens.OnboardingScreen
  * Онбординг и создание питомца из стека убираются: пройдя их один раз,
  * ребёнок не должен попадать туда кнопкой «назад» с главного экрана.
  *
- * Стартовый экран задаётся снаружи, а не зашит здесь: при сохранённом
- * профиле приложение обязано открываться сразу на главном (ТЗ 2.5.13,
- * шаг 11 Приложения А). Кто спрашивает репозиторий о профиле, решится
- * на шаге 6 вместе с появлением первой ViewModel.
+ * Стартовый экран задаётся снаружи: при сохранённом профиле приложение
+ * открывается сразу на главном (ТЗ 2.5.13, шаг 11 Приложения А).
  */
 @Composable
 fun FinnyNavHost(
@@ -34,7 +32,7 @@ fun FinnyNavHost(
     ) {
         composable<Onboarding> {
             OnboardingScreen(
-                onStart = { navController.navigate(CreatePet) },
+                onDone = { navController.navigate(CreatePet) },
             )
         }
 
