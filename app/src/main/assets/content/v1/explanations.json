@@ -25,5 +25,22 @@
   "recovery.POSTPONE_PURCHASE": "Отложить покупку на потом",
   "recovery.ADJUST_NEXT_PLAN": "Поправить план на следующий день",
   "recovery.WITHDRAW_FROM_SAVINGS": "Взять из копилки",
-  "recovery.CHOOSE_CHEAPER": "Выбрать что-то подешевле"
+  "recovery.CHOOSE_CHEAPER": "Выбрать что-то подешевле",
+
+  "pet.body.owl": "Совёнок",
+  "pet.color.mint": "Мятный",
+  "pet.accessory.scarf": "Шарфик",
+
+  "shop.food_porridge": "Каша",
+  "shop.toy_ball": "Мячик",
+
+  "goal.bike": "Самокат",
+
+  "task.plan_pocket_money.intro": "Тебе дали 40 монет на день. Разложи их.",
+  "task.plan_pocket_money.step1": "Сколько на обязательное, сколько на желаемое, сколько отложить?",
+  "task.plan_pocket_money.saved": "Ты отложил часть денег — так цель становится ближе.",
+  "task.plan_pocket_money.otherwise": "В этот раз отложить не вышло. Попробуй оставить немного в следующий раз.",
+
+  "glossary.budget.title": "Бюджет",
+  "glossary.budget.body": "Это сколько у тебя есть денег и на что ты собираешься их потратить."
 }

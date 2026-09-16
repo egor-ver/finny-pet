@@ -1,0 +1,168 @@
+package ru.finnypet.app.data.content
+
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
+
+/**
+ * Зеркало файлов контент-пака. Здесь нет ни одной проверки: DTO описывают
+ * форму JSON, а смысл проверяют доменные типы в ContentParser.
+ *
+ * Имена полей совпадают с ключами в файлах — их видит и правит продакт,
+ * поэтому переименование DTO ломает контент и делается только вместе с ним.
+ */
+
+@Serializable
+data class BalanceDto(
+    val startingBalance: Int,
+    val periodIncome: Int,
+    val taskReward: Int,
+    val initialStat: Int,
+    val statPenaltyMissedMandatory: Int,
+    val moodBonusPlanFollowed: Int,
+    val growthForMandatoryCovered: Int,
+    val growthForPlanFollowed: Int,
+    val growthForSavingsKept: Int,
+    val growthThresholds: List<Int>,
+    val carryOverUnspent: Boolean,
+)
+
+@Serializable
+data class OptionDto(
+    val id: String,
+    val titleKey: String,
+)
+
+@Serializable
+data class PetsDto(
+    val bodies: List<OptionDto>,
+    val colors: List<OptionDto>,
+    val accessories: List<OptionDto> = emptyList(),
+)
+
+@Serializable
+data class EffectDto(
+    val stat: String,
+    val delta: Int,
+)
+
+@Serializable
+data class ShopDto(val items: List<ShopItemDto>)
+
+@Serializable
+data class ShopItemDto(
+    val id: String,
+    val titleKey: String,
+    val price: Int,
+    val category: String,
+    val effects: List<EffectDto> = emptyList(),
+)
+
+@Serializable
+data class GoalsDto(val goals: List<GoalDto>)
+
+@Serializable
+data class GoalDto(
+    val id: String,
+    val titleKey: String,
+    val price: Int,
+)
+
+@Serializable
+data class GlossaryDto(val terms: List<TermDto>)
+
+@Serializable
+data class TermDto(
+    val id: String,
+    val titleKey: String,
+    val bodyKey: String,
+)
+
+// --- Задания ---
+
+/**
+ * Вид шага и вид условия различаются полем "type" в самом объекте: так
+ * продакту не приходится держать в голове вложенные обёртки, а добавление
+ * нового вида остаётся правкой одного файла.
+ */
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("type")
+sealed interface TaskStepDto {
+
+    val promptKey: String
+
+    @Serializable
+    @SerialName("CHOICE")
+    data class Choice(
+        override val promptKey: String,
+        val options: List<TaskOptionDto>,
+    ) : TaskStepDto
+
+    @Serializable
+    @SerialName("DISTRIBUTE")
+    data class Distribute(
+        override val promptKey: String,
+        val budget: Int,
+    ) : TaskStepDto
+
+    @Serializable
+    @SerialName("PICK_ITEMS")
+    data class PickItems(
+        override val promptKey: String,
+        val itemIds: List<String>,
+        val budget: Int,
+    ) : TaskStepDto
+}
+
+@Serializable
+data class TaskOptionDto(
+    val id: String,
+    val labelKey: String,
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("type")
+sealed interface ConditionDto {
+
+    @Serializable
+    @SerialName("OPTION_CHOSEN")
+    data class OptionChosen(val optionId: String) : ConditionDto
+
+    @Serializable
+    @SerialName("SAVED_AT_LEAST")
+    data class SavedAtLeast(val amount: Int) : ConditionDto
+
+    @Serializable
+    @SerialName("SPENT_AT_MOST")
+    data class SpentAtMost(val amount: Int) : ConditionDto
+
+    @Serializable
+    @SerialName("OTHERWISE")
+    data object Otherwise : ConditionDto
+}
+
+@Serializable
+data class OutcomeDto(
+    val id: String,
+    val condition: ConditionDto,
+    /** Не указана — подставится taskReward из balance.json. */
+    val reward: Int? = null,
+    val explanationKey: String,
+    val effects: List<EffectDto> = emptyList(),
+)
+
+@Serializable
+data class TasksDto(val tasks: List<TaskDto>)
+
+@Serializable
+data class TaskDto(
+    val id: String,
+    val topic: String,
+    val introKey: String,
+    val steps: List<TaskStepDto>,
+    val outcomes: List<OutcomeDto>,
+)

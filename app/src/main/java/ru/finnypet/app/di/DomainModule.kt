@@ -13,6 +13,7 @@ import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.repository.ContentRepository
 import javax.inject.Singleton
 
 /**
@@ -27,12 +28,12 @@ import javax.inject.Singleton
 object DomainModule {
 
     /**
-     * Временные числа. В шаге 3 сюда придёт разбор contenta из ассетов, и
-     * этот метод станет читать balance.json вместо константы.
+     * Числа приходят из balance.json — правка экономики не требует пересборки
+     * логики и не идёт через код (ТЗ 3.2).
      */
     @Provides
     @Singleton
-    fun gameBalance(): GameBalance = GameBalance.PLACEHOLDER
+    fun gameBalance(content: ContentRepository): GameBalance = content.pack().balance
 
     @Provides
     fun budgetEngine(): BudgetEngine = BudgetEngine()

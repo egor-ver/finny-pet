@@ -5,12 +5,14 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import ru.finnypet.app.data.SystemGameClock
+import ru.finnypet.app.data.content.AssetContentRepository
 import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
 import ru.finnypet.app.data.repository.SavingsRepositoryImpl
 import ru.finnypet.app.data.repository.SettingsRepositoryImpl
 import ru.finnypet.app.data.repository.TaskProgressRepositoryImpl
 import ru.finnypet.app.domain.economy.GameClock
+import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
@@ -47,6 +49,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun settingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun contentRepository(impl: AssetContentRepository): ContentRepository
 
     @Binds
     abstract fun gameClock(impl: SystemGameClock): GameClock
