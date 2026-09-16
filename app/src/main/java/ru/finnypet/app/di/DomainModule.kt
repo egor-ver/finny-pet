@@ -14,6 +14,8 @@ import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.repository.ContentRepository
+import ru.finnypet.app.domain.repository.PeriodRepository
+import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import javax.inject.Singleton
 
 /**
@@ -52,6 +54,12 @@ object DomainModule {
 
     @Provides
     fun taskEngine(clock: GameClock): TaskEngine = TaskEngine(clock)
+
+    @Provides
+    fun openPeriodIfNeeded(
+        periods: PeriodRepository,
+        balance: GameBalance,
+    ): OpenPeriodIfNeeded = OpenPeriodIfNeeded(periods = periods, balance = balance)
 
     @Provides
     fun periodEngine(
