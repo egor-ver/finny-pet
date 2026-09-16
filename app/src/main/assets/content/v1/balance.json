@@ -1,13 +1,14 @@
 {
-  "startingBalance": 20,
-  "periodIncome": 60,
+  "startingBalance": 40,
+  "periodIncome": 40,
   "taskReward": 15,
-  "initialStat": 70,
-  "statPenaltyMissedMandatory": 15,
-  "moodBonusPlanFollowed": 10,
+  "initialStat": 75,
+  "statPenaltyMissedMandatory": 20,
+  "moodBonusPlanFollowed": 15,
   "growthForMandatoryCovered": 2,
   "growthForPlanFollowed": 2,
-  "growthForSavingsKept": 1,
+  "growthForSavingsKept": 2,
   "growthThresholds": [0, 10, 25],
   "carryOverUnspent": true
 }
+
