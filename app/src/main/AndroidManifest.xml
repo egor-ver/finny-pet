@@ -12,6 +12,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Finnypet">
+        <!--
+            adjustResize оставлен намеренно: на Android 8-10 отступ под
+            клавиатуру доходит до Compose только с ним. На более новых
+            версиях отступ приходит сам, и режим ни на что не влияет.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

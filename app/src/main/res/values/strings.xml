@@ -1,3 +1,43 @@
 <resources>
     <string name="app_name">finny-pet</string>
+
+    <!--
+        Строки интерфейса. Учебный контент сюда не попадает: тексты игры
+        живут в контент-паке в ассетах (ТЗ 3.2 требует отделить учебный
+        контент от интерфейсного кода).
+    -->
+
+    <!-- Навигация -->
+    <string name="action_back">Назад</string>
+    <string name="action_start">Начать</string>
+    <string name="action_done">Готово</string>
+
+    <!-- Деньги -->
+    <plurals name="coins">
+        <item quantity="one">%d монета</item>
+        <item quantity="few">%d монеты</item>
+        <item quantity="many">%d монет</item>
+        <item quantity="other">%d монеты</item>
+    </plurals>
+
+    <!-- Показатели питомца: подпись для чтения вслух -->
+    <string name="stat_description">%1$s: %2$d из %3$d</string>
+    <string name="stat_mood">Настроение</string>
+    <string name="stat_satiety">Сытость</string>
+    <string name="stat_care">Уход</string>
+
+    <!-- Главный экран -->
+    <string name="main_title">Финни</string>
+    <string name="main_balance">Баланс</string>
+    <string name="main_savings">Накоплено</string>
+    <string name="main_pet_state">Как себя чувствует Финни</string>
+
+    <!-- Знакомство с игрой -->
+    <string name="onboarding_title">Питомец Финни</string>
+    <string name="onboarding_placeholder">Здесь будет знакомство с игрой</string>
+    <string name="onboarding_three_choices">Три решения: потратить на нужное, потратить на желаемое, отложить.</string>
+
+    <!-- Создание питомца -->
+    <string name="create_pet_title">Твой питомец</string>
+    <string name="create_pet_placeholder">Здесь будет выбор внешности и имени</string>
 </resources>

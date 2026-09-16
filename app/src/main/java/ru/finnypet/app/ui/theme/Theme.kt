@@ -1,58 +1,79 @@
 package ru.finnypet.app.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val LightColors = lightColorScheme(
+    primary = GreenPrimary,
+    onPrimary = GreenOnPrimary,
+    primaryContainer = GreenContainer,
+    onPrimaryContainer = GreenOnContainer,
+    secondary = AmberSecondary,
+    onSecondary = AmberOnSecondary,
+    secondaryContainer = AmberContainer,
+    onSecondaryContainer = AmberOnContainer,
+    tertiary = VioletTertiary,
+    onTertiary = VioletOnTertiary,
+    tertiaryContainer = VioletContainer,
+    onTertiaryContainer = VioletOnContainer,
+    error = RedError,
+    onError = RedOnError,
+    errorContainer = RedContainer,
+    onErrorContainer = RedOnContainer,
+    background = SurfaceLight,
+    onBackground = OnSurfaceLight,
+    surface = SurfaceLight,
+    onSurface = OnSurfaceLight,
+    surfaceVariant = SurfaceVariantLight,
+    onSurfaceVariant = OnSurfaceVariantLight,
+    outline = OutlineLight,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val DarkColors = darkColorScheme(
+    primary = GreenPrimaryDark,
+    onPrimary = GreenOnPrimaryDark,
+    primaryContainer = GreenContainerDark,
+    onPrimaryContainer = GreenOnContainerDark,
+    secondary = AmberSecondaryDark,
+    onSecondary = AmberOnSecondaryDark,
+    secondaryContainer = AmberContainerDark,
+    onSecondaryContainer = AmberOnContainerDark,
+    tertiary = VioletTertiaryDark,
+    onTertiary = VioletOnTertiaryDark,
+    tertiaryContainer = VioletContainerDark,
+    onTertiaryContainer = VioletOnContainerDark,
+    error = RedErrorDark,
+    onError = RedOnErrorDark,
+    errorContainer = RedContainerDark,
+    onErrorContainer = RedOnContainerDark,
+    background = SurfaceDark,
+    onBackground = OnSurfaceDark,
+    surface = SurfaceDark,
+    onSurface = OnSurfaceDark,
+    surfaceVariant = SurfaceVariantDark,
+    onSurfaceVariant = OnSurfaceVariantDark,
+    outline = OutlineDark,
 )
 
+/**
+ * Тема приложения.
+ *
+ * Динамический цвет Android 12+ намеренно не используется: он подменяет
+ * палитру приложения цветами обоев пользователя. Для игры, где цвет несёт
+ * смысл — зелёный это накопления, янтарный монеты, красный нехватка, —
+ * такая подмена ломает и узнаваемость, и подобранный контраст (ТЗ 3.6).
+ */
 @Composable
 fun FinnypetTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

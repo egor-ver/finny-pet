@@ -4,46 +4,44 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import ru.finnypet.app.ui.theme.FinnypetTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import ru.finnypet.app.domain.repository.SettingsRepository
+import ru.finnypet.app.ui.navigation.FinnyNavHost
+import ru.finnypet.app.ui.theme.FinnypetTheme
+import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
+import ru.finnypet.app.ui.theme.LocalSoundEnabled
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settings: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            // Настройки доступности читаются один раз на всё приложение и
+            // раздаются через CompositionLocal: ТЗ 3.6 требует, чтобы звук
+            // и анимации отключались, и флаг должен доходить до компонентов,
+            // а не лежать в хранилище без дела.
+            val animations by settings.observeAnimationsEnabled()
+                .collectAsStateWithLifecycle(initialValue = true)
+            val sound by settings.observeSoundEnabled()
+                .collectAsStateWithLifecycle(initialValue = true)
+
             FinnypetTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                CompositionLocalProvider(
+                    LocalAnimationsEnabled provides animations,
+                    LocalSoundEnabled provides sound,
+                ) {
+                    FinnyNavHost()
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FinnypetTheme {
-        Greeting("Android")
     }
 }
