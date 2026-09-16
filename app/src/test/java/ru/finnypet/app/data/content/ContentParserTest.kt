@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskStep
@@ -22,7 +23,9 @@ class ContentParserTest {
     fun `настоящий контент-пак разбирается`() {
         val pack = parser.parse(realContent())
 
-        assertEquals(Coins(20), pack.balance.startingBalance)
+        // Конкретные числа принадлежат продакту и меняются по ходу — тест
+        // проверяет, что пак разобрался, а не какие в нём цифры.
+        assertEquals(GrowthStage.entries.size, pack.balance.growthThresholds.size)
         assertTrue("Товаров не разобралось", pack.shop.isNotEmpty())
         assertTrue("Целей не разобралось", pack.goals.isNotEmpty())
         assertTrue("Заданий не разобралось", pack.tasks.isNotEmpty())
@@ -74,6 +77,20 @@ class ContentParserTest {
         assertTrue(outcomes[1].condition is OutcomeCondition.SavedAtLeast)
         assertTrue(outcomes[2].condition is OutcomeCondition.SpentAtMost)
         assertTrue(outcomes[3].condition is OutcomeCondition.Otherwise)
+    }
+
+    @Test
+    fun `за пять периодов питомец доходит до последней стадии`() {
+        val balance = parser.parse(realContent()).balance
+        val reachable = balance.maxGrowthPerPeriod * DEMO_PERIODS
+        val required = balance.growthThresholds.last()
+
+        assertTrue(
+            "За $DEMO_PERIODS периодов набирается $reachable очков роста, а на последнюю " +
+                "стадию нужно $required. ТЗ 2.6 требует показать пять периодов и три стадии — " +
+                "подними очки за период или опусти последний порог в balance.json",
+            reachable >= required,
+        )
     }
 
     // --- Сообщения об ошибках: по ним продакт должен найти место в своём файле ---
@@ -211,6 +228,9 @@ class ContentParserTest {
     }
 
     private companion object {
+
+        /** ТЗ 2.6: в демонстрационном режиме показываем пять периодов. */
+        const val DEMO_PERIODS = 5
 
         val TASK_WITH_ALL_STEPS = """
         {"tasks":[{

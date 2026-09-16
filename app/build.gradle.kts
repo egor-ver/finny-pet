@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.PathSensitivity
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -44,6 +46,18 @@ android {
 // Схемы БД коммитятся в репозиторий — без них нельзя написать тест миграции.
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+/**
+ * Тесты читают контент-пак из ассетов напрямую, а Gradle такие чтения сам не
+ * отслеживает: правка balance.json проходила мимо кэша, и прогон рапортовал
+ * старый результат. Объявляем папку входом, чтобы правка контента всегда
+ * перезапускала тесты.
+ */
+tasks.withType<Test>().configureEach {
+    inputs.dir(layout.projectDirectory.dir("src/main/assets"))
+        .withPropertyName("contentPack")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 dependencies {
