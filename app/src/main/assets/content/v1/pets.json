@@ -3,7 +3,10 @@
     { "id": "owl", "titleKey": "pet.body.owl" }
   ],
   "colors": [
-    { "id": "mint", "titleKey": "pet.color.mint" }
+    { "id": "cream", "titleKey": "pet.color.cream" },
+    { "id": "brown", "titleKey": "pet.color.brown" },
+    { "id": "black", "titleKey": "pet.color.black" },
+    { "id": "white", "titleKey": "pet.color.white" }
   ],
   "accessories": [
     { "id": "scarf", "titleKey": "pet.accessory.scarf" }

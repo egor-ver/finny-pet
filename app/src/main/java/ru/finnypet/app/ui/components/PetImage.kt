@@ -50,7 +50,7 @@ fun PetImage(
 ) {
     val context = LocalContext.current
     val body by loadAsset(context, bodyPath(appearance, stage))
-    val accessory by loadAsset(context, appearance.accessoryId?.let(::accessoryPath))
+    val accessory by loadAsset(context, appearance.accessoryId?.let { accessoryPath(it, stage) })
 
     Box(
         modifier = modifier.size(size),
@@ -98,7 +98,12 @@ private fun MissingPet() {
 private fun bodyPath(appearance: PetAppearance, stage: GrowthStage) =
     "content/v1/pets/${appearance.bodyId}_${appearance.colorId}_${stage.name.lowercase()}.png"
 
-private fun accessoryPath(accessoryId: String) = "content/v1/pets/acc_$accessoryId.png"
+/**
+ * Аксессуар свой на каждую стадию: шея у птенца и у взрослой совы в разных
+ * местах, и одна картинка поверх всех трёх села бы мимо.
+ */
+private fun accessoryPath(accessoryId: String, stage: GrowthStage) =
+    "content/v1/pets/acc_${accessoryId}_${stage.name.lowercase()}.png"
 
 /**
  * Читает картинку из ассетов в фоне: разбор PNG на главном потоке задержал бы
