@@ -3,6 +3,7 @@ package ru.finnypet.app.ui.screens.budget
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -101,7 +102,7 @@ fun BudgetContent(
 private fun Screen(
     onBack: () -> Unit,
     bottomBar: (@Composable () -> Unit)? = null,
-    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     FinnyScaffold(
         title = stringResource(R.string.budget_title),
@@ -200,11 +201,8 @@ private fun CategoryRow(
             )
             // Подпись для озвучки склеивает название с суммой: иначе читается
             // «Нужное», потом отдельно «двадцать монет», и связь теряется.
-            Row(
-                modifier = Modifier.clearAndSetSemantics {
-                    contentDescription = "$title: ${amount.amount}"
-                },
-            ) {
+            val spoken = stringResource(R.string.budget_amount, title, amount.amount)
+            Row(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
                 MoneyAmount(amount = amount)
             }
         }
@@ -237,7 +235,15 @@ private fun StepButton(
             .defaultMinSize(minWidth = Dimens.TouchTarget, minHeight = Dimens.TouchTarget)
             .semantics { contentDescription = description },
     ) {
-        Text(text = symbol, style = MaterialTheme.typography.titleLarge)
+        // Знак скрыт от озвучки: подпись кнопки уже говорит, что она делает,
+        // а «плюс» отдельной остановкой только мешает. Прятать через
+        // clearAndSetSemantics на самой кнопке нельзя — вместе со знаком
+        // пропадёт и признак «недоступна».
+        Text(
+            text = symbol,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
     }
 }
 
@@ -301,14 +307,17 @@ private fun Started(state: BudgetState.Started, onBack: () -> Unit) {
 @Composable
 private fun ComparisonRow(line: BudgetLine) {
     val title = stringResource(line.category.label)
+    val spoken = stringResource(
+        R.string.budget_line,
+        title,
+        line.planned.amount,
+        line.actual.amount,
+    )
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = Modifier
             .fillMaxWidth()
-            .clearAndSetSemantics {
-                contentDescription = "$title: по плану ${line.planned.amount}, " +
-                    "потрачено ${line.actual.amount}"
-            }
+            .clearAndSetSemantics { contentDescription = spoken }
             .background(
                 MaterialTheme.colorScheme.surfaceVariant,
                 RoundedCornerShape(Dimens.Corner),

@@ -68,10 +68,15 @@ sealed interface BudgetState {
 
         val isDistributed: Boolean get() = remainder == Coins.ZERO && overBy == Coins.ZERO
 
-        fun canAdd(): Boolean = remainder.amount >= step
+        /**
+         * Хватает и остатка меньше шага: последние монеты добираются неполным
+         * шагом. Иначе при доступной сумме, не кратной шагу, остаток нельзя
+         * было бы обнулить, а числа экономики правит контент-пак.
+         */
+        fun canAdd(): Boolean = remainder > Coins.ZERO
 
         fun canRemove(category: SpendCategory): Boolean =
-            plan.amountFor(category).amount >= step
+            plan.amountFor(category) > Coins.ZERO
     }
 
     data class Started(
@@ -168,13 +173,31 @@ class BudgetViewModel @Inject constructor(
                 // экране: экран отстаёт от базы на время записи, и при быстрых
                 // нажатиях он вернул бы устаревшую сумму.
                 val stored = periods.plan(period.id) ?: BudgetPlan.EMPTY
-                val amount = (stored.amountFor(category).amount + delta).coerceAtLeast(0)
-                val candidate = stored.with(category, Coins(amount))
-                if (budget.check(candidate, period.available) is PlanCheck.Exceeds) {
-                    return@withLock
-                }
-                periods.savePlan(period.id, candidate)
+                val amount = moved(stored, category, delta, period.available) ?: return@withLock
+                periods.savePlan(period.id, stored.with(category, Coins(amount)))
             }
+        }
+    }
+
+    /**
+     * Новая сумма направления или `null`, если двигать некуда.
+     *
+     * Шаг урезается по месту: добавить можно не больше, чем осталось
+     * нераспределённого, а убрать — не больше, чем лежит. Так последние монеты
+     * не застревают, когда доступная сумма не делится на шаг нацело.
+     */
+    private fun moved(
+        plan: BudgetPlan,
+        category: SpendCategory,
+        delta: Int,
+        available: Coins,
+    ): Int? {
+        val current = plan.amountFor(category).amount
+        return if (delta > 0) {
+            val free = available.amount - plan.total.amount
+            if (free <= 0) null else current + minOf(delta, free)
+        } else {
+            if (current == 0) null else current - minOf(-delta, current)
         }
     }
 

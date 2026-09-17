@@ -162,6 +162,60 @@ class BudgetPlanningTest {
         assertEquals(planning.available, await { true }.plan.total)
     }
 
+    /**
+     * Доступная сумма не обязана делиться на шаг: числа экономики правит
+     * контент-пак. Последние монеты должны добираться неполным шагом, иначе
+     * остаток нельзя обнулить и план не подтвердить целиком.
+     */
+    @Test
+    fun последние_монеты_добираются_неполным_шагом() = runBlocking {
+        // 22 + 60 = 82 — на пять не делится, в конце останется две монеты.
+        val odd = balance.copy(startingBalance = Coins(22))
+        profiles.create(
+            childName = "Аня",
+            petName = "Сова",
+            appearance = PetAppearance(bodyId = "owl", colorId = "white", accessoryId = null),
+        )
+        val second = BudgetViewModel(
+            profiles = profiles,
+            periods = periods,
+            openPeriod = OpenPeriodIfNeeded(
+                periods = periods,
+                wallet = WalletEngine(clock),
+                balance = odd,
+            ),
+            budget = BudgetEngine(),
+            periodEngine = periodEngine(),
+        )
+        try {
+            val start = withTimeout(TIMEOUT_MS) {
+                second.state.first { it is BudgetState.Planning } as BudgetState.Planning
+            }
+            assertEquals(Coins(82), start.available)
+
+            repeat(start.available.amount / start.step) { second.add(SpendCategory.MANDATORY) }
+            val almost = withTimeout(TIMEOUT_MS) {
+                second.state.first {
+                    it is BudgetState.Planning && it.remainder == Coins(2)
+                } as BudgetState.Planning
+            }
+            assertTrue("остаток меньше шага, а кнопка недоступна", almost.canAdd())
+
+            second.add(SpendCategory.MANDATORY)
+
+            val full = withTimeout(TIMEOUT_MS) {
+                second.state.first {
+                    it is BudgetState.Planning && it.remainder == Coins.ZERO
+                } as BudgetState.Planning
+            }
+            assertEquals(Coins(82), full.plan.mandatory)
+            assertTrue(full.isDistributed)
+            assertTrue(full.canConfirm)
+        } finally {
+            second.viewModelScope.cancel()
+        }
+    }
+
     @Test
     fun убрать_монеты_можно_обратно() = runBlocking {
         awaitPlanning()
