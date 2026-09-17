@@ -230,8 +230,11 @@ private fun NameField(
         label = { Text(text = label, style = MaterialTheme.typography.bodyMedium) },
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyLarge,
+        // Автозамена выключена намеренно: имена здесь выдуманные, и клавиатура
+        // исправляет их на словарные — «Финни» превращается в «Финик».
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.Words,
+            autoCorrectEnabled = false,
             imeAction = imeAction,
         ),
         modifier = Modifier
