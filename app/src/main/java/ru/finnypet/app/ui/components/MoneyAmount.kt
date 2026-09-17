@@ -15,8 +15,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.ui.text.WordForm
+import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -61,10 +63,14 @@ fun MoneyAmount(
 
 /** Склонение по числу: одна монета, две монеты, пять монет. */
 @Composable
-private fun coinsText(amount: Coins): String {
-    val resources = LocalContext.current.resources
-    return resources.getQuantityString(R.plurals.coins, amount.amount, amount.amount)
-}
+private fun coinsText(amount: Coins): String = stringResource(
+    when (wordFormOf(amount.amount)) {
+        WordForm.ONE -> R.string.coins_one
+        WordForm.FEW -> R.string.coins_few
+        WordForm.MANY -> R.string.coins_many
+    },
+    amount.amount,
+)
 
 /**
  * Монета нарисована формой, а не символом: знаки валют есть не во всех

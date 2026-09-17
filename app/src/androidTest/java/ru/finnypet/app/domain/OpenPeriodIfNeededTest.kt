@@ -20,11 +20,13 @@ import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.GameClock
+import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import java.io.File
@@ -43,6 +45,7 @@ class OpenPeriodIfNeededTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val balance = GameBalance.PLACEHOLDER
+    private val clock = GameClock { FIXED_TIME }
 
     private lateinit var storeFile: File
     private lateinit var store: DataStore<Preferences>
@@ -62,14 +65,18 @@ class OpenPeriodIfNeededTest {
             database = db,
             store = store,
             balance = balance,
-            clock = GameClock { FIXED_TIME },
+            clock = clock,
         )
         periods = PeriodRepositoryImpl(
             periods = db.periods(),
             plans = db.budgetPlans(),
             transactions = db.transactions(),
         )
-        openPeriod = OpenPeriodIfNeeded(periods = periods, balance = balance)
+        openPeriod = OpenPeriodIfNeeded(
+            periods = periods,
+            wallet = WalletEngine(clock),
+            balance = balance,
+        )
     }
 
     @After
@@ -90,6 +97,56 @@ class OpenPeriodIfNeededTest {
         assertEquals(PeriodStatus.PLANNING, period.status)
         assertEquals(balance.startingBalance + balance.periodIncome, period.available)
         assertNotEquals(0L, period.id)
+    }
+
+    /**
+     * ТЗ 2.5.5: ребёнок планирует доступную сумму, а это стартовый остаток
+     * вместе с доходом. Значит доход обязан лежать на балансе до планирования.
+     */
+    @Test
+    fun `доход_периода_начисляется_при_открытии`() = runTest {
+        val profile = newProfile()
+
+        val period = openPeriod(profile.id)
+
+        assertEquals(balance.startingBalance + balance.periodIncome, periods.balance(period))
+        assertEquals(1, incomeCount(period.id))
+    }
+
+    @Test
+    fun `доход_не_начисляется_дважды`() = runTest {
+        val profile = newProfile()
+
+        val period = openPeriod(profile.id)
+        openPeriod(profile.id)
+
+        assertEquals(1, incomeCount(period.id))
+        assertEquals(balance.startingBalance + balance.periodIncome, periods.balance(period))
+    }
+
+    /**
+     * Между открытием периода и записью начисления приложение может закрыться.
+     * Без восстановления период остался бы без дохода навсегда.
+     */
+    @Test
+    fun `потерянное_начисление_восстанавливается_при_следующем_входе`() = runTest {
+        val profile = newProfile()
+        val bare = periods.open(
+            GamePeriod(
+                id = 0L,
+                profileId = profile.id,
+                number = 1,
+                income = balance.periodIncome,
+                startBalance = balance.startingBalance,
+                status = PeriodStatus.PLANNING,
+            )
+        )
+        assertEquals(balance.startingBalance, periods.balance(bare))
+
+        openPeriod(profile.id)
+
+        assertEquals(1, incomeCount(bare.id))
+        assertEquals(balance.startingBalance + balance.periodIncome, periods.balance(bare))
     }
 
     @Test
@@ -142,7 +199,11 @@ class OpenPeriodIfNeededTest {
     fun `опоздавший_вызов_подхватывает_чужой_период`() = runTest {
         val profile = newProfile()
         val existing = openPeriod(profile.id)
-        val late = OpenPeriodIfNeeded(periods = BlindOnce(periods), balance = balance)
+        val late = OpenPeriodIfNeeded(
+            periods = BlindOnce(periods),
+            wallet = WalletEngine(clock),
+            balance = balance,
+        )
 
         val period = late(profile.id)
 
@@ -166,6 +227,9 @@ class OpenPeriodIfNeededTest {
         assertTrue("ожидали отказ, получили $error", error is IllegalStateException)
         assertTrue(error!!.message!!.contains(profile.id.value))
     }
+
+    private suspend fun incomeCount(periodId: Long): Int =
+        periods.transactions(periodId).count { it.type == TransactionType.INCOME_PERIOD }
 
     private suspend fun newProfile(childName: String = "Егор"): Profile = profiles.create(
         childName = childName,

@@ -1,43 +1,270 @@
 package ru.finnypet.app.ui.screens.main
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
-import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
+import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.PetImage
+import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StatBar
+import ru.finnypet.app.ui.theme.Dimens
 
 /**
- * Временный главный экран.
+ * Главный экран (ТЗ 2.5.3): питомец, баланс, накопления, цель и показатели
+ * состояния видны одновременно, без переходов.
  *
- * Показывает вёрстку на выдуманных числах. Настоящие данные — профиль,
- * баланс, накопления, цель, показатели питомца и активное задание
- * одновременно, как требует ТЗ 2.5.3, — появятся на шаге 7.
+ * Переходы в план, магазин, задания и раздел для взрослого появятся вместе с
+ * этими экранами: кнопка, ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
  */
 @Composable
-fun MainScreen() {
-    FinnyScaffold(title = stringResource(R.string.main_title)) {
-        MoneyCard(label = stringResource(R.string.main_balance), amount = Coins(80))
-        MoneyCard(label = stringResource(R.string.main_savings), amount = Coins(30))
+fun MainScreen(viewModel: MainViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    MainContent(state = state, onRetry = viewModel::retry)
+}
+
+/**
+ * Отрисовка отделена от ViewModel: так экран показывается в тесте с любым
+ * состоянием, не поднимая граф зависимостей.
+ */
+@Composable
+fun MainContent(state: MainState, onRetry: () -> Unit) {
+    when (state) {
+        MainState.Loading -> LoadingScreen()
+        MainState.Failed -> FailedScreen(onRetry = onRetry)
+        is MainState.Ready -> ReadyScreen(state = state)
+    }
+}
+
+/**
+ * Пустой экран без надписей: чтение профиля занимает миллисекунды, и текст
+ * «загружаем» успел бы только мигнуть. Фон держится, чтобы не мелькало белым.
+ */
+@Composable
+private fun LoadingScreen() {
+    FinnyScaffold(title = stringResource(R.string.main_title)) {}
+}
+
+@Composable
+private fun FailedScreen(onRetry: () -> Unit) {
+    FinnyScaffold(
+        title = stringResource(R.string.main_title),
+        bottomBar = {
+            ButtonColumn {
+                FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
+            }
+        },
+    ) {
+        Text(
+            text = stringResource(R.string.main_failed),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}
+
+@Composable
+private fun ReadyScreen(state: MainState.Ready) {
+    // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
+    // между ними меньше обычного.
+    FinnyScaffold(
+        // Заголовком стоит приветствие, а не название игры: ребёнок должен
+        // видеть, чей это профиль, а место на экране дорого — по ТЗ 2.5.3
+        // сюда обязаны поместиться шесть блоков сразу.
+        title = stringResource(R.string.main_hello, state.childName),
+        spacing = Dimens.SpaceMedium,
+    ) {
+        Text(
+            text = stringResource(
+                R.string.main_period,
+                state.periodNumber,
+                stringResource(state.periodStatus.label),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Pet(state = state)
+
+        MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
+        SavingsCard(savings = state.savings)
 
         Text(
-            text = stringResource(R.string.main_pet_state),
+            text = stringResource(R.string.main_pet_state, state.petName),
             style = MaterialTheme.typography.titleMedium,
         )
-        StatBar(label = stringResource(R.string.stat_mood), stat = Stat(80))
+        StatBar(label = stringResource(R.string.stat_mood), stat = state.stats.mood)
         StatBar(
             label = stringResource(R.string.stat_satiety),
-            stat = Stat(55),
+            stat = state.stats.satiety,
             color = MaterialTheme.colorScheme.secondary,
         )
         StatBar(
             label = stringResource(R.string.stat_care),
-            stat = Stat(30),
+            stat = state.stats.care,
             color = MaterialTheme.colorScheme.tertiary,
         )
     }
 }
+
+/**
+ * Питомец с именем и стадией.
+ *
+ * Стадия написана словом, а не только нарисована: по картинке отличить
+ * подростка от взрослого труднее, чем прочитать, и озвучке картинка недоступна
+ * вовсе (ТЗ 3.6). Заодно это выполняет ТЗ 2.5.10 — стадия видна ребёнку.
+ */
+@Composable
+private fun Pet(state: MainState.Ready) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        // Меньше, чем по умолчанию: питомец остаётся главным на экране, но
+        // не выталкивает показатели состояния за нижний край.
+        PetImage(appearance = state.appearance, stage = state.stage, size = 140.dp)
+        Text(
+            text = state.petName,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(state.stage.label),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Накопления и цель.
+ *
+ * Цели может не быть — ребёнок ещё не выбрал. Тогда сумма всё равно
+ * показывается: отложенные монеты не должны пропадать с экрана из-за того,
+ * что цель не назначена.
+ */
+@Composable
+private fun SavingsCard(savings: SavingsView) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(Dimens.Corner),
+            )
+            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {},
+        ) {
+            Text(
+                text = stringResource(R.string.main_savings),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            MoneyAmount(amount = savings.saved)
+        }
+
+        val title = savings.goalTitle
+        val price = savings.price
+        if (title == null || price == null) {
+            Text(
+                text = stringResource(R.string.main_goal_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Goal(savings = savings, title = title, price = price)
+        }
+    }
+}
+
+@Composable
+private fun Goal(
+    savings: SavingsView,
+    title: String,
+    price: Coins,
+) {
+    Text(text = title, style = MaterialTheme.typography.titleMedium)
+    ProgressLine(
+        fraction = savings.fraction,
+        // Полосу озвучка иначе пропустит: цифры внутри неё нет, а смысл есть.
+        contentDescription = stringResource(
+            R.string.main_goal_progress,
+            title,
+            savings.saved.amount,
+            price.amount,
+        ),
+    )
+    if (savings.isReached) {
+        Text(
+            text = stringResource(R.string.main_goal_reached),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    } else {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            modifier = Modifier.semantics(mergeDescendants = true) {},
+        ) {
+            Text(
+                text = stringResource(R.string.main_goal_left),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            MoneyAmount(
+                amount = savings.remaining,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+}
+
+/** Названия стадий и этапов живут рядом с экраном, который их показывает. */
+private val GrowthStage.label: Int
+    get() = when (this) {
+        GrowthStage.CUB -> R.string.stage_cub
+        GrowthStage.YOUNG -> R.string.stage_young
+        GrowthStage.GROWN -> R.string.stage_grown
+    }
+
+private val PeriodStatus.label: Int
+    get() = when (this) {
+        PeriodStatus.PLANNING -> R.string.main_period_planning
+        PeriodStatus.RUNNING -> R.string.main_period_running
+        // На главный экран закрытый период не попадает — текущим считается
+        // незакрытый. Подпись нужна, чтобы разбор был полным и честным.
+        PeriodStatus.CLOSED -> R.string.main_period_closed
+    }

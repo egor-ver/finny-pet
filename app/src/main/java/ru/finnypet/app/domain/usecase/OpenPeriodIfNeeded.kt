@@ -1,18 +1,21 @@
 package ru.finnypet.app.domain.usecase
 
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.PeriodRepository
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Отдаёт период, в котором сейчас идёт игра, открывая самый первый, если игра
- * только началась.
+ * Отдаёт период, в котором сейчас идёт игра: открывает самый первый, если игра
+ * только началась, и следит, чтобы доход периода был начислен.
  *
- * Баланс считается от периода: стартовые деньги и доход лежат в нём, а не в
- * отдельной колонке. Поэтому без периода главному экрану нечего показать,
+ * Баланс считается от периода: стартовые деньги лежат в нём, а доход приходит
+ * отдельной операцией. Поэтому без периода главному экрану нечего показать,
  * а сразу после создания питомца периодов ещё нет — PeriodEngine.openNext()
  * умеет открывать только следующий, ему нужен предыдущий.
  *
@@ -20,12 +23,17 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class OpenPeriodIfNeeded(
     private val periods: PeriodRepository,
+    private val wallet: WalletEngine,
     private val balance: GameBalance,
 ) {
 
     suspend operator fun invoke(profileId: ProfileId): GamePeriod {
-        periods.current(profileId)?.let { return it }
+        val period = periods.current(profileId) ?: openFirst(profileId)
+        creditIncome(period)
+        return period
+    }
 
+    private suspend fun openFirst(profileId: ProfileId): GamePeriod {
         // Закрытие периода обязано открывать следующий тем же действием: иначе
         // остаток неистраченных монет не переносится и просто пропадает.
         // Молчаливый первый период вместо потерянного скрыл бы эту ошибку.
@@ -45,6 +53,28 @@ class OpenPeriodIfNeeded(
             // не повод падать: нужный период к этому моменту уже есть.
             periods.current(profileId) ?: throw error
         }
+    }
+
+    /**
+     * ТЗ 2.5.5 требует, чтобы ребёнок распределял доступную сумму — а это
+     * стартовый остаток вместе с доходом периода. Значит доход должен лежать
+     * на балансе до планирования, а не появляться потом.
+     *
+     * Проверка «не начислен ли уже» нужна не для красоты: между открытием
+     * периода и записью операции приложение может закрыться, и тогда период
+     * остался бы без дохода навсегда. Здесь это чинится при следующем входе.
+     */
+    private suspend fun creditIncome(period: GamePeriod) {
+        if (period.income == Coins.ZERO) return
+        if (periods.transactions(period.id).any { it.type == TransactionType.INCOME_PERIOD }) return
+
+        val credited = wallet.credit(
+            type = TransactionType.INCOME_PERIOD,
+            amount = period.income,
+            currentBalance = periods.balance(period),
+            periodId = period.id,
+        )
+        periods.addTransaction(credited.value.transaction)
     }
 
     private fun firstPeriod(profileId: ProfileId) = GamePeriod(

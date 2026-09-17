@@ -1,5 +1,6 @@
 package ru.finnypet.app.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -26,6 +27,7 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.StatBar
 import ru.finnypet.app.ui.theme.FinnypetTheme
@@ -107,6 +109,30 @@ class DesignSystemTest {
         compose.onNodeWithText("Последний элемент")
             .performScrollTo()
             .assertIsDisplayed()
+    }
+
+    /**
+     * Форма слова проверяется точным совпадением, а не вхождением: «80 монеты»
+     * содержит в себе «80 монет», и проверка вхождением пропустила бы ошибку.
+     * Она и пропускала, пока склонение выбирала локаль устройства.
+     */
+    @Test
+    fun сумма_склоняется_по_русски() {
+        compose.setContent {
+            FinnypetTheme {
+                Column {
+                    MoneyAmount(amount = Coins(1))
+                    MoneyAmount(amount = Coins(2))
+                    MoneyAmount(amount = Coins(11))
+                    MoneyAmount(amount = Coins(80))
+                }
+            }
+        }
+
+        compose.onNodeWithContentDescription("1 монета").assertIsDisplayed()
+        compose.onNodeWithContentDescription("2 монеты").assertIsDisplayed()
+        compose.onNodeWithContentDescription("11 монет").assertIsDisplayed()
+        compose.onNodeWithContentDescription("80 монет").assertIsDisplayed()
     }
 
     @Test

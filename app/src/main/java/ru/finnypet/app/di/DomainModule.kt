@@ -58,8 +58,13 @@ object DomainModule {
     @Provides
     fun openPeriodIfNeeded(
         periods: PeriodRepository,
+        wallet: WalletEngine,
         balance: GameBalance,
-    ): OpenPeriodIfNeeded = OpenPeriodIfNeeded(periods = periods, balance = balance)
+    ): OpenPeriodIfNeeded = OpenPeriodIfNeeded(
+        periods = periods,
+        wallet = wallet,
+        balance = balance,
+    )
 
     @Provides
     fun periodEngine(

@@ -12,13 +12,15 @@
     <string name="action_start">Начать</string>
     <string name="action_done">Готово</string>
 
-    <!-- Деньги -->
-    <plurals name="coins">
-        <item quantity="one">%d монета</item>
-        <item quantity="few">%d монеты</item>
-        <item quantity="many">%d монет</item>
-        <item quantity="other">%d монеты</item>
-    </plurals>
+    <!--
+        Деньги. Формы разнесены по строкам, а не собраны в plurals: форму
+        Android выбирает по локали устройства, и на телефоне с английским
+        языком «80 монет» превратилось бы в «80 монеты». Выбор делает код,
+        см. ui/text/Plural.kt.
+    -->
+    <string name="coins_one">%1$d монета</string>
+    <string name="coins_few">%1$d монеты</string>
+    <string name="coins_many">%1$d монет</string>
 
     <!-- Показатели питомца: подпись для чтения вслух -->
     <string name="stat_description">%1$s: %2$d из %3$d</string>
@@ -28,9 +30,25 @@
 
     <!-- Главный экран -->
     <string name="main_title">Финни</string>
+    <string name="main_hello">Привет, %1$s!</string>
+    <string name="main_period">День %1$d · %2$s</string>
+    <string name="main_period_planning">планируем</string>
+    <string name="main_period_running">идёт</string>
+    <string name="main_period_closed">завершён</string>
     <string name="main_balance">Баланс</string>
     <string name="main_savings">Накоплено</string>
-    <string name="main_pet_state">Как себя чувствует Финни</string>
+    <string name="main_goal_none">Цель пока не выбрана</string>
+    <string name="main_goal_left">Осталось</string>
+    <string name="main_goal_reached">Цель собрана!</string>
+    <string name="main_goal_progress">Цель «%1$s»: накоплено %2$d из %3$d</string>
+    <string name="main_pet_state">Как себя чувствует %1$s</string>
+    <string name="main_failed">Не получилось начать игровой день. Попробуй ещё раз.</string>
+    <string name="action_retry">Попробовать снова</string>
+
+    <!-- Стадии развития питомца (ТЗ 2.5.10) -->
+    <string name="stage_cub">детёныш</string>
+    <string name="stage_young">подросток</string>
+    <string name="stage_grown">взрослый</string>
 
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>
