@@ -24,8 +24,13 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.ui.screens.budget.BudgetContent
+import ru.finnypet.app.ui.screens.budget.BudgetLine
+import ru.finnypet.app.ui.screens.budget.BudgetState
 import ru.finnypet.app.ui.screens.createpet.AppearanceOption
 import ru.finnypet.app.ui.screens.createpet.CreatePetContent
 import ru.finnypet.app.ui.screens.createpet.CreatePetState
@@ -197,10 +202,124 @@ class ScreensTest {
         assertTrue(retried)
     }
 
-    private fun showMain(state: MainState, onRetry: () -> Unit = {}) {
+    @Test
+    fun `с_главного_экрана_можно_перейти_к_плану`() {
+        var opened = false
+        showMain(readyState(), onPlan = { opened = true })
+
+        compose.onNodeWithText(text(R.string.budget_action_plan)).performClick()
+
+        assertTrue(opened)
+    }
+
+    // --- План бюджета (ТЗ 2.5.5) ---
+
+    @Test
+    fun `пустой_план_подтвердить_нельзя`() {
+        showBudget(planning())
+
+        compose.onNodeWithText(text(R.string.budget_confirm)).assertIsNotEnabled()
+    }
+
+    /** ТЗ 2.5.5: приложение не даёт распределить больше доступного. */
+    @Test
+    fun `когда_всё_распределено_плюс_недоступен`() {
+        showBudget(planning(plan = BudgetPlan(Coins(40), Coins(20), Coins(20))))
+
+        scrollToText(text(R.string.budget_distributed))
+        compose.onNodeWithContentDescription(
+            text(R.string.budget_add, text(R.string.category_mandatory)),
+        ).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.budget_confirm)).assertIsEnabled()
+    }
+
+    @Test
+    fun `перебор_виден_и_блокирует_подтверждение`() {
+        showBudget(
+            BudgetState.Planning(
+                available = Coins(80),
+                plan = BudgetPlan(Coins(60), Coins(30), Coins(0)),
+                remainder = Coins.ZERO,
+                overBy = Coins(10),
+                step = 5,
+            )
+        )
+
+        scrollToText(text(R.string.budget_over))
+        compose.onNodeWithText(text(R.string.budget_confirm)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `монеты_можно_добавить_и_убрать`() {
+        var added: SpendCategory? = null
+        var removed: SpendCategory? = null
+        showBudget(
+            state = planning(plan = BudgetPlan(Coins(10), Coins.ZERO, Coins.ZERO)),
+            onAdd = { added = it },
+            onRemove = { removed = it },
+        )
+
+        compose.onNodeWithContentDescription(
+            text(R.string.budget_add, text(R.string.category_optional)),
+        ).performClick()
+        compose.onNodeWithContentDescription(
+            text(R.string.budget_remove, text(R.string.category_mandatory)),
+        ).performClick()
+
+        assertEquals(SpendCategory.OPTIONAL, added)
+        assertEquals(SpendCategory.MANDATORY, removed)
+    }
+
+    /** Последний абзац ТЗ 2.5.5: после подтверждения видно план рядом с фактом. */
+    @Test
+    fun `подтверждённый_план_показывает_план_и_факт`() {
+        showBudget(
+            BudgetState.Started(
+                lines = listOf(
+                    BudgetLine(SpendCategory.MANDATORY, Coins(40), Coins(35), followed = false),
+                    BudgetLine(SpendCategory.OPTIONAL, Coins(20), Coins(20), followed = true),
+                    BudgetLine(SpendCategory.SAVINGS, Coins(20), Coins(20), followed = true),
+                ),
+                planTotal = Coins(80),
+                factTotal = Coins(75),
+            )
+        )
+
+        scrollToText(text(R.string.budget_started))
+        scrollToDescription(
+            text(R.string.category_mandatory) + ": по плану 40, потрачено 35",
+        )
+        scrollToDescription("75 монет")
+    }
+
+    private fun showBudget(
+        state: BudgetState,
+        onAdd: (SpendCategory) -> Unit = {},
+        onRemove: (SpendCategory) -> Unit = {},
+    ) {
         compose.setContent {
             FinnypetTheme {
-                MainContent(state = state, onRetry = onRetry)
+                BudgetContent(state = state, onBack = {}, onAdd = onAdd, onRemove = onRemove)
+            }
+        }
+    }
+
+    private fun planning(plan: BudgetPlan = BudgetPlan.EMPTY) = BudgetState.Planning(
+        available = Coins(80),
+        plan = plan,
+        remainder = Coins(80) - plan.total,
+        overBy = Coins.ZERO,
+        step = 5,
+    )
+
+    private fun showMain(
+        state: MainState,
+        onRetry: () -> Unit = {},
+        onPlan: () -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                MainContent(state = state, onRetry = onRetry, onPlan = onPlan)
             }
         }
     }

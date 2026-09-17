@@ -29,3 +29,7 @@ data object CreatePet : Route
 /** Главный экран (ТЗ 2.5.3). */
 @Serializable
 data object Main : Route
+
+/** План личного бюджета на игровой день (ТЗ 2.5.5). */
+@Serializable
+data object Budget : Route

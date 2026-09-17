@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import ru.finnypet.app.ui.screens.budget.BudgetScreen
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
@@ -48,7 +49,11 @@ fun FinnyNavHost(
         }
 
         composable<Main> {
-            MainScreen()
+            MainScreen(onPlan = { navController.navigate(Budget) })
+        }
+
+        composable<Budget> {
+            BudgetScreen(onBack = { navController.popBackStack() })
         }
     }
 }

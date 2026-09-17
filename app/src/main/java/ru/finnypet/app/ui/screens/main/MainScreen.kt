@@ -41,10 +41,13 @@ import ru.finnypet.app.ui.theme.Dimens
  * этими экранами: кнопка, ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
  */
 @Composable
-fun MainScreen(viewModel: MainViewModel = hiltViewModel()) {
+fun MainScreen(
+    onPlan: () -> Unit,
+    viewModel: MainViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    MainContent(state = state, onRetry = viewModel::retry)
+    MainContent(state = state, onRetry = viewModel::retry, onPlan = onPlan)
 }
 
 /**
@@ -52,11 +55,15 @@ fun MainScreen(viewModel: MainViewModel = hiltViewModel()) {
  * состоянием, не поднимая граф зависимостей.
  */
 @Composable
-fun MainContent(state: MainState, onRetry: () -> Unit) {
+fun MainContent(
+    state: MainState,
+    onRetry: () -> Unit = {},
+    onPlan: () -> Unit = {},
+) {
     when (state) {
         MainState.Loading -> LoadingScreen()
         MainState.Failed -> FailedScreen(onRetry = onRetry)
-        is MainState.Ready -> ReadyScreen(state = state)
+        is MainState.Ready -> ReadyScreen(state = state, onPlan = onPlan)
     }
 }
 
@@ -88,7 +95,7 @@ private fun FailedScreen(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ReadyScreen(state: MainState.Ready) {
+private fun ReadyScreen(state: MainState.Ready, onPlan: () -> Unit) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
     FinnyScaffold(
@@ -97,6 +104,22 @@ private fun ReadyScreen(state: MainState.Ready) {
         // сюда обязаны поместиться шесть блоков сразу.
         title = stringResource(R.string.main_hello, state.childName),
         spacing = Dimens.SpaceMedium,
+        bottomBar = {
+            ButtonColumn {
+                // Пока день планируется, кнопка зовёт распределить монеты;
+                // когда день идёт, она показывает, как план сходится.
+                FinnyButton(
+                    text = stringResource(
+                        if (state.periodStatus == PeriodStatus.PLANNING) {
+                            R.string.budget_action_plan
+                        } else {
+                            R.string.budget_action_show
+                        }
+                    ),
+                    onClick = onPlan,
+                )
+            }
+        },
     ) {
         Text(
             text = stringResource(
