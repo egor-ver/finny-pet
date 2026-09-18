@@ -22,6 +22,10 @@ import org.junit.runner.RunWith
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.SpendCategory
@@ -38,6 +42,11 @@ import ru.finnypet.app.ui.screens.main.MainContent
 import ru.finnypet.app.ui.screens.main.MainState
 import ru.finnypet.app.ui.screens.main.SavingsView
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
+import ru.finnypet.app.ui.screens.shop.PurchaseOutcome
+import ru.finnypet.app.ui.screens.shop.RecoveryChoice
+import ru.finnypet.app.ui.screens.shop.ShopContent
+import ru.finnypet.app.ui.screens.shop.ShopItemView
+import ru.finnypet.app.ui.screens.shop.ShopState
 import ru.finnypet.app.ui.theme.FinnypetTheme
 
 /**
@@ -212,6 +221,175 @@ class ScreensTest {
         assertTrue(opened)
     }
 
+    @Test
+    fun `с_главного_экрана_можно_перейти_в_магазин`() {
+        var opened = false
+        showMain(readyState(), onShop = { opened = true })
+
+        compose.onNodeWithText(text(R.string.shop_action)).performClick()
+
+        assertTrue(opened)
+    }
+
+    // --- Магазин (ТЗ 2.5.6) ---
+
+    @Test
+    fun `магазин_показывает_товары_с_ценой_направлением_и_влиянием`() {
+        showShop(ready())
+
+        scrollToDescription("80 монет")
+        scrollToText("Вкусная каша")
+        scrollToText(text(R.string.category_mandatory))
+        scrollToText(text(R.string.shop_effect, text(R.string.stat_satiety), "+20"))
+        scrollToDescription("12 монет")
+        scrollToText("Яркий мячик")
+        scrollToText(text(R.string.category_optional))
+    }
+
+    /** Покупка — решение, и до списания ребёнок видит цену и что изменится. */
+    @Test
+    fun `покупка_подтверждается_перед_списанием`() {
+        var bought: ItemId? = null
+        showShop(ready(), onBuy = { bought = it })
+
+        compose.onNodeWithText("Вкусная каша").performClick()
+
+        compose.onNodeWithText(text(R.string.shop_pet_change)).assertIsDisplayed()
+        assertEquals(null, bought)
+
+        compose.onNodeWithText(text(R.string.shop_buy)).performClick()
+
+        assertEquals(ItemId("food"), bought)
+    }
+
+    @Test
+    fun `от_покупки_можно_отказаться`() {
+        var bought: ItemId? = null
+        showShop(ready(), onBuy = { bought = it })
+        compose.onNodeWithText("Вкусная каша").performClick()
+
+        compose.onNodeWithText(text(R.string.shop_not_now)).performClick()
+
+        compose.onNodeWithText(text(R.string.shop_buy)).assertDoesNotExist()
+        assertEquals(null, bought)
+    }
+
+    /** ТЗ 2.5.5 и 3.4: пока день планируется, покупать нельзя, но дорога в план есть. */
+    @Test
+    fun `пока_день_планируется_товары_недоступны_и_есть_дорога_в_план`() {
+        var planned = false
+        showShop(ready(canBuy = false), onPlan = { planned = true })
+
+        compose.onNodeWithText(text(R.string.shop_planning_hint)).assertIsDisplayed()
+        compose.onNodeWithText("Вкусная каша").assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.budget_action_plan)).performClick()
+
+        assertTrue(planned)
+    }
+
+    @Test
+    fun `покупка_объясняется_словами_из_контента`() {
+        var dismissed = false
+        val done = PurchaseOutcome.Done(
+            title = "Вкусная каша",
+            text = "Осталось 68 монет.",
+            effects = food.effects,
+        )
+        showShop(ready(outcome = done), onDismiss = { dismissed = true })
+
+        compose.onNodeWithText("Осталось 68 монет.").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_ok)).performClick()
+
+        assertTrue(dismissed)
+    }
+
+    /**
+     * ТЗ 2.5.6: отказ объясняет нехватку и предлагает выход. Кнопками
+     * становятся только варианты, у которых есть куда вести; остальные —
+     * подсказкой, чтобы не было кнопки в пустоту (ТЗ 3.4).
+     */
+    @Test
+    fun `отказ_объясняет_и_предлагает_выход`() {
+        var dismissed = false
+        val rejected = PurchaseOutcome.Rejected(
+            title = "Замок",
+            shortfall = Coins(20),
+            text = "Не хватает 20 монет.",
+            options = listOf(
+                RecoveryChoice(RecoveryOption.DO_TASK, "Выполнить задание"),
+                RecoveryChoice(RecoveryOption.POSTPONE_PURCHASE, "Купить попозже"),
+                RecoveryChoice(RecoveryOption.CHOOSE_CHEAPER, "Выбрать подешевле"),
+            ),
+        )
+        showShop(ready(outcome = rejected), onDismiss = { dismissed = true })
+
+        compose.onNodeWithText("Не хватает 20 монет.").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.shop_option_hint, "Выполнить задание")).assertIsDisplayed()
+        compose.onNodeWithText("Выбрать подешевле").assertIsDisplayed()
+        compose.onNodeWithText("Купить попозже").performClick()
+
+        assertTrue(dismissed)
+    }
+
+    /** ТЗ 3.4: сбой не оставляет экран без выхода. */
+    @Test
+    fun `сбой_магазина_предлагает_повтор`() {
+        var retried = false
+        showShop(ShopState.Failed, onRetry = { retried = true })
+
+        compose.onNodeWithText(text(R.string.shop_failed)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_retry)).performClick()
+
+        assertTrue(retried)
+    }
+
+    private val food = ShopItemView(
+        id = ItemId("food"),
+        title = "Вкусная каша",
+        price = Coins(12),
+        category = SpendCategory.MANDATORY,
+        effects = listOf(PetEffect(PetStatKind.SATIETY, 20)),
+    )
+
+    private val toy = ShopItemView(
+        id = ItemId("toy"),
+        title = "Яркий мячик",
+        price = Coins(18),
+        category = SpendCategory.OPTIONAL,
+        effects = listOf(PetEffect(PetStatKind.MOOD, 15)),
+    )
+
+    private fun ready(
+        canBuy: Boolean = true,
+        outcome: PurchaseOutcome? = null,
+    ) = ShopState.Ready(
+        items = listOf(food, toy),
+        balance = Coins(80),
+        canBuy = canBuy,
+        outcome = outcome,
+    )
+
+    private fun showShop(
+        state: ShopState,
+        onPlan: () -> Unit = {},
+        onBuy: (ItemId) -> Unit = {},
+        onDismiss: () -> Unit = {},
+        onRetry: () -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                ShopContent(
+                    state = state,
+                    onBack = {},
+                    onPlan = onPlan,
+                    onBuy = onBuy,
+                    onDismiss = onDismiss,
+                    onRetry = onRetry,
+                )
+            }
+        }
+    }
+
     // --- План бюджета (ТЗ 2.5.5) ---
 
     @Test
@@ -316,10 +494,11 @@ class ScreensTest {
         state: MainState,
         onRetry: () -> Unit = {},
         onPlan: () -> Unit = {},
+        onShop: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
-                MainContent(state = state, onRetry = onRetry, onPlan = onPlan)
+                MainContent(state = state, onRetry = onRetry, onPlan = onPlan, onShop = onShop)
             }
         }
     }

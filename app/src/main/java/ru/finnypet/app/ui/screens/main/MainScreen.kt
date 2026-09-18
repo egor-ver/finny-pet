@@ -26,6 +26,7 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
+import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PetImage
@@ -37,17 +38,18 @@ import ru.finnypet.app.ui.theme.Dimens
  * Главный экран (ТЗ 2.5.3): питомец, баланс, накопления, цель и показатели
  * состояния видны одновременно, без переходов.
  *
- * Переходы в план, магазин, задания и раздел для взрослого появятся вместе с
- * этими экранами: кнопка, ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
+ * Переходы в задания и раздел для взрослого появятся вместе с этими
+ * экранами: кнопка, ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
  */
 @Composable
 fun MainScreen(
     onPlan: () -> Unit,
+    onShop: () -> Unit,
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    MainContent(state = state, onRetry = viewModel::retry, onPlan = onPlan)
+    MainContent(state = state, onRetry = viewModel::retry, onPlan = onPlan, onShop = onShop)
 }
 
 /**
@@ -59,11 +61,12 @@ fun MainContent(
     state: MainState,
     onRetry: () -> Unit = {},
     onPlan: () -> Unit = {},
+    onShop: () -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
         MainState.Failed -> FailedScreen(onRetry = onRetry)
-        is MainState.Ready -> ReadyScreen(state = state, onPlan = onPlan)
+        is MainState.Ready -> ReadyScreen(state = state, onPlan = onPlan, onShop = onShop)
     }
 }
 
@@ -95,7 +98,11 @@ private fun FailedScreen(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ReadyScreen(state: MainState.Ready, onPlan: () -> Unit) {
+private fun ReadyScreen(
+    state: MainState.Ready,
+    onPlan: () -> Unit,
+    onShop: () -> Unit,
+) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
     FinnyScaffold(
@@ -106,18 +113,16 @@ private fun ReadyScreen(state: MainState.Ready, onPlan: () -> Unit) {
         spacing = Dimens.SpaceMedium,
         bottomBar = {
             ButtonColumn {
-                // Пока день планируется, кнопка зовёт распределить монеты;
-                // когда день идёт, она показывает, как план сходится.
-                FinnyButton(
-                    text = stringResource(
-                        if (state.periodStatus == PeriodStatus.PLANNING) {
-                            R.string.budget_action_plan
-                        } else {
-                            R.string.budget_action_show
-                        }
-                    ),
-                    onClick = onPlan,
-                )
+                // Главное действие сверху, и оно меняется с днём: пока день
+                // планируется — распределить монеты, когда идёт — покупать.
+                // Второе всегда под ним, чтобы дорога была одна и та же.
+                if (state.periodStatus == PeriodStatus.PLANNING) {
+                    FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
+                    FinnySecondaryButton(text = stringResource(R.string.shop_action), onClick = onShop)
+                } else {
+                    FinnyButton(text = stringResource(R.string.shop_action), onClick = onShop)
+                    FinnySecondaryButton(text = stringResource(R.string.budget_action_show), onClick = onPlan)
+                }
             }
         },
     ) {

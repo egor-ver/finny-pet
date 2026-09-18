@@ -22,6 +22,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyListScaffold
@@ -30,6 +32,9 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.StatBar
+import ru.finnypet.app.ui.screens.shop.ShopContent
+import ru.finnypet.app.ui.screens.shop.ShopItemView
+import ru.finnypet.app.ui.screens.shop.ShopState
 import ru.finnypet.app.ui.theme.FinnypetTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 
@@ -83,6 +88,35 @@ class DesignSystemTest {
         }
 
         compose.onNodeWithContentDescription("Назад")
+            .assertHeightIsAtLeast(48.dp)
+            .assertWidthIsAtLeast(48.dp)
+    }
+
+    /** Строка товара в магазине — вся целиком кнопка, и как кнопка не меньше 48 dp. */
+    @Test
+    fun строка_товара_не_меньше_48_dp() {
+        compose.setContent {
+            FinnypetTheme {
+                ShopContent(
+                    state = ShopState.Ready(
+                        items = listOf(
+                            ShopItemView(
+                                id = ItemId("food"),
+                                title = "Каша",
+                                price = Coins(12),
+                                category = SpendCategory.MANDATORY,
+                                effects = emptyList(),
+                            )
+                        ),
+                        balance = Coins(80),
+                        canBuy = true,
+                    ),
+                    onBack = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("Каша")
             .assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
     }

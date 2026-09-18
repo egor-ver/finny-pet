@@ -74,6 +74,23 @@
     <string name="budget_line">%1$s: по плану %2$d, потрачено %3$d</string>
     <string name="budget_failed">Не получилось сохранить план. Попробуй ещё раз.</string>
 
+    <!-- Магазин (ТЗ 2.5.6) -->
+    <string name="shop_title">Магазин</string>
+    <string name="shop_action">В магазин</string>
+    <string name="shop_planning_hint">Сначала спланируй день — потом можно покупать.</string>
+    <string name="shop_empty">В магазине пока пусто.</string>
+    <string name="shop_price">Цена</string>
+    <string name="shop_effect">%1$s %2$s</string>
+    <string name="shop_pet_change">Что изменится у питомца</string>
+    <string name="shop_buy">Купить</string>
+    <string name="shop_not_now">Не сейчас</string>
+    <string name="shop_done_title">Готово!</string>
+    <string name="shop_rejected_title">Монет не хватает</string>
+    <string name="shop_options">Что можно сделать</string>
+    <string name="shop_option_hint">• %1$s</string>
+    <string name="shop_failed">Не получилось открыть магазин. Попробуй ещё раз.</string>
+    <string name="action_ok">Понятно</string>
+
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>
     <string name="create_pet_appearance">Каким он будет?</string>
