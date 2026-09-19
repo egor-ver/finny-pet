@@ -33,6 +33,7 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StepButton
 import ru.finnypet.app.ui.text.WordForm
@@ -167,7 +168,7 @@ private fun Ready(
         MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
 
         if (!state.canOperate) {
-            PlanningHint(onPlan = onPlan)
+            PlanningHint(text = stringResource(R.string.savings_planning_hint), onPlan = onPlan)
         }
 
         val active = state.active
@@ -218,26 +219,6 @@ private fun Ready(
 }
 
 /** Пока день планируется, копилка закрыта — и дорога в план тут же (ТЗ 3.4). */
-@Composable
-private fun PlanningHint(onPlan: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(Dimens.Space),
-    ) {
-        Text(
-            text = stringResource(R.string.savings_planning_hint),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
-    }
-}
 
 /**
  * Выбранная цель: стоимость, накоплено, остаток и срок — всё, что требует

@@ -1,7 +1,6 @@
 package ru.finnypet.app.ui.screens.tasks
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,15 +10,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import ru.finnypet.app.domain.economy.BudgetEngine
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.model.BudgetPlan
@@ -46,12 +44,12 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.navigation.Task
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class OptionView(
     val id: String,
@@ -196,21 +194,21 @@ private sealed interface Draft {
 @HiltViewModel
 class TaskViewModel @Inject constructor(
     savedState: SavedStateHandle,
-    private val profiles: ProfileRepository,
+    profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val engine: TaskEngine,
+    private val budget: BudgetEngine,
     private val recorder: OutcomeRecorder,
     private val balance: GameBalance,
     content: ContentRepository,
-) : ViewModel() {
+) : ProfileViewModel(profiles) {
 
     private val taskId = TaskId(savedState.toRoute<Task>().taskId)
     private val task: LearningTask? = content.pack().tasks.firstOrNull { it.id == taskId }
     private val items: Map<ItemId, ShopItem> = content.pack().shop.associateBy { it.id }
     private val texts: Map<String, String> = content.pack().texts
 
-    private val failed = MutableStateFlow(false)
     private val progress = MutableStateFlow(Progress())
 
     /** Ответ уходит один раз: два быстрых «Ответить» иначе записали бы две награды. */
@@ -237,10 +235,7 @@ class TaskViewModel @Inject constructor(
         act { openPeriod(it) }
     }
 
-    fun retry() {
-        failed.value = false
-        act { openPeriod(it) }
-    }
+    fun retry() = retryWith { openPeriod(it) }
 
     fun start() {
         val task = task ?: return
@@ -259,14 +254,15 @@ class TaskViewModel @Inject constructor(
 
     fun remove(category: SpendCategory) = move(category, -STEP)
 
+    /** Можно ли взять — решает та же [StepView.Pick], что показана на экране: правило одно. */
     fun toggle(itemId: ItemId) {
         val task = task ?: return
         progress.update { current ->
             val draft = current.draft as? Draft.Picked ?: return@update current
             val step = task.steps[current.answers.size] as? TaskStep.PickItems ?: return@update current
+            val view = stepView(step, draft) as StepView.Pick
+            if (!view.canToggle(itemId)) return@update current
             val ids = if (itemId in draft.ids) draft.ids - itemId else draft.ids + itemId
-            val spent = ids.sumOf { items[it]?.price?.amount ?: 0 }
-            if (!step.budget.covers(Coins(spent))) return@update current
             current.copy(draft = Draft.Picked(ids))
         }
     }
@@ -300,32 +296,26 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    /** Тот же шаг, что в плане дня: правило одно, живёт в [BudgetEngine]. */
     private fun move(category: SpendCategory, delta: Int) {
         val task = task ?: return
         progress.update { current ->
             val draft = current.draft as? Draft.Allocated ?: return@update current
             val step = task.steps[current.answers.size] as? TaskStep.Distribute ?: return@update current
-            val amount = moved(draft.plan, category, delta, step.budget) ?: return@update current
-            current.copy(draft = Draft.Allocated(draft.plan.with(category, Coins(amount))))
-        }
-    }
-
-    /**
-     * Шаг урезается по месту, как в плане дня: добавить не больше, чем
-     * осталось, убрать не больше, чем лежит.
-     */
-    private fun moved(plan: BudgetPlan, category: SpendCategory, delta: Int, budget: Coins): Int? {
-        val current = plan.amountFor(category).amount
-        return if (delta > 0) {
-            val free = budget.amount - plan.total.amount
-            if (free <= 0) null else current + minOf(delta, free)
-        } else {
-            if (current == 0) null else current - minOf(-delta, current)
+            val amount = budget.stepped(draft.plan, category, delta, step.budget) ?: return@update current
+            current.copy(draft = Draft.Allocated(draft.plan.with(category, amount)))
         }
     }
 
     private suspend fun answer(profileId: ProfileId, task: LearningTask, attempt: TaskAttempt) {
-        val period = periods.current(profileId)?.takeIf { it.status == PeriodStatus.RUNNING } ?: return
+        // День перестал идти, пока задание было открыто: молча вернуть на шаг
+        // нельзя, ребёнок не поймёт. Возвращаемся ко вступлению — там видна
+        // подсказка про план и дорога к нему.
+        val period = periods.current(profileId)?.takeIf { it.status == PeriodStatus.RUNNING }
+        if (period == null) {
+            progress.update { Progress() }
+            return
+        }
         val rewardable = TaskSchedule.rewardAvailable(periods.transactions(period.id), balance)
         val result = engine.evaluate(task, attempt, periods.balance(period), period.id, rewardable)
         val paid = result.value.transaction?.amount ?: Coins.ZERO
@@ -369,19 +359,6 @@ class TaskViewModel @Inject constructor(
         is TaskStep.PickItems -> (draft as? Draft.Picked)?.let { picked ->
             val ids = step.itemIds.filter { it in picked.ids }
             StepAnswer.Picked(ids, Coins(ids.sumOf { items.getValue(it).price.amount }))
-        }
-    }
-
-    private fun act(block: suspend (ProfileId) -> Unit) {
-        viewModelScope.launch {
-            val profile = profiles.observeActive().filterNotNull().first()
-            try {
-                block(profile.id)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                failed.value = true
-            }
         }
     }
 

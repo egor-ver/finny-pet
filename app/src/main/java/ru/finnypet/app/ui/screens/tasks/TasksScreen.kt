@@ -31,7 +31,10 @@ import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.text.WordForm
+import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -99,9 +102,9 @@ private fun Ready(
     var askingPlan by rememberSaveable { mutableStateOf(false) }
 
     FinnyListScaffold(title = stringResource(R.string.tasks_title), onBack = onBack) {
-        item(key = "header:reward") { RewardNote(available = state.rewardAvailable) }
+        item(key = "header:reward") { RewardNote(available = state.rewardAvailable, limit = state.rewardLimit) }
         if (!state.canStart) {
-            item(key = "header:planning") { PlanningHint(onPlan = onPlan) }
+            item(key = "header:planning") { PlanningHint(text = stringResource(R.string.tasks_planning_hint), onPlan = onPlan) }
         }
         if (state.groups.isEmpty()) {
             item(key = "header:empty") {
@@ -151,9 +154,13 @@ private fun Ready(
 
 /** Правило дня — до выбора задания, чтобы ребёнок знал, за что монеты, а за что нет. */
 @Composable
-private fun RewardNote(available: Boolean) {
+private fun RewardNote(available: Boolean, limit: Int) {
     Text(
-        text = stringResource(if (available) R.string.tasks_reward_available else R.string.tasks_reward_taken),
+        text = if (available) {
+            stringResource(R.string.tasks_reward_available, tasksText(limit))
+        } else {
+            stringResource(R.string.tasks_reward_taken)
+        },
         style = MaterialTheme.typography.bodyLarge,
         modifier = Modifier
             .fillMaxWidth()
@@ -165,26 +172,17 @@ private fun RewardNote(available: Boolean) {
     )
 }
 
+
+/** «1 задание», «2 задания», «5 заданий» — число из `balance.json`, склонение по-русски. */
 @Composable
-private fun PlanningHint(onPlan: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(Dimens.Space),
-    ) {
-        Text(
-            text = stringResource(R.string.tasks_planning_hint),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
-    }
-}
+private fun tasksText(count: Int): String = stringResource(
+    when (wordFormOf(count)) {
+        WordForm.ONE -> R.string.tasks_one
+        WordForm.FEW -> R.string.tasks_few
+        WordForm.MANY -> R.string.tasks_many
+    },
+    count,
+)
 
 /**
  * Задание в списке — вся строка кнопка. У задания нет заголовка (в контенте

@@ -22,9 +22,9 @@ class TaskScheduleTest {
 
     private val balance = GameBalance.PLACEHOLDER.copy(rewardedTasksPerPeriod = 1)
 
-    private fun task(id: String) = LearningTask(
+    private fun task(id: String, topic: TaskTopic = TaskTopic.PLANNING) = LearningTask(
         id = TaskId(id),
-        topic = TaskTopic.PLANNING,
+        topic = topic,
         introKey = "task.$id.intro",
         steps = listOf(TaskStep.Distribute(promptKey = "task.$id.step", budget = Coins(40))),
         outcomes = listOf(
@@ -85,6 +85,15 @@ class TaskScheduleTest {
         val completed = listOf(passed("a", 10), passed("b", 20), passed("a", 30))
 
         assertEquals(TaskId("b"), TaskSchedule.taskOfTheDay(tasks, completed)?.id)
+    }
+
+    /** Тот же порядок, что в списке: сначала планирование, потом накопления, потом покупки. */
+    @Test
+    fun `задание дня идёт по темам а не по порядку файла`() {
+        val tasks = listOf(task("pay", TaskTopic.PAYMENTS), task("save", TaskTopic.SAVING), task("plan", TaskTopic.PLANNING))
+
+        assertEquals(TaskId("plan"), TaskSchedule.taskOfTheDay(tasks, emptyList())?.id)
+        assertEquals(TaskId("save"), TaskSchedule.taskOfTheDay(tasks, listOf(passed("plan", 1)))?.id)
     }
 
     @Test

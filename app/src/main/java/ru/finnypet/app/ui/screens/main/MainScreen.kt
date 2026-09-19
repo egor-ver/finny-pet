@@ -354,13 +354,18 @@ private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        // Обе подписи независимы: «всё пройдено» не должно прятать, что
+        // награда за сегодня ещё ждёт — иначе повторять незачем.
+        if (task.allDone) {
+            Text(
+                text = stringResource(R.string.main_task_all_done),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
             text = stringResource(
-                when {
-                    task.allDone -> R.string.main_task_all_done
-                    task.rewardAvailable -> R.string.main_task_reward
-                    else -> R.string.main_task_reward_taken
-                }
+                if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

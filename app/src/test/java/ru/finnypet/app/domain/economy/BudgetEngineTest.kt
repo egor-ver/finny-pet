@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
@@ -11,6 +12,25 @@ import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.SpendCategory
 
 class BudgetEngineTest {
+
+    /** Шаг кнопкой: добавить не больше, чем осталось, убрать не больше, чем лежит. */
+    @Test
+    fun `шаг вверх урезается по остатку`() {
+        val plan = BudgetPlan(Coins(30), Coins(5), Coins(0))
+
+        assertEquals(Coins(10), BudgetEngine().stepped(plan, SpendCategory.OPTIONAL, 5, Coins(40)))
+        assertEquals(Coins(7), BudgetEngine().stepped(plan, SpendCategory.OPTIONAL, 5, Coins(37)))
+        assertNull(BudgetEngine().stepped(plan, SpendCategory.OPTIONAL, 5, Coins(35)))
+    }
+
+    @Test
+    fun `шаг вниз урезается по тому что лежит`() {
+        val plan = BudgetPlan(Coins(30), Coins(3), Coins(0))
+
+        assertEquals(Coins(0), BudgetEngine().stepped(plan, SpendCategory.OPTIONAL, -5, Coins(40)))
+        assertEquals(Coins(25), BudgetEngine().stepped(plan, SpendCategory.MANDATORY, -5, Coins(40)))
+        assertNull(BudgetEngine().stepped(plan, SpendCategory.SAVINGS, -5, Coins(40)))
+    }
 
     private val engine = BudgetEngine()
 

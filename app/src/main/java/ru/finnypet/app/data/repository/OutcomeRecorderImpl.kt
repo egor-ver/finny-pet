@@ -2,18 +2,17 @@ package ru.finnypet.app.data.repository
 
 import androidx.room.withTransaction
 import ru.finnypet.app.data.local.FinnyDatabase
-import ru.finnypet.app.data.local.entity.TaskProgressEntity
 import ru.finnypet.app.data.local.mapper.petStateEntityOf
 import ru.finnypet.app.data.local.mapper.toEntity
 import ru.finnypet.app.data.local.mapper.toGrowth
 import ru.finnypet.app.data.local.mapper.toState
-import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.OutcomeRecorder
+import ru.finnypet.app.domain.repository.TaskProgressRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,7 +26,7 @@ import javax.inject.Singleton
 class OutcomeRecorderImpl @Inject constructor(
     private val database: FinnyDatabase,
     private val petState: PetStateEngine,
-    private val clock: GameClock,
+    private val taskProgress: TaskProgressRepository,
 ) : OutcomeRecorder {
 
     override suspend fun record(profileId: ProfileId, outcome: ActionOutcome): List<Change.PetStat> =
@@ -39,16 +38,10 @@ class OutcomeRecorderImpl @Inject constructor(
                 // путём, что и выбор цели, иначе завелась бы вторая активная.
                 if (progress.isActive) database.goalProgress().setActive(entity) else database.goalProgress().upsert(entity)
             }
+            // Запись о прохождении — через репозиторий: у таблицы один писатель,
+            // а транзакция Room подхватывает и его.
             outcome.taskCompletion?.let { completion ->
-                database.taskProgress().insert(
-                    TaskProgressEntity(
-                        profileId = profileId.value,
-                        taskId = completion.taskId.value,
-                        outcomeId = completion.outcomeId,
-                        reward = completion.reward.amount,
-                        completedAt = clock.now(),
-                    )
-                )
+                taskProgress.complete(profileId, completion.taskId, completion.outcomeId, completion.reward)
             }
             outcome.transaction?.let { database.transactions().insert(it.toEntity()) }
             changes

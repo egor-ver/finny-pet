@@ -1,21 +1,16 @@
 package ru.finnypet.app.ui.screens.main
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
@@ -35,13 +30,13 @@ import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 /** Копилка: сколько отложено и на что копим. Цели может не быть — это норма. */
 data class SavingsView(
@@ -112,20 +107,18 @@ sealed interface MainState {
  */
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val profiles: ProfileRepository,
+    profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val savings: SavingsRepository,
     private val taskProgress: TaskProgressRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val balance: GameBalance,
     content: ContentRepository,
-) : ViewModel() {
+) : ProfileViewModel(profiles) {
 
     private val goals: Map<GoalId, Goal> = content.pack().goals.associateBy { it.id }
     private val tasks = content.pack().tasks
     private val texts: Map<String, String> = content.pack().texts
-
-    private val failed = MutableStateFlow(false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<MainState> =
@@ -144,33 +137,13 @@ class MainViewModel @Inject constructor(
             )
 
     init {
-        startDay()
+        // Игровой день должен быть открыт до того, как экран покажет баланс:
+        // без периода баланса не существует.
+        act { openPeriod(it) }
     }
 
     /** Повтор после сбоя: ТЗ 3.4 запрещает экраны, с которых нет выхода. */
-    fun retry() {
-        failed.value = false
-        startDay()
-    }
-
-    /**
-     * Игровой день должен быть открыт до того, как экран покажет баланс:
-     * без периода баланса не существует. Ждём профиль, а не берём его разом —
-     * на главный экран можно попасть сразу после создания питомца, и запись
-     * профиля может ещё не дойти до подписчиков.
-     */
-    private fun startDay() {
-        viewModelScope.launch {
-            val profile = profiles.observeActive().filterNotNull().first()
-            try {
-                openPeriod(profile.id)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                failed.value = true
-            }
-        }
-    }
+    fun retry() = retryWith { openPeriod(it) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun ready(profile: Profile): Flow<MainState> = combine(
@@ -178,7 +151,7 @@ class MainViewModel @Inject constructor(
         periods.observeCurrent(profile.id),
         savings.observeActive(profile.id),
         taskProgress.observeCompleted(profile.id),
-    ) { pet, period, progress, completed -> Ready(pet, period, progress, completed) }
+    ) { pet, period, progress, completed -> Sources(pet, period, progress, completed) }
         .flatMapLatest { (pet, period, progress, completed) ->
             if (pet == null || period == null) {
                 flowOf(MainState.Loading)
@@ -207,7 +180,7 @@ class MainViewModel @Inject constructor(
         }
 
     /** Четыре источника разом: у combine нет Triple на четверых. */
-    private data class Ready(
+    private data class Sources(
         val pet: Pet?,
         val period: GamePeriod?,
         val progress: GoalProgress?,

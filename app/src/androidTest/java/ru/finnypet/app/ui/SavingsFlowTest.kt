@@ -26,6 +26,7 @@ import ru.finnypet.app.data.repository.OutcomeRecorderImpl
 import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
 import ru.finnypet.app.data.repository.SavingsRepositoryImpl
+import ru.finnypet.app.data.repository.TaskProgressRepositoryImpl
 import ru.finnypet.app.domain.content.ContentOption
 import ru.finnypet.app.domain.content.ContentPack
 import ru.finnypet.app.domain.content.PetOptions
@@ -109,7 +110,7 @@ class SavingsFlowTest {
                 balance = balance,
             ),
             engine = SavingsEngine(clock),
-            recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), clock = clock),
+            recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock)),
             content = content(),
         )
     }

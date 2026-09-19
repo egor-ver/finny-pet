@@ -3,6 +3,8 @@ package ru.finnypet.app.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
@@ -564,7 +566,7 @@ class ScreensTest {
     fun `список_заданий_по_темам_с_пометкой_пройдено`() {
         showTasks(tasksReady())
 
-        scrollToText(text(R.string.tasks_reward_available))
+        scrollToText(text(R.string.tasks_reward_available, text(R.string.tasks_one, 1)))
         scrollToText(text(R.string.topic_planning))
         scrollToText("Разложи сорок монет.")
         scrollToText(text(R.string.tasks_completed))
@@ -640,6 +642,9 @@ class ScreensTest {
 
         scrollToText(text(R.string.task_step, 1, 1))
         scrollToText(text(R.string.task_selected))
+        // Состояние «выбрано» доступно и озвучке, не только словом.
+        compose.onNodeWithText("Отложить").assertIsSelected()
+        compose.onNodeWithText("Потратить").assertIsNotSelected()
         compose.onNodeWithText("Потратить").performClick()
         assertEquals("spend", chosen)
         compose.onNodeWithText(text(R.string.task_answer)).performClick()
@@ -756,6 +761,7 @@ class ScreensTest {
             ),
         ),
         rewardAvailable = rewardAvailable,
+        rewardLimit = 1,
         canStart = canStart,
     )
 

@@ -125,7 +125,10 @@
     <string name="topic_saving">Накопления</string>
     <string name="topic_payments">Покупки</string>
     <string name="tasks_title">Задания</string>
-    <string name="tasks_reward_available">Монеты дают за одно задание в день — сегодня ещё можно получить.</string>
+    <string name="tasks_reward_available">Монеты дают за %1$s в день — сегодня ещё можно получить.</string>
+    <string name="tasks_one">%1$d задание</string>
+    <string name="tasks_few">%1$d задания</string>
+    <string name="tasks_many">%1$d заданий</string>
     <string name="tasks_reward_taken">Монеты за сегодня получены. Остальные задания — для тренировки.</string>
     <string name="tasks_completed">пройдено</string>
     <string name="tasks_empty">Заданий пока нет.</string>

@@ -24,15 +24,17 @@ object TaskSchedule {
         paidToday(transactions) < balance.rewardedTasksPerPeriod
 
     /**
-     * Задание дня для главного экрана: первое ещё не пройденное в порядке
-     * контент-пака; когда пройдены все — то, которое проходили давнее всех.
+     * Задание дня для главного экрана: первое ещё не пройденное — в том же
+     * порядке, что и список (темы ТЗ 2.5.8, внутри темы — порядок
+     * контент-пака); когда пройдены все — то, которое проходили давнее всех.
      * Порядок открытия ТЗ 2.5.8 оставляет команде, замков нет — это только
      * подсказка.
      */
     fun taskOfTheDay(tasks: List<LearningTask>, completed: List<CompletedTask>): LearningTask? {
         if (tasks.isEmpty()) return null
+        val ordered = tasks.sortedBy { it.topic.ordinal }
         val lastPassed = completed.groupBy { it.taskId }.mapValues { (_, passes) -> passes.maxOf { it.completedAt } }
-        return tasks.firstOrNull { it.id !in lastPassed }
-            ?: tasks.minBy { lastPassed.getValue(it.id) }
+        return ordered.firstOrNull { it.id !in lastPassed }
+            ?: ordered.minBy { lastPassed.getValue(it.id) }
     }
 }

@@ -37,6 +37,7 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -132,7 +133,7 @@ private fun Ready(
             MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
         }
         if (!state.canBuy) {
-            item(key = "header:planning") { PlanningHint(onPlan = onPlan) }
+            item(key = "header:planning") { PlanningHint(text = stringResource(R.string.shop_planning_hint), onPlan = onPlan) }
         }
         if (state.items.isEmpty()) {
             item(key = "header:empty") {
@@ -173,30 +174,6 @@ private fun Ready(
     state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss, onSavings = onSavings, onTasks = onTasks) }
 }
 
-/**
- * Пока день планируется, покупать нельзя — и ребёнку нужен не запрет, а
- * дорога: кнопка ведёт прямо в план (ТЗ 3.4 запрещает тупики).
- */
-@Composable
-private fun PlanningHint(onPlan: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(Dimens.Space),
-    ) {
-        Text(
-            text = stringResource(R.string.shop_planning_hint),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
-    }
-}
 
 @Composable
 private fun PlanningDialog(onPlan: () -> Unit, onDismiss: () -> Unit) {

@@ -1,21 +1,16 @@
 package ru.finnypet.app.ui.screens.budget
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.BudgetEngine
@@ -30,9 +25,9 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 /** Строка сравнения: сколько задумали и сколько вышло на самом деле. */
 data class BudgetLine(
@@ -95,14 +90,12 @@ sealed interface BudgetState {
  */
 @HiltViewModel
 class BudgetViewModel @Inject constructor(
-    private val profiles: ProfileRepository,
+    profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val budget: BudgetEngine,
     private val periodEngine: PeriodEngine,
-) : ViewModel() {
-
-    private val failed = MutableStateFlow(false)
+) : ProfileViewModel(profiles) {
 
     /**
      * Правки плана идут по одной. Без этого два быстрых нажатия «плюс»
@@ -133,10 +126,7 @@ class BudgetViewModel @Inject constructor(
         act { openPeriod(it) }
     }
 
-    fun retry() {
-        failed.value = false
-        act { openPeriod(it) }
-    }
+    fun retry() = retryWith { openPeriod(it) }
 
     fun add(category: SpendCategory) = change(category, STEP)
 
@@ -173,48 +163,8 @@ class BudgetViewModel @Inject constructor(
                 // экране: экран отстаёт от базы на время записи, и при быстрых
                 // нажатиях он вернул бы устаревшую сумму.
                 val stored = periods.plan(period.id) ?: BudgetPlan.EMPTY
-                val amount = moved(stored, category, delta, period.available) ?: return@withLock
-                periods.savePlan(period.id, stored.with(category, Coins(amount)))
-            }
-        }
-    }
-
-    /**
-     * Новая сумма направления или `null`, если двигать некуда.
-     *
-     * Шаг урезается по месту: добавить можно не больше, чем осталось
-     * нераспределённого, а убрать — не больше, чем лежит. Так последние монеты
-     * не застревают, когда доступная сумма не делится на шаг нацело.
-     */
-    private fun moved(
-        plan: BudgetPlan,
-        category: SpendCategory,
-        delta: Int,
-        available: Coins,
-    ): Int? {
-        val current = plan.amountFor(category).amount
-        return if (delta > 0) {
-            val free = available.amount - plan.total.amount
-            if (free <= 0) null else current + minOf(delta, free)
-        } else {
-            if (current == 0) null else current - minOf(-delta, current)
-        }
-    }
-
-    /**
-     * Общая обёртка: дождаться профиля, выполнить и не уронить экран.
-     * ТЗ 3.4 запрещает тупики, поэтому любой сбой превращается в состояние
-     * с кнопкой повтора, а не в исключение.
-     */
-    private fun act(block: suspend (ProfileId) -> Unit) {
-        viewModelScope.launch {
-            val profile = profiles.observeActive().filterNotNull().first()
-            try {
-                block(profile.id)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                failed.value = true
+                val amount = budget.stepped(stored, category, delta, period.available) ?: return@withLock
+                periods.savePlan(period.id, stored.with(category, amount))
             }
         }
     }

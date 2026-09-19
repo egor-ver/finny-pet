@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -303,7 +306,7 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(container)
-            .clickable(role = Role.RadioButton, onClick = onClick)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
@@ -328,11 +331,14 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
  */
 @Composable
 private fun Shelf(step: StepView.Pick, onToggle: (ItemId) -> Unit) {
+    // Счётчик читается одной фразой: «в корзине 18 из 30 монет», а не
+    // «корзина, 18 монет, слеш, 30 монет» и ещё раз то же самое с полосы.
+    val spoken = stringResource(R.string.task_basket_progress, step.spent.amount, step.budget.amount)
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {},
+            .clearAndSetSemantics { contentDescription = spoken },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -351,7 +357,6 @@ private fun Shelf(step: StepView.Pick, onToggle: (ItemId) -> Unit) {
         }
         ProgressLine(
             fraction = if (step.budget.amount == 0) 0f else step.spent.amount.toFloat() / step.budget.amount,
-            contentDescription = stringResource(R.string.task_basket_progress, step.spent.amount, step.budget.amount),
         )
     }
 

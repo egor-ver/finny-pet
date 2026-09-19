@@ -118,6 +118,24 @@ class TaskFlowTest {
         ),
     )
 
+    /** Сценарий из двух шагов: история, потом полка — исход по обоим ответам. */
+    private val scenario = LearningTask(
+        id = TaskId("scenario"),
+        topic = TaskTopic.PAYMENTS,
+        introKey = "task.scenario.intro",
+        steps = listOf(
+            TaskStep.Choice(
+                promptKey = "task.scenario.step1",
+                options = listOf(TaskOption("list", "task.scenario.list"), TaskOption("rush", "task.scenario.rush")),
+            ),
+            TaskStep.PickItems(promptKey = "task.scenario.step2", itemIds = listOf(food.id, toy.id), budget = Coins(30)),
+        ),
+        outcomes = listOf(
+            TaskOutcome(id = "careful", condition = OutcomeCondition.OptionChosen("list"), reward = Coins(15), explanationKey = "task.scenario.careful"),
+            TaskOutcome(id = "otherwise", condition = OutcomeCondition.Otherwise, reward = Coins(5), explanationKey = "task.scenario.rushed"),
+        ),
+    )
+
     /** «Полка»: уложиться в тридцать. */
     private val shelf = LearningTask(
         id = TaskId("shelf"),
@@ -246,6 +264,33 @@ class TaskFlowTest {
         assertEquals(Coins(15), done.outcome.reward)
     }
 
+    /** Два шага: ответ первого сохраняется, второй начинается с чистого черновика, исход — по обоим. */
+    @Test
+    fun сценарий_из_двух_шагов_проходится_по_очереди() = runBlocking {
+        startDay()
+        val vm = viewModel(scenario)
+        vm.start()
+        val first = vm.await { it.stage is TaskStage.Step }.stage as TaskStage.Step
+        assertEquals(0, first.index)
+        assertEquals(2, first.total)
+
+        vm.choose("list")
+        vm.await { (it.stage as? TaskStage.Step)?.step?.canProceed == true }
+        vm.next()
+
+        val second = vm.await { (it.stage as? TaskStage.Step)?.index == 1 }.stage as TaskStage.Step
+        assertTrue(second.step is StepView.Pick)
+        assertEquals(emptySet<ItemId>(), (second.step as StepView.Pick).picked)
+        // Ответ первого шага не потерян: «дальше» на втором шаге разбирает оба.
+        vm.toggle(food.id)
+        vm.await { pick(it)?.picked == setOf(food.id) }
+        vm.next()
+
+        val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
+        assertEquals("Составил список — молодец.", done.outcome.text)
+        assertEquals(Coins(15), done.outcome.reward)
+    }
+
     @Test
     fun пустой_план_дальше_не_пускает() = runBlocking {
         startDay()
@@ -312,7 +357,8 @@ class TaskFlowTest {
         vm.await { (it.stage as? TaskStage.Step)?.step?.canProceed == true }
         vm.next()
 
-        assertTrue(settle(vm).stage is TaskStage.Step)
+        // Не молчим на шаге, а возвращаем ко вступлению с подсказкой про план.
+        assertEquals(TaskStage.Intro, vm.await { it.stage is TaskStage.Intro }.stage)
         val period = periods.current(profileId)!!
         assertTrue(periods.transactions(period.id).none { it.type == TransactionType.INCOME_TASK })
         assertTrue(progress.completedIds(profileId).isEmpty())
@@ -366,7 +412,8 @@ class TaskFlowTest {
         periods = periods,
         openPeriod = OpenPeriodIfNeeded(periods = periods, wallet = WalletEngine(clock), balance = balance),
         engine = TaskEngine(clock),
-        recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), clock = clock),
+        budget = BudgetEngine(),
+        recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = progress),
         balance = balance,
         content = content(),
     ).also { viewModels += it }
@@ -400,7 +447,7 @@ class TaskFlowTest {
             ),
             shop = listOf(food, toy, bike),
             goals = emptyList(),
-            tasks = listOf(story, jars, shelf),
+            tasks = listOf(story, jars, shelf, scenario),
             glossary = emptyList(),
             texts = mapOf(
                 "shop.food" to "Каша",
@@ -420,6 +467,13 @@ class TaskFlowTest {
                 "task.shelf.step" to "Что возьмём?",
                 "task.shelf.thrifty" to "Уложился в двадцать!",
                 "task.shelf.full" to "Потратил больше двадцати — в другой раз посмотри на цены.",
+                "task.scenario.intro" to "Идём в магазин.",
+                "task.scenario.step1" to "Список или как получится?",
+                "task.scenario.list" to "Составить список",
+                "task.scenario.rush" to "Как получится",
+                "task.scenario.step2" to "Что берём?",
+                "task.scenario.careful" to "Составил список — молодец.",
+                "task.scenario.rushed" to "Без списка вышло дороже.",
             ),
         )
     }

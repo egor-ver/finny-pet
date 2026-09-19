@@ -1,20 +1,15 @@
 package ru.finnypet.app.ui.screens.tasks
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.PeriodStatus
@@ -24,12 +19,12 @@ import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 /** Задание в списке: тема, начало вступления и было ли пройдено. */
 data class TaskRow(
@@ -55,6 +50,8 @@ sealed interface TasksState {
         val groups: List<TaskGroup>,
         /** Остался ли на сегодня лимит наград. */
         val rewardAvailable: Boolean,
+        /** Сколько заданий в день приносят монеты — из чисел экономики, не из строки. */
+        val rewardLimit: Int,
         /** Задания проходятся только когда день идёт — как покупки и копилка. */
         val canStart: Boolean,
     ) : TasksState
@@ -66,18 +63,16 @@ sealed interface TasksState {
  */
 @HiltViewModel
 class TasksViewModel @Inject constructor(
-    private val profiles: ProfileRepository,
+    profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val progress: TaskProgressRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val balance: GameBalance,
     content: ContentRepository,
-) : ViewModel() {
+) : ProfileViewModel(profiles) {
 
     private val tasks: List<LearningTask> = content.pack().tasks
     private val texts: Map<String, String> = content.pack().texts
-
-    private val failed = MutableStateFlow(false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<TasksState> =
@@ -99,23 +94,7 @@ class TasksViewModel @Inject constructor(
         act { openPeriod(it) }
     }
 
-    fun retry() {
-        failed.value = false
-        act { openPeriod(it) }
-    }
-
-    private fun act(block: suspend (ProfileId) -> Unit) {
-        viewModelScope.launch {
-            val profile = profiles.observeActive().filterNotNull().first()
-            try {
-                block(profile.id)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                failed.value = true
-            }
-        }
-    }
+    fun retry() = retryWith { openPeriod(it) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun forProfile(profileId: ProfileId): Flow<TasksState> =
@@ -141,6 +120,7 @@ class TasksViewModel @Inject constructor(
                             if (rows.isEmpty()) null else TaskGroup(topic = topic, tasks = rows)
                         },
                         rewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
+                        rewardLimit = balance.rewardedTasksPerPeriod,
                         canStart = period.status == PeriodStatus.RUNNING,
                     )
                 }

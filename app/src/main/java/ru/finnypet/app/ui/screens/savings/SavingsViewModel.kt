@@ -1,6 +1,5 @@
 package ru.finnypet.app.ui.screens.savings
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -9,12 +8,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.SavingsEngine
@@ -31,11 +28,11 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 /** Цель как её видит экран: название готовым текстом, цена и сколько уже отложено. */
 data class GoalView(
@@ -142,19 +139,18 @@ private enum class OperationKind { DEPOSIT, WITHDRAW }
  */
 @HiltViewModel
 class SavingsViewModel @Inject constructor(
-    private val profiles: ProfileRepository,
+    profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val savings: SavingsRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val engine: SavingsEngine,
     private val recorder: OutcomeRecorder,
     content: ContentRepository,
-) : ViewModel() {
+) : ProfileViewModel(profiles) {
 
     private val goals: List<Goal> = content.pack().goals
     private val texts: Map<String, String> = content.pack().texts
 
-    private val failed = MutableStateFlow(false)
     private val draft = MutableStateFlow<DraftRequest?>(null)
     private val outcome = MutableStateFlow<SavingsOutcomeView?>(null)
 
@@ -181,10 +177,7 @@ class SavingsViewModel @Inject constructor(
         act { openPeriod(it) }
     }
 
-    fun retry() {
-        failed.value = false
-        act { openPeriod(it) }
-    }
+    fun retry() = retryWith { openPeriod(it) }
 
     /**
      * Выбор цели денег не двигает, поэтому разрешён и во время планирования.
@@ -305,19 +298,6 @@ class SavingsViewModel @Inject constructor(
         val progress = savings.activeProgress(profileId) ?: return null
         val goal = goals.firstOrNull { it.id == progress.goalId } ?: return null
         return progress to goal
-    }
-
-    private fun act(block: suspend (ProfileId) -> Unit) {
-        viewModelScope.launch {
-            val profile = profiles.observeActive().filterNotNull().first()
-            try {
-                block(profile.id)
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Exception) {
-                failed.value = true
-            }
-        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

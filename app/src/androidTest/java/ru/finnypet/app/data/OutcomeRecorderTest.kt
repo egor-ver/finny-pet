@@ -79,7 +79,7 @@ class OutcomeRecorderTest {
         periods = PeriodRepositoryImpl(periods = db.periods(), plans = db.budgetPlans(), transactions = db.transactions())
         savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
         tasks = TaskProgressRepositoryImpl(tasks = db.taskProgress(), clock = clock)
-        recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), clock = clock)
+        recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = tasks)
 
         profileId = profiles.create(
             childName = "Егор",
