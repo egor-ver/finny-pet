@@ -75,6 +75,18 @@ class GameBalanceTest {
     }
 
     @Test
+    fun `отрицательное число заданий с наградой не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            GameBalance.PLACEHOLDER.copy(rewardedTasksPerPeriod = -1)
+        }
+    }
+
+    @Test
+    fun `ноль заданий с наградой допускается`() {
+        assertEquals(0, GameBalance.PLACEHOLDER.copy(rewardedTasksPerPeriod = 0).rewardedTasksPerPeriod)
+    }
+
+    @Test
     fun `отрицательные очки роста не допускаются`() {
         assertThrows(IllegalArgumentException::class.java) { balance(growthForMandatoryCovered = -1) }
     }

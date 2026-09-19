@@ -17,6 +17,15 @@ data class GameBalance(
     val growthThresholds: List<Int>,
     val unexpectedExpenseChance: Int,
     val carryOverUnspent: Boolean,
+    /**
+     * Сколько заданий в игровой день приносят монеты. Остальные играются
+     * ради объяснения и питомца. Из дохода на желаемое не остаётся ничего:
+     * доход уходит на нужное и копилку, и задание дня — те самые «деньги на
+     * игрушку». Без лимита шесть заданий давали бы вдвое больше дохода и
+     * обесценивали план (ТЗ 2.5.5); «один раз за задание навсегда» убивал бы
+     * стимул и путь «выполнить задание» из отказа в магазине (ТЗ 2.5.9).
+     */
+    val rewardedTasksPerPeriod: Int = 1,
 ) {
 
     init {
@@ -41,6 +50,9 @@ data class GameBalance(
         }
         require(unexpectedExpenseChance in 0..100) {
             "Шанс непредвиденных расходов задаётся в процентах, задан: $unexpectedExpenseChance"
+        }
+        require(rewardedTasksPerPeriod >= 0) {
+            "Число заданий с наградой в день не может быть отрицательным, задано: $rewardedTasksPerPeriod"
         }
     }
 

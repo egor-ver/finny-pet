@@ -95,6 +95,20 @@ class ContentParserTest {
     // --- Сообщения об ошибках: по ним продакт должен найти место в своём файле ---
 
     @Test
+    fun `лимит заданий с наградой читается из чисел экономики`() {
+        assertEquals(1, parser.parse(realContent()).balance.rewardedTasksPerPeriod)
+    }
+
+    /** Поле появилось позже остальных: старый файл без него читается как «одно в день». */
+    @Test
+    fun `без поля лимита заданий подставляется единица`() {
+        val without = RealContent.asset("balance.json").replace(",\n  \"rewardedTasksPerPeriod\": 1", "")
+        assertTrue("поле должно было удалиться из копии", "rewardedTasksPerPeriod" !in without)
+
+        assertEquals(1, parser.parse(realContent(balance = without)).balance.rewardedTasksPerPeriod)
+    }
+
+    @Test
     fun `опечатка в имени поля называет файл`() {
         val error = parseFailure(goals = """{"goals":[{"id":"bike","titleKey":"g","cost":120}]}""")
 

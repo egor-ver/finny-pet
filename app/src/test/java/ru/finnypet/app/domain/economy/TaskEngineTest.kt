@@ -63,6 +63,29 @@ class TaskEngineTest {
         ),
     )
 
+    /** Лимит наград в день выбран: исход и объяснение те же, монет и операции нет. */
+    @Test
+    fun `без права на награду исход тот же а монет нет`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1, rewardable = false)
+
+        assertEquals("saved", result.value.outcome.id)
+        assertEquals(Coins(60), result.value.newBalance)
+        assertNull(result.value.transaction)
+        assertEquals(emptyList<Change>(), result.changes)
+        assertEquals("0", result.explanation.args["reward"])
+        assertEquals("60", result.explanation.args["balance"])
+        assertEquals(savedEnough.effects, result.value.effects)
+    }
+
+    @Test
+    fun `по умолчанию награда выплачивается`() {
+        val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)
+
+        assertEquals(Coins(75), result.value.newBalance)
+        assertEquals(TransactionType.INCOME_TASK, result.value.transaction?.type)
+        assertEquals("15", result.explanation.args["reward"])
+    }
+
     @Test
     fun `выполненное условие выбирает свой исход`() {
         val result = engine.evaluate(task(), allocated(30, 20, 10), Coins(60), periodId = 1)

@@ -26,6 +26,8 @@ data class BalanceDto(
     val growthForSavingsKept: Int,
     val growthThresholds: List<Int>,
     val carryOverUnspent: Boolean,
+    /** Появилось позже остальных: старый balance.json без него читается как «одно в день». */
+    val rewardedTasksPerPeriod: Int = 1,
 )
 
 @Serializable

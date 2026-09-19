@@ -114,6 +114,21 @@ class WalletEngineTest {
         assertTrue(options.contains(RecoveryOption.CHOOSE_CHEAPER))
     }
 
+    /** Лимит наград в день выбран — обещать монеты за задание нельзя. */
+    @Test
+    fun `когда задание сегодня без монет его не предлагают`() {
+        val result = engine.purchase(
+            item(price = Coins(100)),
+            currentBalance = Coins(60),
+            periodId = 1,
+            taskRewardAvailable = false,
+        )
+
+        val options = (result as PurchaseResult.Rejected).options
+        assertTrue(RecoveryOption.DO_TASK !in options)
+        assertEquals(RecoveryOption.CHOOSE_CHEAPER, result.explanation.nextStep)
+    }
+
     @Test
     fun `необязательную покупку предлагают отложить`() {
         val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(100)), Coins(10), periodId = 1)

@@ -34,14 +34,20 @@ data class CreditOutcome(
 
 class WalletEngine(private val clock: GameClock) {
 
+    /**
+     * [taskRewardAvailable] — есть ли сегодня ещё задание с монетами: когда
+     * лимит дня выбран, «выполнить задание» не предлагается — это было бы
+     * обещание без денег.
+     */
     fun purchase(
         item: ShopItem,
         currentBalance: Coins,
         periodId: Long,
         savings: Coins = Coins.ZERO,
+        taskRewardAvailable: Boolean = true,
     ): PurchaseResult {
         if (!currentBalance.covers(item.price)) {
-            return rejected(item, currentBalance, savings)
+            return rejected(item, currentBalance, savings, taskRewardAvailable)
         }
         val newBalance = currentBalance - item.price
         return PurchaseResult.Success(
@@ -108,9 +114,14 @@ class WalletEngine(private val clock: GameClock) {
         )
     }
 
-    private fun rejected(item: ShopItem, currentBalance: Coins, savings: Coins): PurchaseResult.Rejected {
+    private fun rejected(
+        item: ShopItem,
+        currentBalance: Coins,
+        savings: Coins,
+        taskRewardAvailable: Boolean,
+    ): PurchaseResult.Rejected {
         val shortfall = currentBalance.shortfallTo(item.price)
-        val options = recoveryOptions(item, shortfall, savings)
+        val options = recoveryOptions(item, shortfall, savings, taskRewardAvailable)
         return PurchaseResult.Rejected(
             shortfall = shortfall,
             options = options,
@@ -129,8 +140,9 @@ class WalletEngine(private val clock: GameClock) {
         item: ShopItem,
         shortfall: Coins,
         savings: Coins,
+        taskRewardAvailable: Boolean,
     ): List<RecoveryOption> = buildList {
-        add(RecoveryOption.DO_TASK)
+        if (taskRewardAvailable) add(RecoveryOption.DO_TASK)
         if (item.category == SpendCategory.MANDATORY && savings.covers(shortfall)) {
             add(RecoveryOption.WITHDRAW_FROM_SAVINGS)
         }

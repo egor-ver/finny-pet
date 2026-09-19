@@ -23,17 +23,27 @@ data class TaskResult(
 
 class TaskEngine(private val clock: GameClock) {
 
+    /**
+     * Разбирает попытку: исход, награду, влияние на питомца и объяснение.
+     *
+     * [rewardable] — можно ли за это прохождение платить: лимит наград в день
+     * (`GameBalance.rewardedTasksPerPeriod`) считает вызывающий по операциям
+     * периода. Когда платить нельзя, исход и объяснение те же, награда — ноль,
+     * операции нет: ребёнок учится, а экономика не раздувается.
+     */
     fun evaluate(
         task: LearningTask,
         attempt: TaskAttempt,
         currentBalance: Coins,
         periodId: Long,
+        rewardable: Boolean = true,
     ): GameResult<TaskResult> {
         checkAnswersMatchSteps(task, attempt)
 
         val outcome = outcomeFor(task, attempt)
-        val newBalance = currentBalance + outcome.reward
-        val rewarded = outcome.reward > Coins.ZERO
+        val reward = if (rewardable) outcome.reward else Coins.ZERO
+        val newBalance = currentBalance + reward
+        val rewarded = reward > Coins.ZERO
 
         return GameResult(
             value = TaskResult(
@@ -45,7 +55,7 @@ class TaskEngine(private val clock: GameClock) {
             explanation = Explanation(
                 key = outcome.explanationKey,
                 args = mapOf(
-                    "reward" to outcome.reward.amount.toString(),
+                    "reward" to reward.amount.toString(),
                     "balance" to newBalance.amount.toString(),
                 ),
             ),

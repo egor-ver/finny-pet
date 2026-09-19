@@ -9,6 +9,7 @@
   "growthForPlanFollowed": 2,
   "growthForSavingsKept": 2,
   "growthThresholds": [0, 10, 25],
-  "carryOverUnspent": true
+  "carryOverUnspent": true,
+  "rewardedTasksPerPeriod": 1
 }
 

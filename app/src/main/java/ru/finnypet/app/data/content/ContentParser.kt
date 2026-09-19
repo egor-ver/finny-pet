@@ -88,6 +88,7 @@ class ContentParser @Inject constructor() {
                 // обязательный минимум ТЗ они не входят, поле остаётся нулевым.
                 unexpectedExpenseChance = 0,
                 carryOverUnspent = dto.carryOverUnspent,
+                rewardedTasksPerPeriod = dto.rewardedTasksPerPeriod,
             )
         }
     }
