@@ -49,6 +49,7 @@ import ru.finnypet.app.ui.theme.Dimens
 fun ShopScreen(
     onBack: () -> Unit,
     onPlan: () -> Unit,
+    onSavings: () -> Unit,
     viewModel: ShopViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -57,6 +58,7 @@ fun ShopScreen(
         state = state,
         onBack = onBack,
         onPlan = onPlan,
+        onSavings = onSavings,
         onBuy = viewModel::buy,
         onDismiss = viewModel::dismiss,
         onRetry = viewModel::retry,
@@ -68,6 +70,7 @@ fun ShopContent(
     state: ShopState,
     onBack: () -> Unit,
     onPlan: () -> Unit = {},
+    onSavings: () -> Unit = {},
     onBuy: (ItemId) -> Unit = {},
     onDismiss: () -> Unit = {},
     onRetry: () -> Unit = {},
@@ -96,6 +99,7 @@ fun ShopContent(
             state = state,
             onBack = onBack,
             onPlan = onPlan,
+            onSavings = onSavings,
             onBuy = onBuy,
             onDismiss = onDismiss,
         )
@@ -107,6 +111,7 @@ private fun Ready(
     state: ShopState.Ready,
     onBack: () -> Unit,
     onPlan: () -> Unit,
+    onSavings: () -> Unit,
     onBuy: (ItemId) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -160,7 +165,7 @@ private fun Ready(
             onDismiss = { pendingId = null },
         )
     }
-    state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss) }
+    state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss, onSavings = onSavings) }
 }
 
 /**
@@ -195,7 +200,7 @@ private fun PlanningDialog(onPlan: () -> Unit, onDismiss: () -> Unit) {
         onDismiss = onDismiss,
         buttons = {
             FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
-            FinnySecondaryButton(text = stringResource(R.string.shop_not_now), onClick = onDismiss)
+            FinnySecondaryButton(text = stringResource(R.string.action_not_now), onClick = onDismiss)
         },
     ) {
         Text(text = stringResource(R.string.shop_planning_hint), style = MaterialTheme.typography.bodyLarge)
@@ -251,7 +256,7 @@ private fun ConfirmDialog(
         onDismiss = onDismiss,
         buttons = {
             FinnyButton(text = stringResource(R.string.shop_buy), onClick = onConfirm)
-            FinnySecondaryButton(text = stringResource(R.string.shop_not_now), onClick = onDismiss)
+            FinnySecondaryButton(text = stringResource(R.string.action_not_now), onClick = onDismiss)
         },
     ) {
         Row(
@@ -281,7 +286,11 @@ private fun ConfirmDialog(
 }
 
 @Composable
-private fun OutcomeDialog(outcome: PurchaseOutcome, onDismiss: () -> Unit) {
+private fun OutcomeDialog(
+    outcome: PurchaseOutcome,
+    onDismiss: () -> Unit,
+    onSavings: () -> Unit,
+) {
     when (outcome) {
         is PurchaseOutcome.Done -> FinnyDialog(
             title = stringResource(R.string.shop_done_title),
@@ -304,7 +313,11 @@ private fun OutcomeDialog(outcome: PurchaseOutcome, onDismiss: () -> Unit) {
             }
         }
 
-        is PurchaseOutcome.Rejected -> RejectedDialog(outcome = outcome, onDismiss = onDismiss)
+        is PurchaseOutcome.Rejected -> RejectedDialog(
+            outcome = outcome,
+            onDismiss = onDismiss,
+            onSavings = onSavings,
+        )
     }
 }
 
@@ -312,16 +325,24 @@ private fun OutcomeDialog(outcome: PurchaseOutcome, onDismiss: () -> Unit) {
  * Отказ с объяснением и вариантами выхода (ТЗ 2.5.6, 2.5.9).
  *
  * Кнопками становятся только варианты, у которых есть куда вести: «купить
- * попозже» и «выбрать подешевле» возвращают к списку. Задание и копилка
- * показываются подсказкой и станут кнопками вместе со своими экранами —
- * кнопка в пустоту была бы тупиком (ТЗ 3.4). Главная кнопка — тот вариант,
- * который рекомендует домен, если он уже ведёт куда-то; иначе первый из тех,
- * что ведут.
+ * попозже» и «выбрать подешевле» возвращают к списку, «взять из копилки»
+ * ведёт в копилку. Задание показывается подсказкой и станет кнопкой вместе
+ * со своим экраном — кнопка в пустоту была бы тупиком (ТЗ 3.4). Главная
+ * кнопка — тот вариант, который рекомендует домен, если он уже ведёт
+ * куда-то; иначе первый из тех, что ведут.
  */
 @Composable
-private fun RejectedDialog(outcome: PurchaseOutcome.Rejected, onDismiss: () -> Unit) {
-    val (actionable, hints) = outcome.options.partition { it.option.closesDialog }
+private fun RejectedDialog(
+    outcome: PurchaseOutcome.Rejected,
+    onDismiss: () -> Unit,
+    onSavings: () -> Unit,
+) {
+    val (actionable, hints) = outcome.options.partition { it.option.action != RecoveryAction.Hint }
     val primary = actionable.firstOrNull { it.option == outcome.recommended } ?: actionable.firstOrNull()
+    val act: (RecoveryChoice) -> Unit = { choice ->
+        onDismiss()
+        if (choice.option.action == RecoveryAction.Savings) onSavings()
+    }
     FinnyDialog(
         title = stringResource(R.string.shop_rejected_title),
         onDismiss = onDismiss,
@@ -332,10 +353,10 @@ private fun RejectedDialog(outcome: PurchaseOutcome.Rejected, onDismiss: () -> U
             if (primary == null) {
                 FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
             } else {
-                FinnyButton(text = primary.label, onClick = onDismiss)
+                FinnyButton(text = primary.label, onClick = { act(primary) })
             }
             actionable.filter { it != primary }.forEach { choice ->
-                FinnySecondaryButton(text = choice.label, onClick = onDismiss)
+                FinnySecondaryButton(text = choice.label, onClick = { act(choice) })
             }
         },
     ) {
@@ -369,10 +390,14 @@ private fun EffectLine(stat: PetStatKind, delta: Int) {
     )
 }
 
-private val RecoveryOption.closesDialog: Boolean
+/** Куда ведёт вариант выхода: назад к списку, в копилку или пока никуда. */
+private enum class RecoveryAction { Close, Savings, Hint }
+
+private val RecoveryOption.action: RecoveryAction
     get() = when (this) {
-        RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER -> true
-        RecoveryOption.DO_TASK, RecoveryOption.WITHDRAW_FROM_SAVINGS, RecoveryOption.ADJUST_NEXT_PLAN -> false
+        RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER -> RecoveryAction.Close
+        RecoveryOption.WITHDRAW_FROM_SAVINGS -> RecoveryAction.Savings
+        RecoveryOption.DO_TASK, RecoveryOption.ADJUST_NEXT_PLAN -> RecoveryAction.Hint
     }
 
 private val PetStatKind.label: Int

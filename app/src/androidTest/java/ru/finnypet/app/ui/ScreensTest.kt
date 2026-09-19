@@ -4,7 +4,10 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
@@ -12,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -22,6 +26,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetEffect
@@ -30,6 +35,7 @@ import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.economy.WithdrawPreview
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.PetState
@@ -44,6 +50,11 @@ import ru.finnypet.app.ui.screens.main.MainContent
 import ru.finnypet.app.ui.screens.main.MainState
 import ru.finnypet.app.ui.screens.main.SavingsView
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
+import ru.finnypet.app.ui.screens.savings.GoalView
+import ru.finnypet.app.ui.screens.savings.SavingsContent
+import ru.finnypet.app.ui.screens.savings.SavingsDraft
+import ru.finnypet.app.ui.screens.savings.SavingsOutcomeView
+import ru.finnypet.app.ui.screens.savings.SavingsState
 import ru.finnypet.app.ui.screens.shop.PurchaseOutcome
 import ru.finnypet.app.ui.screens.shop.RecoveryChoice
 import ru.finnypet.app.ui.screens.shop.ShopContent
@@ -233,6 +244,18 @@ class ScreensTest {
         assertTrue(opened)
     }
 
+    /** Карточка копилки — кнопка, и подписана словами, а не только цветом. */
+    @Test
+    fun `карточка_копилки_ведёт_в_копилку`() {
+        var opened = false
+        showMain(readyState(), onSavings = { opened = true })
+
+        scrollToText(text(R.string.savings_open))
+        compose.onNodeWithText(text(R.string.savings_open)).performClick()
+
+        assertTrue(opened)
+    }
+
     // --- Магазин (ТЗ 2.5.6) ---
 
     @Test
@@ -270,7 +293,7 @@ class ScreensTest {
         showShop(ready(), onBuy = { bought = it })
         compose.onNodeWithText("Вкусная каша").performClick()
 
-        compose.onNodeWithText(text(R.string.shop_not_now)).performClick()
+        compose.onNodeWithText(text(R.string.action_not_now)).performClick()
 
         compose.onNodeWithText(text(R.string.shop_buy)).assertDoesNotExist()
         assertEquals(null, bought)
@@ -377,6 +400,29 @@ class ScreensTest {
         scrollToText("Яркий мячик")
     }
 
+    /** Копилка теперь есть — «взять из копилки» ведёт в неё, а не остаётся подсказкой. */
+    @Test
+    fun `отказ_ведёт_в_копилку_когда_она_поможет`() {
+        var dismissed = false
+        var savings = false
+        val rejected = PurchaseOutcome.Rejected(
+            title = "Ветеринар",
+            text = "Не хватает 20 монет.",
+            options = listOf(
+                RecoveryChoice(RecoveryOption.DO_TASK, "Выполнить задание"),
+                RecoveryChoice(RecoveryOption.WITHDRAW_FROM_SAVINGS, "Взять из копилки"),
+                RecoveryChoice(RecoveryOption.CHOOSE_CHEAPER, "Выбрать подешевле"),
+            ),
+            recommended = RecoveryOption.DO_TASK,
+        )
+        showShop(ready(outcome = rejected), onDismiss = { dismissed = true }, onSavings = { savings = true })
+
+        compose.onNodeWithText("Взять из копилки").performClick()
+
+        assertTrue(dismissed)
+        assertTrue(savings)
+    }
+
     /** ТЗ 3.4: сбой не оставляет экран без выхода. */
     @Test
     fun `сбой_магазина_предлагает_повтор`() {
@@ -422,6 +468,7 @@ class ScreensTest {
         onBuy: (ItemId) -> Unit = {},
         onDismiss: () -> Unit = {},
         onRetry: () -> Unit = {},
+        onSavings: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
@@ -429,7 +476,214 @@ class ScreensTest {
                     state = state,
                     onBack = {},
                     onPlan = onPlan,
+                    onSavings = onSavings,
                     onBuy = onBuy,
+                    onDismiss = onDismiss,
+                    onRetry = onRetry,
+                )
+            }
+        }
+    }
+
+    // --- Копилка и цель (ТЗ 2.5.7) ---
+
+    /** ТЗ 2.5.7: цель, её стоимость, накоплено, остаток и срок — всё на одном экране. */
+    @Test
+    fun `копилка_показывает_цель_накопленное_остаток_и_срок`() {
+        showSavings(savingsReady(periodsToGoal = 2))
+
+        scrollToDescription("80 монет")
+        // Название и цена цели стоят и в карточке, и в списке — ищем любой.
+        scrollToAny(hasText("Самокат"))
+        scrollToAny(hasContentDescription("30 монет", substring = true))
+        scrollToAny(hasContentDescription("10 монет", substring = true))
+        scrollToDescription("20 монет")
+        scrollToText(text(R.string.savings_eta, text(R.string.days_few, 2)))
+        scrollToText(text(R.string.savings_goal_active))
+        scrollToText("Книжка")
+    }
+
+    @Test
+    fun `без_пополнений_срок_не_обещается`() {
+        showSavings(savingsReady(periodsToGoal = null))
+
+        scrollToText(text(R.string.savings_eta_unknown))
+    }
+
+    @Test
+    fun `без_цели_копилка_зовёт_выбрать_и_отложить_нельзя`() {
+        showSavings(savingsReady(active = false))
+
+        scrollToText(text(R.string.savings_goal_none))
+        compose.onNodeWithText(text(R.string.savings_deposit)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.savings_withdraw)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `цель_выбирается_нажатием`() {
+        var chosen: GoalId? = null
+        showSavings(savingsReady(), onChoose = { chosen = it })
+
+        scrollToText("Книжка")
+        compose.onNodeWithText("Книжка").performClick()
+
+        assertEquals(GoalId("book"), chosen)
+    }
+
+    /** ТЗ 2.5.5 и 3.4: во время планирования копилка закрыта, но дорога в план есть. */
+    @Test
+    fun `пока_день_планируется_копилка_закрыта_и_зовёт_в_план`() {
+        var planned = false
+        showSavings(savingsReady(canOperate = false), onPlan = { planned = true })
+
+        scrollToText(text(R.string.savings_planning_hint))
+        compose.onNodeWithText(text(R.string.savings_deposit)).assertIsNotEnabled()
+        compose.onNodeWithText(text(R.string.budget_action_plan)).performClick()
+
+        assertTrue(planned)
+    }
+
+    @Test
+    fun `пополнение_набирается_кнопками_и_подтверждается`() {
+        var added = false
+        var confirmed = false
+        val draft = SavingsDraft.Deposit(amount = Coins(5), max = Coins(80))
+        showSavings(savingsReady(draft = draft), onAdd = { added = true }, onConfirm = { confirmed = true })
+
+        compose.onNodeWithText(text(R.string.savings_deposit_title)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(text(R.string.savings_amount_less)).assertIsNotEnabled()
+        compose.onNodeWithContentDescription(text(R.string.savings_amount_more)).performClick()
+        assertTrue(added)
+
+        // «Отложить» есть и внизу экрана, и в окне — жмём ту, что в окне.
+        compose.onNode(hasText(text(R.string.savings_deposit)) and hasAnyAncestor(isDialog())).performClick()
+
+        assertTrue(confirmed)
+    }
+
+    /**
+     * ТЗ 2.5.7: до подтверждения снятия видно, сколько останется и как
+     * отодвинется цель.
+     */
+    @Test
+    fun `снятие_показывает_остаток_и_срок_до_подтверждения`() {
+        var confirmed = false
+        val draft = SavingsDraft.Withdraw(
+            amount = Coins(5),
+            max = Coins(10),
+            preview = WithdrawPreview(
+                savingsBefore = Coins(10),
+                savingsAfter = Coins(5),
+                periodsBefore = 2,
+                periodsAfter = 3,
+            ),
+            avgDeposit = Coins(10),
+        )
+        showSavings(savingsReady(draft = draft), onConfirm = { confirmed = true })
+
+        compose.onNodeWithText(text(R.string.savings_withdraw_title)).assertIsDisplayed()
+        // Подпись и сумма склеены в один узел: текст у подписи, озвучка у суммы.
+        compose.onNode(hasText(text(R.string.savings_withdraw_left)) and hasContentDescription("5 монет"))
+            .assertIsDisplayed()
+        compose.onNodeWithText(
+            text(R.string.savings_withdraw_eta, text(R.string.days_few, 2), text(R.string.days_few, 3))
+        ).assertIsDisplayed()
+        assertEquals(false, confirmed)
+
+        compose.onNodeWithText(text(R.string.savings_withdraw_confirm)).performClick()
+
+        assertTrue(confirmed)
+    }
+
+    @Test
+    fun `от_снятия_можно_отказаться`() {
+        var cancelled = false
+        val draft = SavingsDraft.Deposit(amount = Coins(5), max = Coins(80))
+        showSavings(savingsReady(draft = draft), onCancel = { cancelled = true })
+
+        compose.onNodeWithText(text(R.string.action_not_now)).performClick()
+
+        assertTrue(cancelled)
+    }
+
+    @Test
+    fun `итог_объясняется_словами_из_контента`() {
+        var dismissed = false
+        val outcome = SavingsOutcomeView(text = "Отложили 5 монет в копилку!", goalReached = false)
+        showSavings(savingsReady(outcome = outcome), onDismiss = { dismissed = true })
+
+        compose.onNodeWithText("Отложили 5 монет в копилку!").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_ok)).performClick()
+
+        assertTrue(dismissed)
+    }
+
+    @Test
+    fun `сбой_копилки_предлагает_повтор`() {
+        var retried = false
+        showSavings(SavingsState.Failed, onRetry = { retried = true })
+
+        compose.onNodeWithText(text(R.string.savings_failed)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_retry)).performClick()
+
+        assertTrue(retried)
+    }
+
+    private val scooter = GoalView(
+        id = GoalId("scooter"),
+        title = "Самокат",
+        price = Coins(30),
+        saved = Coins(10),
+        isActive = true,
+    )
+
+    private val book = GoalView(
+        id = GoalId("book"),
+        title = "Книжка",
+        price = Coins(15),
+        saved = Coins.ZERO,
+        isActive = false,
+    )
+
+    private fun savingsReady(
+        active: Boolean = true,
+        periodsToGoal: Int? = 2,
+        canOperate: Boolean = true,
+        draft: SavingsDraft? = null,
+        outcome: SavingsOutcomeView? = null,
+    ): SavingsState.Ready {
+        val goals = if (active) listOf(scooter, book) else listOf(scooter.copy(isActive = false), book)
+        return SavingsState.Ready(
+            goals = goals,
+            active = goals.firstOrNull { it.isActive },
+            periodsToGoal = if (active) periodsToGoal else null,
+            balance = Coins(80),
+            canOperate = canOperate,
+            draft = draft,
+            outcome = outcome,
+        )
+    }
+
+    private fun showSavings(
+        state: SavingsState,
+        onPlan: () -> Unit = {},
+        onChoose: (GoalId) -> Unit = {},
+        onAdd: () -> Unit = {},
+        onConfirm: () -> Unit = {},
+        onCancel: () -> Unit = {},
+        onDismiss: () -> Unit = {},
+        onRetry: () -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                SavingsContent(
+                    state = state,
+                    onBack = {},
+                    onPlan = onPlan,
+                    onChoose = onChoose,
+                    onAdd = onAdd,
+                    onConfirm = onConfirm,
+                    onCancel = onCancel,
                     onDismiss = onDismiss,
                     onRetry = onRetry,
                 )
@@ -542,10 +796,17 @@ class ScreensTest {
         onRetry: () -> Unit = {},
         onPlan: () -> Unit = {},
         onShop: () -> Unit = {},
+        onSavings: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
-                MainContent(state = state, onRetry = onRetry, onPlan = onPlan, onShop = onShop)
+                MainContent(
+                    state = state,
+                    onRetry = onRetry,
+                    onPlan = onPlan,
+                    onShop = onShop,
+                    onSavings = onSavings,
+                )
             }
         }
     }
@@ -553,6 +814,12 @@ class ScreensTest {
     private fun scrollToText(label: String) {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(label))
         compose.onNodeWithText(label).assertIsDisplayed()
+    }
+
+    /** Когда узлов с такой подписью несколько — достаточно, чтобы показался первый. */
+    private fun scrollToAny(matcher: SemanticsMatcher) {
+        compose.onNode(hasScrollAction()).performScrollToNode(matcher)
+        compose.onAllNodes(matcher).onFirst().assertIsDisplayed()
     }
 
     /**

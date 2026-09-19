@@ -1,0 +1,477 @@
+package ru.finnypet.app.ui.screens.savings
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.finnypet.app.R
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GoalId
+import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyDialog
+import ru.finnypet.app.ui.components.FinnyScaffold
+import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.StepButton
+import ru.finnypet.app.ui.text.WordForm
+import ru.finnypet.app.ui.text.wordFormOf
+import ru.finnypet.app.ui.theme.Dimens
+
+/**
+ * Копилка и цель (ТЗ 2.5.7): выбор цели, стоимость, накоплено и остаток,
+ * пополнение, снятие после отдельного подтверждения с превью, срок по
+ * средней сумме пополнения.
+ */
+@Composable
+fun SavingsScreen(
+    onBack: () -> Unit,
+    onPlan: () -> Unit,
+    viewModel: SavingsViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    SavingsContent(
+        state = state,
+        onBack = onBack,
+        onPlan = onPlan,
+        onChoose = viewModel::choose,
+        onDeposit = viewModel::startDeposit,
+        onWithdraw = viewModel::startWithdraw,
+        onAdd = viewModel::add,
+        onRemove = viewModel::remove,
+        onConfirm = viewModel::confirm,
+        onCancel = viewModel::cancel,
+        onDismiss = viewModel::dismissOutcome,
+        onRetry = viewModel::retry,
+    )
+}
+
+@Composable
+fun SavingsContent(
+    state: SavingsState,
+    onBack: () -> Unit,
+    onPlan: () -> Unit = {},
+    onChoose: (GoalId) -> Unit = {},
+    onDeposit: () -> Unit = {},
+    onWithdraw: () -> Unit = {},
+    onAdd: () -> Unit = {},
+    onRemove: () -> Unit = {},
+    onConfirm: () -> Unit = {},
+    onCancel: () -> Unit = {},
+    onDismiss: () -> Unit = {},
+    onRetry: () -> Unit = {},
+) {
+    when (state) {
+        SavingsState.Loading -> Screen(onBack = onBack) {}
+
+        SavingsState.Failed -> Screen(
+            onBack = onBack,
+            bottomBar = {
+                ButtonColumn {
+                    FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
+                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
+                }
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.savings_failed),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        is SavingsState.Ready -> Ready(
+            state = state,
+            onBack = onBack,
+            onPlan = onPlan,
+            onChoose = onChoose,
+            onDeposit = onDeposit,
+            onWithdraw = onWithdraw,
+            onAdd = onAdd,
+            onRemove = onRemove,
+            onConfirm = onConfirm,
+            onCancel = onCancel,
+            onDismiss = onDismiss,
+        )
+    }
+}
+
+@Composable
+private fun Screen(
+    onBack: () -> Unit,
+    bottomBar: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    FinnyScaffold(
+        title = stringResource(R.string.savings_title),
+        onBack = onBack,
+        bottomBar = bottomBar,
+        spacing = Dimens.SpaceMedium,
+        content = content,
+    )
+}
+
+@Composable
+private fun Ready(
+    state: SavingsState.Ready,
+    onBack: () -> Unit,
+    onPlan: () -> Unit,
+    onChoose: (GoalId) -> Unit,
+    onDeposit: () -> Unit,
+    onWithdraw: () -> Unit,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Screen(
+        onBack = onBack,
+        bottomBar = {
+            ButtonColumn {
+                FinnyButton(
+                    text = stringResource(R.string.savings_deposit),
+                    onClick = onDeposit,
+                    enabled = state.canDeposit,
+                )
+                FinnySecondaryButton(
+                    text = stringResource(R.string.savings_withdraw),
+                    onClick = onWithdraw,
+                    enabled = state.canWithdraw,
+                )
+            }
+        },
+    ) {
+        MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
+
+        if (!state.canOperate) {
+            PlanningHint(onPlan = onPlan)
+        }
+
+        val active = state.active
+        if (active == null) {
+            Text(
+                text = stringResource(R.string.savings_goal_none),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        } else {
+            ActiveGoal(goal = active, periodsToGoal = state.periodsToGoal)
+        }
+
+        Text(
+            text = stringResource(R.string.savings_goal_choose),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (state.goals.isEmpty()) {
+            Text(
+                text = stringResource(R.string.savings_goals_empty),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        state.goals.forEach { goal ->
+            GoalRow(goal = goal, onClick = { onChoose(goal.id) })
+        }
+    }
+
+    when (val draft = state.draft) {
+        null -> Unit
+        is SavingsDraft.Deposit -> DepositDialog(
+            draft = draft,
+            onAdd = onAdd,
+            onRemove = onRemove,
+            onConfirm = onConfirm,
+            onCancel = onCancel,
+        )
+
+        is SavingsDraft.Withdraw -> WithdrawDialog(
+            draft = draft,
+            onAdd = onAdd,
+            onRemove = onRemove,
+            onConfirm = onConfirm,
+            onCancel = onCancel,
+        )
+    }
+    state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss) }
+}
+
+/** Пока день планируется, копилка закрыта — и дорога в план тут же (ТЗ 3.4). */
+@Composable
+private fun PlanningHint(onPlan: () -> Unit) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.secondaryContainer,
+                RoundedCornerShape(Dimens.Corner),
+            )
+            .padding(Dimens.Space),
+    ) {
+        Text(
+            text = stringResource(R.string.savings_planning_hint),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+        FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
+    }
+}
+
+/**
+ * Выбранная цель: стоимость, накоплено, остаток и срок — всё, что требует
+ * ТЗ 2.5.7 показать ребёнку о цели.
+ */
+@Composable
+private fun ActiveGoal(goal: GoalView, periodsToGoal: Int?) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(Dimens.Corner),
+            )
+            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+    ) {
+        Text(text = goal.title, style = MaterialTheme.typography.titleLarge)
+        Labelled(label = stringResource(R.string.savings_price), amount = goal.price)
+        Labelled(label = stringResource(R.string.main_savings), amount = goal.saved)
+        ProgressLine(
+            fraction = goal.fraction,
+            contentDescription = stringResource(
+                R.string.main_goal_progress,
+                goal.title,
+                goal.saved.amount,
+                goal.price.amount,
+            ),
+        )
+        if (goal.isReached) {
+            Text(
+                text = stringResource(R.string.main_goal_reached),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            Labelled(label = stringResource(R.string.main_goal_left), amount = goal.remaining)
+            Text(
+                text = when (periodsToGoal) {
+                    null -> stringResource(R.string.savings_eta_unknown)
+                    else -> stringResource(R.string.savings_eta, daysText(periodsToGoal))
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun Labelled(label: String, amount: Coins) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        MoneyAmount(amount = amount)
+    }
+}
+
+/**
+ * Цель в списке — кнопка выбора. Выбранная подписана словом, а не только
+ * выделена цветом (ТЗ 3.6). Накопленное показывается у каждой: отложенное на
+ * прежнюю цель не пропадает из виду при смене.
+ */
+@Composable
+private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
+    val container = if (goal.isActive) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .background(container)
+            .clickable(role = Role.Button, onClick = onClick)
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = goal.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (goal.isActive) FontWeight.Bold else FontWeight.Normal,
+            )
+            if (goal.isActive) {
+                Text(
+                    text = stringResource(R.string.savings_goal_active),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (goal.saved > Coins.ZERO) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                ) {
+                    Text(
+                        text = stringResource(R.string.main_savings),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    MoneyAmount(amount = goal.saved, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+        MoneyAmount(amount = goal.price)
+    }
+}
+
+@Composable
+private fun DepositDialog(
+    draft: SavingsDraft.Deposit,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    FinnyDialog(
+        title = stringResource(R.string.savings_deposit_title),
+        onDismiss = onCancel,
+        buttons = {
+            FinnyButton(text = stringResource(R.string.savings_deposit), onClick = onConfirm)
+            FinnySecondaryButton(text = stringResource(R.string.action_not_now), onClick = onCancel)
+        },
+    ) {
+        AmountStepper(draft = draft, onAdd = onAdd, onRemove = onRemove)
+    }
+}
+
+/**
+ * Снятие — только после отдельного подтверждения, и до него ребёнок видит,
+ * сколько останется в копилке и как отодвинется цель (ТЗ 2.5.7).
+ */
+@Composable
+private fun WithdrawDialog(
+    draft: SavingsDraft.Withdraw,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    FinnyDialog(
+        title = stringResource(R.string.savings_withdraw_title),
+        onDismiss = onCancel,
+        buttons = {
+            FinnyButton(text = stringResource(R.string.savings_withdraw_confirm), onClick = onConfirm)
+            FinnySecondaryButton(text = stringResource(R.string.action_not_now), onClick = onCancel)
+        },
+    ) {
+        AmountStepper(draft = draft, onAdd = onAdd, onRemove = onRemove)
+        Labelled(label = stringResource(R.string.savings_withdraw_left), amount = draft.preview.savingsAfter)
+        val before = draft.preview.periodsBefore
+        val after = draft.preview.periodsAfter
+        Text(
+            text = if (before == null || after == null) {
+                stringResource(R.string.savings_withdraw_eta_unknown)
+            } else {
+                stringResource(R.string.savings_withdraw_eta, daysText(before), daysText(after))
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun AmountStepper(
+    draft: SavingsDraft,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        StepButton(
+            symbol = "−",
+            description = stringResource(R.string.savings_amount_less),
+            enabled = draft.canRemove,
+            onClick = onRemove,
+        )
+        MoneyAmount(
+            amount = draft.amount,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.weight(1f),
+        )
+        StepButton(
+            symbol = "+",
+            description = stringResource(R.string.savings_amount_more),
+            enabled = draft.canAdd,
+            onClick = onAdd,
+        )
+    }
+}
+
+@Composable
+private fun OutcomeDialog(outcome: SavingsOutcomeView, onDismiss: () -> Unit) {
+    FinnyDialog(
+        title = stringResource(
+            if (outcome.goalReached) R.string.main_goal_reached else R.string.savings_done_title
+        ),
+        onDismiss = onDismiss,
+        buttons = {
+            FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
+        },
+    ) {
+        Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** «3 дня», «5 дней»: игровой день — это период, склонение по русскому правилу. */
+@Composable
+private fun daysText(days: Int): String = stringResource(
+    when (wordFormOf(days)) {
+        WordForm.ONE -> R.string.days_one
+        WordForm.FEW -> R.string.days_few
+        WordForm.MANY -> R.string.days_many
+    },
+    days,
+)

@@ -32,6 +32,7 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.StatBar
+import ru.finnypet.app.ui.components.StepButton
 import ru.finnypet.app.ui.screens.shop.ShopContent
 import ru.finnypet.app.ui.screens.shop.ShopItemView
 import ru.finnypet.app.ui.screens.shop.ShopState
@@ -88,6 +89,19 @@ class DesignSystemTest {
         }
 
         compose.onNodeWithContentDescription("Назад")
+            .assertHeightIsAtLeast(48.dp)
+            .assertWidthIsAtLeast(48.dp)
+    }
+
+    @Test
+    fun кнопка_шага_не_меньше_48_dp() {
+        compose.setContent {
+            FinnypetTheme {
+                StepButton(symbol = "+", description = "Больше", enabled = true, onClick = {})
+            }
+        }
+
+        compose.onNodeWithContentDescription("Больше")
             .assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
     }

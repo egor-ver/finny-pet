@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.screens.main
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,11 +48,18 @@ import ru.finnypet.app.ui.theme.Dimens
 fun MainScreen(
     onPlan: () -> Unit,
     onShop: () -> Unit,
+    onSavings: () -> Unit,
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    MainContent(state = state, onRetry = viewModel::retry, onPlan = onPlan, onShop = onShop)
+    MainContent(
+        state = state,
+        onRetry = viewModel::retry,
+        onPlan = onPlan,
+        onShop = onShop,
+        onSavings = onSavings,
+    )
 }
 
 /**
@@ -62,11 +72,17 @@ fun MainContent(
     onRetry: () -> Unit = {},
     onPlan: () -> Unit = {},
     onShop: () -> Unit = {},
+    onSavings: () -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
         MainState.Failed -> FailedScreen(onRetry = onRetry)
-        is MainState.Ready -> ReadyScreen(state = state, onPlan = onPlan, onShop = onShop)
+        is MainState.Ready -> ReadyScreen(
+            state = state,
+            onPlan = onPlan,
+            onShop = onShop,
+            onSavings = onSavings,
+        )
     }
 }
 
@@ -102,6 +118,7 @@ private fun ReadyScreen(
     state: MainState.Ready,
     onPlan: () -> Unit,
     onShop: () -> Unit,
+    onSavings: () -> Unit,
 ) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
@@ -139,7 +156,7 @@ private fun ReadyScreen(
         Pet(state = state)
 
         MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
-        SavingsCard(savings = state.savings)
+        SavingsCard(savings = state.savings, onOpen = onSavings)
 
         Text(
             text = stringResource(R.string.main_pet_state, state.petName),
@@ -195,17 +212,21 @@ private fun Pet(state: MainState.Ready) {
  * Цели может не быть — ребёнок ещё не выбрал. Тогда сумма всё равно
  * показывается: отложенные монеты не должны пропадать с экрана из-за того,
  * что цель не назначена.
+ *
+ * Карточка целиком — кнопка в копилку: третья кнопка внизу вытеснила бы
+ * показатели питомца с экрана, а ТЗ 2.5.3 требует показать всё сразу.
+ * Подпись «Открыть копилку» говорит, что карточка нажимается, — цветом это
+ * не передашь (ТЗ 3.6).
  */
 @Composable
-private fun SavingsCard(savings: SavingsView) {
+private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(role = Role.Button, onClick = onOpen)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
         Row(
@@ -235,6 +256,13 @@ private fun SavingsCard(savings: SavingsView) {
         } else {
             Goal(savings = savings, title = title, price = price)
         }
+
+        Text(
+            text = stringResource(R.string.savings_open),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.align(Alignment.End),
+        )
     }
 }
 

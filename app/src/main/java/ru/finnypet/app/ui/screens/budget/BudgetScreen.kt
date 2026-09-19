@@ -5,12 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +30,7 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.StepButton
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -217,32 +216,6 @@ private fun CategoryRow(
             description = stringResource(R.string.budget_add, title),
             enabled = canAdd,
             onClick = onAdd,
-        )
-    }
-}
-
-@Composable
-private fun StepButton(
-    symbol: String,
-    description: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    OutlinedIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .defaultMinSize(minWidth = Dimens.TouchTarget, minHeight = Dimens.TouchTarget)
-            .semantics { contentDescription = description },
-    ) {
-        // Знак скрыт от озвучки: подпись кнопки уже говорит, что она делает,
-        // а «плюс» отдельной остановкой только мешает. Прятать через
-        // clearAndSetSemantics на самой кнопке нельзя — вместе со знаком
-        // пропадёт и признак «недоступна».
-        Text(
-            text = symbol,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }

@@ -25,6 +25,9 @@ interface GoalProgressDao {
     @Query("SELECT * FROM goal_progress WHERE profileId = :profileId")
     suspend fun all(profileId: String): List<GoalProgressEntity>
 
+    @Query("SELECT * FROM goal_progress WHERE profileId = :profileId")
+    fun observeAll(profileId: String): Flow<List<GoalProgressEntity>>
+
     /**
      * Смена активной цели целиком: снять флаг со всех и поставить одной.
      *

@@ -37,3 +37,7 @@ data object Budget : Route
 /** Магазин: покупки и расходы (ТЗ 2.5.6). */
 @Serializable
 data object Shop : Route
+
+/** Копилка и цель (ТЗ 2.5.7). */
+@Serializable
+data object Savings : Route

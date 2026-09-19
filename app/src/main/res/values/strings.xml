@@ -11,6 +11,7 @@
     <string name="action_back">Назад</string>
     <string name="action_start">Начать</string>
     <string name="action_done">Готово</string>
+    <string name="action_not_now">Не сейчас</string>
 
     <!--
         Деньги. Формы разнесены по строкам, а не собраны в plurals: форму
@@ -83,7 +84,6 @@
     <string name="shop_effect">%1$s %2$s</string>
     <string name="shop_pet_change">Что изменится у питомца</string>
     <string name="shop_buy">Купить</string>
-    <string name="shop_not_now">Не сейчас</string>
     <string name="shop_done_title">Готово!</string>
     <string name="shop_no_change">Питомцу и так хорошо — показатели не изменились.</string>
     <string name="shop_rejected_title">Монет не хватает</string>
@@ -91,6 +91,33 @@
     <string name="shop_option_hint">• %1$s</string>
     <string name="shop_failed">Не получилось открыть магазин. Попробуй ещё раз.</string>
     <string name="action_ok">Понятно</string>
+
+    <!-- Копилка и цель (ТЗ 2.5.7). Игровой день — это период; склонение делает код, см. ui/text/Plural.kt -->
+    <string name="savings_title">Копилка</string>
+    <string name="savings_open">Открыть копилку</string>
+    <string name="savings_goal_choose">На что копим?</string>
+    <string name="savings_goals_empty">Целей пока нет.</string>
+    <string name="savings_goal_none">Выбери цель — и копилка заработает.</string>
+    <string name="savings_goal_active">Выбрана</string>
+    <string name="savings_price">Стоит</string>
+    <string name="savings_eta">При таких пополнениях соберём через %1$s</string>
+    <string name="savings_eta_unknown">Отложи первые монеты — и я посчитаю, когда соберём.</string>
+    <string name="savings_deposit">Отложить</string>
+    <string name="savings_withdraw">Взять из копилки</string>
+    <string name="savings_deposit_title">Сколько отложить?</string>
+    <string name="savings_withdraw_title">Сколько взять?</string>
+    <string name="savings_withdraw_confirm">Взять</string>
+    <string name="savings_withdraw_left">В копилке останется</string>
+    <string name="savings_withdraw_eta">Цель была через %1$s, станет через %2$s</string>
+    <string name="savings_withdraw_eta_unknown">Срок пока не посчитать — пополнений ещё не было.</string>
+    <string name="savings_amount_more">Больше</string>
+    <string name="savings_amount_less">Меньше</string>
+    <string name="savings_planning_hint">Сначала спланируй день — потом можно откладывать и брать из копилки.</string>
+    <string name="savings_done_title">Готово!</string>
+    <string name="savings_failed">Не получилось открыть копилку. Попробуй ещё раз.</string>
+    <string name="days_one">%1$d день</string>
+    <string name="days_few">%1$d дня</string>
+    <string name="days_many">%1$d дней</string>
 
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>

@@ -10,6 +10,7 @@ import ru.finnypet.app.ui.screens.budget.BudgetScreen
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
+import ru.finnypet.app.ui.screens.savings.SavingsScreen
 import ru.finnypet.app.ui.screens.shop.ShopScreen
 
 /**
@@ -53,6 +54,7 @@ fun FinnyNavHost(
             MainScreen(
                 onPlan = { navController.navigate(Budget) },
                 onShop = { navController.navigate(Shop) },
+                onSavings = { navController.navigate(Savings) },
             )
         }
 
@@ -66,6 +68,19 @@ fun FinnyNavHost(
                 // Из магазина в план — не поверх магазина, а вместо него:
                 // после плана ребёнок вернётся на главный, а не в магазин,
                 // где ещё минуту назад покупать было нельзя.
+                onPlan = {
+                    navController.navigate(Budget) {
+                        popUpTo<Main>()
+                    }
+                },
+                // А копилка — поверх: взял монеты, вернулся и купил.
+                onSavings = { navController.navigate(Savings) },
+            )
+        }
+
+        composable<Savings> {
+            SavingsScreen(
+                onBack = { navController.popBackStack() },
                 onPlan = {
                     navController.navigate(Budget) {
                         popUpTo<Main>()

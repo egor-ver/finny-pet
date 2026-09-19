@@ -52,6 +52,9 @@ class SavingsRepositoryImpl @Inject constructor(
     override suspend fun all(profileId: ProfileId): List<GoalProgress> =
         goals.all(profileId.value).map(GoalProgressEntity::toDomain)
 
+    override fun observeAll(profileId: ProfileId): Flow<List<GoalProgress>> =
+        goals.observeAll(profileId.value).map { rows -> rows.map(GoalProgressEntity::toDomain) }
+
     override suspend fun averageDeposit(profileId: ProfileId, goalId: GoalId): Coins {
         val deposits = transactions.byGoal(profileId.value, goalId.value)
             .filter { it.type == TransactionType.SAVINGS_DEPOSIT }
