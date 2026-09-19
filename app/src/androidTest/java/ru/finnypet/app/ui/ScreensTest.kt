@@ -577,7 +577,6 @@ class ScreensTest {
                 periodsBefore = 2,
                 periodsAfter = 3,
             ),
-            avgDeposit = Coins(10),
         )
         showSavings(savingsReady(draft = draft), onConfirm = { confirmed = true })
 
@@ -593,6 +592,25 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.savings_withdraw_confirm)).performClick()
 
         assertTrue(confirmed)
+    }
+
+    /** Собранная цель — не «через 0 дней». */
+    @Test
+    fun `снятие_из_собранной_цели_не_обещает_ноль_дней`() {
+        val draft = SavingsDraft.Withdraw(
+            amount = Coins(5),
+            max = Coins(30),
+            preview = WithdrawPreview(
+                savingsBefore = Coins(30),
+                savingsAfter = Coins(25),
+                periodsBefore = 0,
+                periodsAfter = 1,
+            ),
+        )
+        showSavings(savingsReady(draft = draft))
+
+        compose.onNodeWithText(text(R.string.savings_withdraw_eta_reached, text(R.string.days_one, 1)))
+            .assertIsDisplayed()
     }
 
     @Test
@@ -655,7 +673,6 @@ class ScreensTest {
         val goals = if (active) listOf(scooter, book) else listOf(scooter.copy(isActive = false), book)
         return SavingsState.Ready(
             goals = goals,
-            active = goals.firstOrNull { it.isActive },
             periodsToGoal = if (active) periodsToGoal else null,
             balance = Coins(80),
             canOperate = canOperate,

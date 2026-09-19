@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -113,7 +114,10 @@ class SavingsFlowTest {
 
     @After
     fun tearDown() {
+        // Отменить и дождаться: отмена не прерывает запрос, который уже ушёл
+        // в SQLite, и закрытая под ним база уронила бы весь прогон.
         viewModel.viewModelScope.cancel()
+        runBlocking { viewModel.viewModelScope.coroutineContext[Job]?.join() }
         db.close()
         storeFile.delete()
     }
@@ -193,11 +197,13 @@ class SavingsFlowTest {
 
         deposit(Coins(10))
         // Остаток 20, средний взнос 10 — два дня.
-        assertEquals(2, await { it.active?.saved == Coins(10) && it.outcome == null }.periodsToGoal)
+        val first = await { it.active?.saved == Coins(10) && it.outcome == null }
+        assertEquals(2, first.periodsToGoal)
 
         deposit(Coins(5))
         // Остаток 15, средний взнос (10 + 5) / 2 = 7 — три дня с округлением вверх.
-        assertEquals(3, await { it.active?.saved == Coins(15) && it.outcome == null }.periodsToGoal)
+        val second = await { it.active?.saved == Coins(15) && it.outcome == null }
+        assertEquals(3, second.periodsToGoal)
     }
 
     @Test
@@ -289,6 +295,23 @@ class SavingsFlowTest {
         assertEquals(after.balance, settle().balance)
         val period = periods.current(profileId)!!
         assertEquals(1, periods.transactions(period.id).count { it.type == TransactionType.SAVINGS_DEPOSIT })
+    }
+
+    /** Черновик считался по прежней цели — при смене цели он закрывается. */
+    @Test
+    fun смена_цели_закрывает_черновик() = runBlocking {
+        startDay()
+        awaitReady()
+        viewModel.choose(scooter.id)
+        await { it.active?.id == scooter.id }
+        viewModel.startDeposit()
+        await { it.draft != null }
+
+        viewModel.choose(book.id)
+
+        val after = await { it.active?.id == book.id }
+        assertNull(after.draft)
+        assertEquals(Coins.ZERO, after.active?.saved)
     }
 
     @Test

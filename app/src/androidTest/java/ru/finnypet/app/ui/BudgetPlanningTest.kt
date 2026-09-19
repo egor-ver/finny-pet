@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -98,9 +99,11 @@ class BudgetPlanningTest {
 
     @After
     fun tearDown() {
-        // Сначала останавливаем вьюмодель: её подписка на базу переживает
-        // закрытие и падает на «Database is closed».
+        // Сначала останавливаем вьюмодель и ждём, пока она остановится: её
+        // подписка на базу переживает закрытие и падает на «Database is closed»,
+        // а отмена не прерывает запрос, который уже ушёл в SQLite.
         viewModel.viewModelScope.cancel()
+        runBlocking { viewModel.viewModelScope.coroutineContext[Job]?.join() }
         db.close()
         storeFile.delete()
     }

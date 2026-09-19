@@ -408,10 +408,11 @@ private fun WithdrawDialog(
         val before = draft.preview.periodsBefore
         val after = draft.preview.periodsAfter
         Text(
-            text = if (before == null || after == null) {
-                stringResource(R.string.savings_withdraw_eta_unknown)
-            } else {
-                stringResource(R.string.savings_withdraw_eta, daysText(before), daysText(after))
+            text = when {
+                before == null || after == null -> stringResource(R.string.savings_withdraw_eta_unknown)
+                // Ноль дней — это «уже собрана», а не срок; говорить «через 0 дней» ребёнку нельзя.
+                before == 0 -> stringResource(R.string.savings_withdraw_eta_reached, daysText(after))
+                else -> stringResource(R.string.savings_withdraw_eta, daysText(before), daysText(after))
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

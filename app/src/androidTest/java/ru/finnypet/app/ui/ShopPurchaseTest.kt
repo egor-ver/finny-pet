@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -161,7 +162,10 @@ class ShopPurchaseTest {
     fun tearDown() {
         // Сначала останавливаем вьюмодель: её подписка на базу переживает
         // закрытие и падает на «Database is closed».
+        // Отменить и дождаться: отмена не прерывает запрос, который уже ушёл
+        // в SQLite, и закрытая под ним база уронила бы весь прогон.
         viewModel.viewModelScope.cancel()
+        runBlocking { viewModel.viewModelScope.coroutineContext[Job]?.join() }
         db.close()
         storeFile.delete()
     }

@@ -48,14 +48,17 @@ data class GoalView(
 
     val isReached: Boolean get() = saved.covers(price)
 
-    val fraction: Float get() = (saved.amount.toFloat() / price.amount).coerceAtMost(1f)
+    /** Цена в домене больше нуля, но экран не должен падать и на выдуманной. */
+    val fraction: Float
+        get() = if (price.amount == 0) 1f else (saved.amount.toFloat() / price.amount).coerceAtMost(1f)
 }
 
 /**
  * Сумма, которую ребёнок набирает кнопками, и что домен про неё говорит.
  *
- * Живёт во вьюмодели, а не в экране: превью снятия считает [SavingsEngine]
- * по среднему пополнению из базы, и экрану неоткуда взять эти числа самому.
+ * Собирается из состояния, а не хранится: граница — это баланс или
+ * накопленное прямо сейчас, а превью снятия считает [SavingsEngine] по
+ * среднему пополнению из базы. Экрану неоткуда взять эти числа самому.
  */
 sealed interface SavingsDraft {
 
@@ -73,14 +76,12 @@ sealed interface SavingsDraft {
 
     /**
      * ТЗ 2.5.7: до подтверждения снятия ребёнок видит, сколько останется и,
-     * если срок считается, как он изменится. [avgDeposit] хранится здесь,
-     * чтобы не ходить в базу на каждое нажатие «больше».
+     * если срок считается, как он изменится.
      */
     data class Withdraw(
         override val amount: Coins,
         override val max: Coins,
         val preview: WithdrawPreview,
-        val avgDeposit: Coins,
     ) : SavingsDraft
 }
 
@@ -98,7 +99,6 @@ sealed interface SavingsState {
 
     data class Ready(
         val goals: List<GoalView>,
-        val active: GoalView?,
         /**
          * Через сколько игровых дней цель соберётся при таких же пополнениях
          * (ТЗ 2.5.7: расчёт по средней сумме). `null` — пополнений ещё не было
@@ -116,11 +116,21 @@ sealed interface SavingsState {
         val outcome: SavingsOutcomeView? = null,
     ) : SavingsState {
 
+        val active: GoalView? get() = goals.firstOrNull { it.isActive }
+
         val canDeposit: Boolean get() = canOperate && active != null && balance > Coins.ZERO
 
-        val canWithdraw: Boolean get() = canOperate && active != null && active.saved > Coins.ZERO
+        val canWithdraw: Boolean get() = canOperate && (active?.saved ?: Coins.ZERO) > Coins.ZERO
     }
 }
+
+/** Что ребёнок набирает: вид операции и сумма. Границы и превью досчитывает состояние. */
+private data class DraftRequest(
+    val kind: OperationKind,
+    val amount: Coins,
+)
+
+private enum class OperationKind { DEPOSIT, WITHDRAW }
 
 /**
  * Копилка и цель (ТЗ 2.5.7): выбор цели, пополнение, снятие с превью,
@@ -142,7 +152,7 @@ class SavingsViewModel @Inject constructor(
     private val texts: Map<String, String> = content.pack().texts
 
     private val failed = MutableStateFlow(false)
-    private val draft = MutableStateFlow<SavingsDraft?>(null)
+    private val draft = MutableStateFlow<DraftRequest?>(null)
     private val outcome = MutableStateFlow<SavingsOutcomeView?>(null)
 
     /** Операции по одной: два быстрых «отложить» иначе списали бы баланс дважды. */
@@ -173,46 +183,25 @@ class SavingsViewModel @Inject constructor(
         act { openPeriod(it) }
     }
 
-    /** Выбор цели денег не двигает, поэтому разрешён и во время планирования. */
+    /**
+     * Выбор цели денег не двигает, поэтому разрешён и во время планирования.
+     * Открытый черновик закрывается: его границы и превью считались по
+     * прежней цели.
+     */
     fun choose(goalId: GoalId) {
         act { profileId ->
             editing.withLock {
                 if (goals.none { it.id == goalId }) return@withLock
+                draft.value = null
                 val progress = savings.progress(profileId, goalId)
                 savings.setActive(profileId, progress.copy(isActive = true))
             }
         }
     }
 
-    fun startDeposit() {
-        act { profileId ->
-            editing.withLock {
-                val period = runningPeriod(profileId) ?: return@withLock
-                activeGoal(profileId) ?: return@withLock
-                val balance = periods.balance(period)
-                if (balance == Coins.ZERO) return@withLock
-                draft.value = SavingsDraft.Deposit(amount = AmountLadder.first(balance), max = balance)
-            }
-        }
-    }
+    fun startDeposit() = start(OperationKind.DEPOSIT)
 
-    fun startWithdraw() {
-        act { profileId ->
-            editing.withLock {
-                runningPeriod(profileId) ?: return@withLock
-                val (progress, goal) = activeGoal(profileId) ?: return@withLock
-                if (progress.saved == Coins.ZERO) return@withLock
-                val avgDeposit = savings.averageDeposit(profileId, goal.id)
-                val amount = AmountLadder.first(progress.saved)
-                draft.value = SavingsDraft.Withdraw(
-                    amount = amount,
-                    max = progress.saved,
-                    preview = engine.previewWithdraw(amount, progress, goal, avgDeposit),
-                    avgDeposit = avgDeposit,
-                )
-            }
-        }
-    }
+    fun startWithdraw() = start(OperationKind.WITHDRAW)
 
     fun add() = step(up = true)
 
@@ -222,15 +211,17 @@ class SavingsViewModel @Inject constructor(
         draft.value = null
     }
 
+    /**
+     * Окно закрывается сразу, до записи: повторное нажатие или «не сейчас»
+     * во время записи уже ни на что не влияют, а ребёнок не видит окно,
+     * которое «не реагирует».
+     */
     fun confirm() {
         act { profileId ->
             editing.withLock {
-                when (val current = draft.value) {
-                    null -> Unit
-                    is SavingsDraft.Deposit -> deposit(profileId, current.amount)
-                    is SavingsDraft.Withdraw -> withdraw(profileId, current.amount)
-                }
+                val current = draft.value ?: return@withLock
                 draft.value = null
+                operate(profileId, current.kind, current.amount)
             }
         }
     }
@@ -239,62 +230,60 @@ class SavingsViewModel @Inject constructor(
         outcome.value = null
     }
 
-    /**
-     * Шаг по лесенке. Превью снятия пересчитывается по прогрессу из базы:
-     * сумма в черновике могла бы разойтись с накоплениями, если бы их
-     * поменял кто-то ещё, и домен на это отвечает исключением.
-     */
-    private fun step(up: Boolean) {
+    private fun start(kind: OperationKind) {
         act { profileId ->
             editing.withLock {
-                when (val current = draft.value) {
-                    null -> Unit
-
-                    is SavingsDraft.Deposit -> draft.value = current.copy(
-                        amount = if (up) AmountLadder.up(current.amount, current.max) else AmountLadder.down(current.amount, current.max),
-                    )
-
-                    is SavingsDraft.Withdraw -> {
-                        val (progress, goal) = activeGoal(profileId) ?: return@withLock
-                        val amount = if (up) AmountLadder.up(current.amount, current.max) else AmountLadder.down(current.amount, current.max)
-                        if (!progress.saved.covers(amount)) return@withLock
-                        draft.value = current.copy(
-                            amount = amount,
-                            preview = engine.previewWithdraw(amount, progress, goal, current.avgDeposit),
-                        )
-                    }
-                }
+                val limit = limitOf(profileId, kind) ?: return@withLock
+                if (limit == Coins.ZERO) return@withLock
+                draft.value = DraftRequest(kind = kind, amount = AmountLadder.first(limit))
             }
         }
     }
 
+    /** Шаг по лесенке в границах, прочитанных из базы прямо сейчас. */
+    private fun step(up: Boolean) {
+        act { profileId ->
+            editing.withLock {
+                val current = draft.value ?: return@withLock
+                val limit = limitOf(profileId, current.kind) ?: return@withLock
+                val amount = if (up) AmountLadder.up(current.amount, limit) else AmountLadder.down(current.amount, limit)
+                draft.value = current.copy(amount = amount)
+            }
+        }
+    }
+
+    /**
+     * Сколько всего можно отложить или взять: баланс либо накопленное.
+     * `null` — операция сейчас невозможна: день не идёт или цели нет.
+     */
+    private suspend fun limitOf(profileId: ProfileId, kind: OperationKind): Coins? {
+        val period = runningPeriod(profileId) ?: return null
+        val (progress, _) = activeGoal(profileId) ?: return null
+        return when (kind) {
+            OperationKind.DEPOSIT -> periods.balance(period)
+            OperationKind.WITHDRAW -> progress.saved
+        }
+    }
+
     /** Баланс, прогресс и период берутся из базы в момент записи, не из экрана. */
-    private suspend fun deposit(profileId: ProfileId, requested: Coins) {
+    private suspend fun operate(profileId: ProfileId, kind: OperationKind, requested: Coins) {
         val period = runningPeriod(profileId) ?: return
         val (progress, goal) = activeGoal(profileId) ?: return
         val balance = periods.balance(period)
-        val amount = minOf(requested, balance)
+        val limit = when (kind) {
+            OperationKind.DEPOSIT -> balance
+            OperationKind.WITHDRAW -> progress.saved
+        }
+        val amount = minOf(requested, limit)
         if (amount == Coins.ZERO) return
 
-        val result = engine.deposit(amount, balance, progress, goal, period.id)
+        val result = when (kind) {
+            OperationKind.DEPOSIT -> engine.deposit(amount, balance, progress, goal, period.id)
+            OperationKind.WITHDRAW -> engine.withdraw(amount, balance, progress, goal, period.id)
+        }
         // Сначала операция, потом прогресс: баланс считается по операциям,
         // и если приложение закроется между записями, монеты будут видны в
         // истории, а не пропадут.
-        periods.addTransaction(result.value.transaction)
-        savings.save(profileId, result.value.progress)
-        outcome.value = SavingsOutcomeView(
-            text = texts.textOf(result.explanation),
-            goalReached = result.value.goalReached,
-        )
-    }
-
-    private suspend fun withdraw(profileId: ProfileId, requested: Coins) {
-        val period = runningPeriod(profileId) ?: return
-        val (progress, goal) = activeGoal(profileId) ?: return
-        val amount = minOf(requested, progress.saved)
-        if (amount == Coins.ZERO) return
-
-        val result = engine.withdraw(amount, periods.balance(period), progress, goal, period.id)
         periods.addTransaction(result.value.transaction)
         savings.save(profileId, result.value.progress)
         outcome.value = SavingsOutcomeView(
@@ -335,29 +324,34 @@ class SavingsViewModel @Inject constructor(
             if (period == null) {
                 flowOf(SavingsState.Loading)
             } else {
-                combine(
-                    periods.observeBalance(period),
+                // Средний взнос меняется только вместе с операциями и выбором
+                // цели — считается на их изменение, а не на каждое нажатие
+                // «больше» в окне. Идёт одним значением с прогрессом, чтобы
+                // экран не показал новое накопленное со старым сроком.
+                val progressWithAverage = combine(
                     savings.observeAll(profileId),
                     periods.observeTransactions(period.id),
+                ) { progresses, _ ->
+                    val active = progresses.firstOrNull { it.isActive }
+                    progresses to (active?.let { savings.averageDeposit(profileId, it.goalId) } ?: Coins.ZERO)
+                }
+                combine(
+                    periods.observeBalance(period),
+                    progressWithAverage,
                     draft,
                     outcome,
-                ) { balance, progresses, _, draft, outcome ->
-                    ready(profileId, period, balance, progresses, draft, outcome)
+                ) { balance, (progresses, avgDeposit), draft, outcome ->
+                    ready(period, balance, progresses, avgDeposit, draft, outcome)
                 }
             }
         }
 
-    /**
-     * Срок достижения считается по среднему пополнению из базы, поэтому
-     * состояние собирается в приостанавливаемой функции. Подписка на
-     * операции периода нужна только чтобы пересчитать срок после пополнения.
-     */
-    private suspend fun ready(
-        profileId: ProfileId,
+    private fun ready(
         period: GamePeriod,
         balance: Coins,
         progresses: List<GoalProgress>,
-        draft: SavingsDraft?,
+        avgDeposit: Coins,
+        request: DraftRequest?,
         outcome: SavingsOutcomeView?,
     ): SavingsState.Ready {
         val byGoal = progresses.associateBy { it.goalId }
@@ -371,20 +365,51 @@ class SavingsViewModel @Inject constructor(
                 isActive = progress?.isActive == true,
             )
         }
-        val active = views.firstOrNull { it.isActive }
-        val periodsToGoal = active?.let { view ->
-            val goal = goals.first { it.id == view.id }
-            engine.periodsToGoal(byGoal.getValue(goal.id), goal, savings.averageDeposit(profileId, goal.id))
-        }
+        val progress = progresses.firstOrNull { it.isActive }
+        val goal = progress?.let { active -> goals.firstOrNull { it.id == active.goalId } }
+        val periodsToGoal = if (progress != null && goal != null) engine.periodsToGoal(progress, goal, avgDeposit) else null
         return SavingsState.Ready(
             goals = views,
-            active = active,
             periodsToGoal = periodsToGoal,
             balance = balance,
             canOperate = period.status == PeriodStatus.RUNNING,
-            draft = draft,
+            draft = request?.let { draftOf(it, balance, progress, goal, avgDeposit) },
             outcome = outcome,
         )
+    }
+
+    /**
+     * Черновик в сегодняшних границах: баланс и накопленное могли измениться
+     * после того, как окно открылось, и сумма в нём не должна обещать больше,
+     * чем есть. Когда брать или откладывать стало нечего — окно закрывается.
+     */
+    private fun draftOf(
+        request: DraftRequest,
+        balance: Coins,
+        progress: GoalProgress?,
+        goal: Goal?,
+        avgDeposit: Coins,
+    ): SavingsDraft? = when (request.kind) {
+        OperationKind.DEPOSIT -> {
+            if (balance == Coins.ZERO || progress == null) {
+                null
+            } else {
+                SavingsDraft.Deposit(amount = minOf(request.amount, balance), max = balance)
+            }
+        }
+
+        OperationKind.WITHDRAW -> {
+            if (progress == null || goal == null || progress.saved == Coins.ZERO) {
+                null
+            } else {
+                val amount = minOf(request.amount, progress.saved)
+                SavingsDraft.Withdraw(
+                    amount = amount,
+                    max = progress.saved,
+                    preview = engine.previewWithdraw(amount, progress, goal, avgDeposit),
+                )
+            }
+        }
     }
 
     private companion object {

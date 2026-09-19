@@ -108,7 +108,8 @@
     <string name="savings_withdraw_title">Сколько взять?</string>
     <string name="savings_withdraw_confirm">Взять</string>
     <string name="savings_withdraw_left">В копилке останется</string>
-    <string name="savings_withdraw_eta">Цель была через %1$s, станет через %2$s</string>
+    <string name="savings_withdraw_eta">Сейчас цель через %1$s, после снятия — через %2$s</string>
+    <string name="savings_withdraw_eta_reached">Цель уже собрана, после снятия — через %1$s</string>
     <string name="savings_withdraw_eta_unknown">Срок пока не посчитать — пополнений ещё не было.</string>
     <string name="savings_amount_more">Больше</string>
     <string name="savings_amount_less">Меньше</string>
