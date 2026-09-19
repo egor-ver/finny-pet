@@ -49,7 +49,12 @@
 ## 4. Сторонние библиотеки и SDK
 
 Все подключенные программные библиотеки распространяются под открытыми разрешительными лицензиями (Permissive Open Source Licenses):
+| Библиотека / Компонент | Назначение | Разработчик | Лицензия |
+| :--- | :--- | :--- | :--- |
+| **Kotlin (stdlib, coroutines)** | Язык программирования и асинхронная работа | JetBrains s.r.o. | Apache License 2.0 |
+| **kotlinx.serialization** | Сериализация и разбор JSON-контента | JetBrains s.r.o. | Apache License 2.0 |
+| **AndroidX (Core KTX, Activity Compose, Lifecycle)** | Базовые компоненты Android | Google LLC | Apache License 2.0 |
+| **Jetpack Compose (UI, Material 3, Foundation)** | Пользовательский интерфейс | Google LLC | Apache License 2.0 |
+| **Room (Runtime, KTX)** | Локальная база данных SQLite | Google LLC | Apache License 2.0 |
+| **Hilt (Android, Compiler)** | Внедрение зависимостей | Google LLC | Apache License 2.0 |
 
-* **AndroidX & Jetpack Compose** — Apache License 2.0 (Google LLC).
-* **Room Persistence Library & DataStore** — Apache License 2.0 (Google LLC).
-* **Kotlin Coroutines** — Apache License 2.0 (JetBrains s.r.o.).
