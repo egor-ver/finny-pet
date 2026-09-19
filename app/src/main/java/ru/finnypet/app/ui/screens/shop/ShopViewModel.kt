@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Change
@@ -36,6 +37,7 @@ import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -124,6 +126,7 @@ class ShopViewModel @Inject constructor(
     private val openPeriod: OpenPeriodIfNeeded,
     private val wallet: WalletEngine,
     private val recorder: OutcomeRecorder,
+    private val balance: GameBalance,
     content: ContentRepository,
 ) : ViewModel() {
 
@@ -202,6 +205,8 @@ class ShopViewModel @Inject constructor(
             currentBalance = periods.balance(period),
             periodId = period.id,
             savings = saved,
+            // «Выполнить задание» обещает монеты — только пока лимит дня не выбран.
+            taskRewardAvailable = TaskSchedule.rewardAvailable(periods.transactions(period.id), balance),
         )
         val title = texts.textOf(item.titleKey)
         outcome.value = when (result) {

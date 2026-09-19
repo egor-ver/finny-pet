@@ -29,6 +29,8 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
@@ -49,6 +51,7 @@ import ru.finnypet.app.ui.screens.createpet.CreatePetState
 import ru.finnypet.app.ui.screens.main.MainContent
 import ru.finnypet.app.ui.screens.main.MainState
 import ru.finnypet.app.ui.screens.main.SavingsView
+import ru.finnypet.app.ui.screens.main.TaskOfDay
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
 import ru.finnypet.app.ui.screens.savings.GoalView
 import ru.finnypet.app.ui.screens.savings.SavingsContent
@@ -60,6 +63,17 @@ import ru.finnypet.app.ui.screens.shop.RecoveryChoice
 import ru.finnypet.app.ui.screens.shop.ShopContent
 import ru.finnypet.app.ui.screens.shop.ShopItemView
 import ru.finnypet.app.ui.screens.shop.ShopState
+import ru.finnypet.app.ui.screens.tasks.OptionView
+import ru.finnypet.app.ui.screens.tasks.PickItemView
+import ru.finnypet.app.ui.screens.tasks.StepView
+import ru.finnypet.app.ui.screens.tasks.TaskContent
+import ru.finnypet.app.ui.screens.tasks.TaskGroup
+import ru.finnypet.app.ui.screens.tasks.TaskOutcomeView
+import ru.finnypet.app.ui.screens.tasks.TaskRow
+import ru.finnypet.app.ui.screens.tasks.TaskStage
+import ru.finnypet.app.ui.screens.tasks.TaskState
+import ru.finnypet.app.ui.screens.tasks.TasksContent
+import ru.finnypet.app.ui.screens.tasks.TasksState
 import ru.finnypet.app.ui.theme.FinnypetTheme
 
 /**
@@ -244,6 +258,41 @@ class ScreensTest {
         assertTrue(opened)
     }
 
+    /** ТЗ 2.5.3: активное задание видно на главном, карточка — кнопка в него. */
+    @Test
+    fun `задание_дня_на_главном_ведёт_в_задание`() {
+        var opened: TaskId? = null
+        val task = TaskOfDay(
+            id = TaskId("story"),
+            topic = TaskTopic.SAVING,
+            intro = "Сова нашла монеты. Что с ними делать?",
+            rewardAvailable = true,
+            allDone = false,
+        )
+        showMain(readyState(task = task), onTask = { opened = it })
+
+        scrollToText(text(R.string.main_task))
+        scrollToText("Сова нашла монеты. Что с ними делать?")
+        scrollToText(text(R.string.main_task_reward))
+        compose.onNodeWithText(text(R.string.main_task_open)).performClick()
+
+        assertEquals(TaskId("story"), opened)
+    }
+
+    @Test
+    fun `когда_монеты_за_сегодня_получены_главный_об_этом_говорит`() {
+        val task = TaskOfDay(
+            id = TaskId("story"),
+            topic = TaskTopic.SAVING,
+            intro = "Вступление",
+            rewardAvailable = false,
+            allDone = true,
+        )
+        showMain(readyState(task = task))
+
+        scrollToText(text(R.string.main_task_all_done))
+    }
+
     /** Карточка копилки — кнопка, и подписана словами, а не только цветом. */
     @Test
     fun `карточка_копилки_ведёт_в_копилку`() {
@@ -365,8 +414,8 @@ class ScreensTest {
 
     /**
      * ТЗ 2.5.6: отказ объясняет нехватку и предлагает выход. Кнопками
-     * становятся только варианты, у которых есть куда вести; остальные —
-     * подсказкой, чтобы не было кнопки в пустоту (ТЗ 3.4).
+     * становятся только варианты, у которых есть куда вести; вариант без
+     * экрана — подсказкой, чтобы не было кнопки в пустоту (ТЗ 3.4).
      */
     @Test
     fun `отказ_объясняет_и_предлагает_выход`() {
@@ -375,16 +424,16 @@ class ScreensTest {
             title = "Замок",
             text = "Не хватает 20 монет.",
             options = listOf(
-                RecoveryChoice(RecoveryOption.DO_TASK, "Выполнить задание"),
+                RecoveryChoice(RecoveryOption.ADJUST_NEXT_PLAN, "Пересмотреть план"),
                 RecoveryChoice(RecoveryOption.POSTPONE_PURCHASE, "Купить попозже"),
                 RecoveryChoice(RecoveryOption.CHOOSE_CHEAPER, "Выбрать подешевле"),
             ),
-            recommended = RecoveryOption.DO_TASK,
+            recommended = RecoveryOption.ADJUST_NEXT_PLAN,
         )
         showShop(ready(outcome = rejected), onDismiss = { dismissed = true })
 
         compose.onNodeWithText("Не хватает 20 монет.").assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.shop_option_hint, "Выполнить задание")).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.shop_option_hint, "Пересмотреть план")).assertIsDisplayed()
         compose.onNodeWithText("Выбрать подешевле").assertIsDisplayed()
         compose.onNodeWithText("Купить попозже").performClick()
 
@@ -421,6 +470,28 @@ class ScreensTest {
 
         assertTrue(dismissed)
         assertTrue(savings)
+    }
+
+    /** Экран заданий есть — «выполнить задание» ведёт в него и стоит главной кнопкой. */
+    @Test
+    fun `отказ_ведёт_в_задания_главной_кнопкой`() {
+        var tasks = false
+        val rejected = PurchaseOutcome.Rejected(
+            title = "Замок",
+            text = "Не хватает 20 монет.",
+            options = listOf(
+                RecoveryChoice(RecoveryOption.DO_TASK, "Выполнить задание"),
+                RecoveryChoice(RecoveryOption.POSTPONE_PURCHASE, "Купить попозже"),
+                RecoveryChoice(RecoveryOption.CHOOSE_CHEAPER, "Выбрать подешевле"),
+            ),
+            recommended = RecoveryOption.DO_TASK,
+        )
+        showShop(ready(outcome = rejected), onTasks = { tasks = true })
+
+        compose.onNodeWithText(text(R.string.shop_option_hint, "Выполнить задание")).assertDoesNotExist()
+        compose.onNodeWithText("Выполнить задание").performClick()
+
+        assertTrue(tasks)
     }
 
     /** ТЗ 3.4: сбой не оставляет экран без выхода. */
@@ -469,6 +540,7 @@ class ScreensTest {
         onDismiss: () -> Unit = {},
         onRetry: () -> Unit = {},
         onSavings: () -> Unit = {},
+        onTasks: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
@@ -477,9 +549,262 @@ class ScreensTest {
                     onBack = {},
                     onPlan = onPlan,
                     onSavings = onSavings,
+                    onTasks = onTasks,
                     onBuy = onBuy,
                     onDismiss = onDismiss,
                     onRetry = onRetry,
+                )
+            }
+        }
+    }
+
+    // --- Задания (ТЗ 2.5.8) ---
+
+    @Test
+    fun `список_заданий_по_темам_с_пометкой_пройдено`() {
+        showTasks(tasksReady())
+
+        scrollToText(text(R.string.tasks_reward_available))
+        scrollToText(text(R.string.topic_planning))
+        scrollToText("Разложи сорок монет.")
+        scrollToText(text(R.string.tasks_completed))
+        scrollToText(text(R.string.topic_saving))
+        scrollToText("Сова нашла монеты.")
+    }
+
+    @Test
+    fun `задание_открывается_нажатием`() {
+        var opened: TaskId? = null
+        showTasks(tasksReady(), onOpen = { opened = it })
+
+        scrollToText("Сова нашла монеты.")
+        compose.onNodeWithText("Сова нашла монеты.").performClick()
+
+        assertEquals(TaskId("story"), opened)
+    }
+
+    /** ТЗ 2.5.5 и 3.4: пока день планируется, задание не открыть, но дорога в план есть. */
+    @Test
+    fun `пока_день_планируется_задание_зовёт_в_план`() {
+        var planned = false
+        var opened: TaskId? = null
+        showTasks(tasksReady(canStart = false), onPlan = { planned = true }, onOpen = { opened = it })
+
+        scrollToText("Сова нашла монеты.")
+        compose.onNodeWithText("Сова нашла монеты.").performClick()
+        compose.onAllNodesWithText(text(R.string.budget_action_plan))[1].performClick()
+
+        assertTrue(planned)
+        assertEquals(null, opened)
+    }
+
+    @Test
+    fun `когда_монеты_за_сегодня_получены_список_предупреждает`() {
+        showTasks(tasksReady(rewardAvailable = false))
+
+        scrollToText(text(R.string.tasks_reward_taken))
+    }
+
+    /** Правило дня — до старта, а не после: ребёнок знает, за что монеты. */
+    @Test
+    fun `вступление_показывает_сову_тему_и_награду`() {
+        var started = false
+        showTask(taskReady(stage = TaskStage.Intro), onStart = { started = true })
+
+        scrollToText(text(R.string.topic_saving))
+        scrollToText("Сова нашла монеты. Что с ними делать?")
+        scrollToDescription("15 монет")
+        compose.onNodeWithText(text(R.string.task_start)).performClick()
+
+        assertTrue(started)
+    }
+
+    @Test
+    fun `без_права_на_монеты_вступление_предупреждает_до_старта`() {
+        showTask(taskReady(stage = TaskStage.Intro, rewardAvailable = false))
+
+        scrollToText(text(R.string.task_training_note))
+        compose.onNodeWithText(text(R.string.task_start_training)).assertIsDisplayed()
+    }
+
+    @Test
+    fun `история_выбранный_вариант_подписан_словом_и_пускает_дальше`() {
+        var chosen: String? = null
+        var next = false
+        val step = StepView.Choice(
+            prompt = "Отложить или потратить?",
+            options = listOf(OptionView("save", "Отложить"), OptionView("spend", "Потратить")),
+            chosen = "save",
+        )
+        showTask(taskReady(stage = TaskStage.Step(index = 0, total = 1, step = step)), onChoose = { chosen = it }, onNext = { next = true })
+
+        scrollToText(text(R.string.task_step, 1, 1))
+        scrollToText(text(R.string.task_selected))
+        compose.onNodeWithText("Потратить").performClick()
+        assertEquals("spend", chosen)
+        compose.onNodeWithText(text(R.string.task_answer)).performClick()
+
+        assertTrue(next)
+    }
+
+    @Test
+    fun `история_без_выбора_дальше_не_пускает`() {
+        val step = StepView.Choice(
+            prompt = "Отложить или потратить?",
+            options = listOf(OptionView("save", "Отложить"), OptionView("spend", "Потратить")),
+            chosen = null,
+        )
+        showTask(taskReady(stage = TaskStage.Step(index = 0, total = 1, step = step)))
+
+        compose.onNodeWithText(text(R.string.task_answer)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `три_банки_показывают_бюджет_остаток_и_кнопки`() {
+        var added: SpendCategory? = null
+        val step = StepView.Distribute(
+            prompt = "Сколько куда?",
+            budget = Coins(40),
+            plan = BudgetPlan(Coins(15), Coins(10), Coins(0)),
+        )
+        showTask(taskReady(stage = TaskStage.Step(index = 0, total = 2, step = step)), onAdd = { added = it })
+
+        scrollToText(text(R.string.task_step, 1, 2))
+        scrollToDescription(text(R.string.budget_amount, text(R.string.category_mandatory), 15))
+        scrollToDescription("15 монет")
+        compose.onNodeWithContentDescription(text(R.string.budget_add, text(R.string.category_savings))).performClick()
+        assertEquals(SpendCategory.SAVINGS, added)
+        compose.onNodeWithText(text(R.string.task_next)).assertIsEnabled()
+    }
+
+    @Test
+    fun `полка_считает_корзину_и_не_даёт_взять_лишнее`() {
+        var toggled: ItemId? = null
+        val step = StepView.Pick(
+            prompt = "Что возьмём?",
+            budget = Coins(30),
+            items = listOf(
+                PickItemView(ItemId("food"), "Каша", Coins(12), SpendCategory.MANDATORY),
+                PickItemView(ItemId("toy"), "Мячик", Coins(18), SpendCategory.OPTIONAL),
+                PickItemView(ItemId("bike"), "Велосипед", Coins(25), SpendCategory.OPTIONAL),
+            ),
+            picked = setOf(ItemId("toy")),
+        )
+        showTask(taskReady(stage = TaskStage.Step(index = 0, total = 1, step = step)), onToggle = { toggled = it })
+
+        scrollToDescription(text(R.string.task_basket_progress, 18, 30))
+        scrollToText(text(R.string.task_picked))
+        scrollToText(text(R.string.task_pick_full))
+        compose.onNodeWithText("Каша").performClick()
+
+        assertEquals(ItemId("food"), toggled)
+    }
+
+    /** ТЗ 2.5.8: объяснение независимо от результата; награда — отдельной строкой. */
+    @Test
+    fun `итог_показывает_объяснение_награду_и_питомца`() {
+        var finished = false
+        val outcome = TaskOutcomeView(
+            text = "Молодец, отложил!",
+            reward = Coins(15),
+            rewardable = true,
+            changes = listOf(Change.PetStat(PetStatKind.MOOD, from = Stat(75), to = Stat(80))),
+        )
+        showTask(taskReady(stage = TaskStage.Done(outcome)), onBack = { finished = true })
+
+        scrollToText("Молодец, отложил!")
+        scrollToText(text(R.string.task_reward))
+        scrollToDescription("15 монет")
+        scrollToText(text(R.string.shop_effect, text(R.string.stat_mood), "+5"))
+        compose.onNodeWithText(text(R.string.task_finish)).performClick()
+
+        assertTrue(finished)
+    }
+
+    @Test
+    fun `итог_без_монет_говорит_об_этом_честно`() {
+        val outcome = TaskOutcomeView(text = "Потратил всё.", reward = Coins.ZERO, rewardable = false, changes = emptyList())
+        showTask(taskReady(stage = TaskStage.Done(outcome)))
+
+        scrollToText(text(R.string.task_reward_none))
+        compose.onNodeWithText(text(R.string.task_reward)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `несуществующее_задание_не_тупик`() {
+        var back = false
+        showTask(TaskState.Missing, onBack = { back = true })
+
+        compose.onNodeWithText(text(R.string.task_missing)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.task_finish)).performClick()
+
+        assertTrue(back)
+    }
+
+    private fun tasksReady(
+        rewardAvailable: Boolean = true,
+        canStart: Boolean = true,
+    ) = TasksState.Ready(
+        groups = listOf(
+            TaskGroup(
+                topic = TaskTopic.PLANNING,
+                tasks = listOf(TaskRow(TaskId("jars"), TaskTopic.PLANNING, "Разложи сорок монет.", completed = true)),
+            ),
+            TaskGroup(
+                topic = TaskTopic.SAVING,
+                tasks = listOf(TaskRow(TaskId("story"), TaskTopic.SAVING, "Сова нашла монеты.", completed = false)),
+            ),
+        ),
+        rewardAvailable = rewardAvailable,
+        canStart = canStart,
+    )
+
+    private fun taskReady(
+        stage: TaskStage,
+        rewardAvailable: Boolean = true,
+        canStart: Boolean = true,
+    ) = TaskState.Ready(
+        id = TaskId("story"),
+        topic = TaskTopic.SAVING,
+        intro = "Сова нашла монеты. Что с ними делать?",
+        appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        maxReward = Coins(15),
+        rewardAvailable = rewardAvailable,
+        canStart = canStart,
+        stage = stage,
+    )
+
+    private fun showTasks(
+        state: TasksState,
+        onPlan: () -> Unit = {},
+        onOpen: (TaskId) -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                TasksContent(state = state, onBack = {}, onPlan = onPlan, onOpen = onOpen)
+            }
+        }
+    }
+
+    private fun showTask(
+        state: TaskState,
+        onBack: () -> Unit = {},
+        onStart: () -> Unit = {},
+        onChoose: (String) -> Unit = {},
+        onAdd: (SpendCategory) -> Unit = {},
+        onToggle: (ItemId) -> Unit = {},
+        onNext: () -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                TaskContent(
+                    state = state,
+                    onBack = onBack,
+                    onStart = onStart,
+                    onChoose = onChoose,
+                    onAdd = onAdd,
+                    onToggle = onToggle,
+                    onNext = onNext,
                 )
             }
         }
@@ -814,6 +1139,7 @@ class ScreensTest {
         onPlan: () -> Unit = {},
         onShop: () -> Unit = {},
         onSavings: () -> Unit = {},
+        onTask: (TaskId) -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
@@ -823,6 +1149,7 @@ class ScreensTest {
                     onPlan = onPlan,
                     onShop = onShop,
                     onSavings = onSavings,
+                    onTask = onTask,
                 )
             }
         }
@@ -855,6 +1182,7 @@ class ScreensTest {
             goalTitle = "Самокат мечты",
             price = Coins(120),
         ),
+        task: TaskOfDay? = null,
     ) = MainState.Ready(
         childName = "Егор",
         petName = "Пушок",
@@ -863,6 +1191,7 @@ class ScreensTest {
         stats = PetState(mood = Stat(75), satiety = Stat(80), care = Stat(60)),
         balance = Coins(80),
         savings = savings,
+        task = task,
         periodNumber = 1,
         periodStatus = PeriodStatus.PLANNING,
     )

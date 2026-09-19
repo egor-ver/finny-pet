@@ -12,6 +12,8 @@ import ru.finnypet.app.ui.screens.main.MainScreen
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
 import ru.finnypet.app.ui.screens.savings.SavingsScreen
 import ru.finnypet.app.ui.screens.shop.ShopScreen
+import ru.finnypet.app.ui.screens.tasks.TaskScreen
+import ru.finnypet.app.ui.screens.tasks.TasksScreen
 
 /**
  * Граф переходов.
@@ -55,6 +57,7 @@ fun FinnyNavHost(
                 onPlan = { navController.navigate(Budget) },
                 onShop = { navController.navigate(Shop) },
                 onSavings = { navController.navigate(Savings) },
+                onTask = { taskId -> navController.navigate(Task(taskId.value)) },
             )
         }
 
@@ -73,8 +76,32 @@ fun FinnyNavHost(
                         popUpTo<Main>()
                     }
                 },
-                // А копилка — поверх: взял монеты, вернулся и купил.
+                // А копилка и задания — поверх: взял монеты, вернулся и купил.
                 onSavings = { navController.navigate(Savings) },
+                onTasks = { navController.navigate(Tasks) },
+            )
+        }
+
+        composable<Tasks> {
+            TasksScreen(
+                onBack = { navController.popBackStack() },
+                onPlan = {
+                    navController.navigate(Budget) {
+                        popUpTo<Main>()
+                    }
+                },
+                onOpen = { taskId -> navController.navigate(Task(taskId.value)) },
+            )
+        }
+
+        composable<Task> {
+            TaskScreen(
+                onBack = { navController.popBackStack() },
+                onPlan = {
+                    navController.navigate(Budget) {
+                        popUpTo<Main>()
+                    }
+                },
             )
         }
 

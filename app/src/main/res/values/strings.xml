@@ -120,6 +120,43 @@
     <string name="days_few">%1$d дня</string>
     <string name="days_many">%1$d дней</string>
 
+    <!-- Задания (ТЗ 2.5.8) -->
+    <string name="topic_planning">Планирование</string>
+    <string name="topic_saving">Накопления</string>
+    <string name="topic_payments">Покупки</string>
+    <string name="tasks_title">Задания</string>
+    <string name="tasks_reward_available">Монеты дают за одно задание в день — сегодня ещё можно получить.</string>
+    <string name="tasks_reward_taken">Монеты за сегодня получены. Остальные задания — для тренировки.</string>
+    <string name="tasks_completed">пройдено</string>
+    <string name="tasks_empty">Заданий пока нет.</string>
+    <string name="tasks_planning_hint">Сначала спланируй день — потом можно браться за задания.</string>
+    <string name="tasks_failed">Не получилось открыть задания. Попробуй ещё раз.</string>
+    <string name="task_title">Задание</string>
+    <string name="task_missing">Такого задания нет. Вернись к списку.</string>
+    <string name="task_start">Начать</string>
+    <string name="task_start_training">Потренироваться</string>
+    <string name="task_training_note">Монеты за сегодня уже получены — это задание без монет, для тренировки.</string>
+    <string name="task_reward_upto">Награда — до</string>
+    <string name="task_step">Шаг %1$d из %2$d</string>
+    <string name="task_next">Дальше</string>
+    <string name="task_answer">Ответить</string>
+    <string name="task_budget">Монет на этот шаг</string>
+    <string name="task_basket">Корзина</string>
+    <string name="task_basket_progress">В корзине %1$d из %2$d монет</string>
+    <string name="task_pick">Взять</string>
+    <string name="task_picked">В корзине</string>
+    <string name="task_pick_full">Не влезает</string>
+    <string name="task_selected">Выбрано</string>
+    <string name="task_done_title">Готово!</string>
+    <string name="task_reward">Награда</string>
+    <string name="task_reward_none">Сегодня без монет — но ты стал умнее!</string>
+    <string name="task_finish">Продолжить</string>
+    <string name="main_task">Задание дня</string>
+    <string name="main_task_all_done">Все задания пройдены — можно повторить любое.</string>
+    <string name="main_task_reward">Награда сегодня ещё не получена</string>
+    <string name="main_task_reward_taken">Монеты за сегодня получены</string>
+    <string name="main_task_open">Открыть</string>
+
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>
     <string name="create_pet_appearance">Каким он будет?</string>

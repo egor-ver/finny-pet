@@ -37,7 +37,7 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
-import ru.finnypet.app.ui.screens.budget.label
+import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -50,6 +50,7 @@ fun ShopScreen(
     onBack: () -> Unit,
     onPlan: () -> Unit,
     onSavings: () -> Unit,
+    onTasks: () -> Unit,
     viewModel: ShopViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -59,6 +60,7 @@ fun ShopScreen(
         onBack = onBack,
         onPlan = onPlan,
         onSavings = onSavings,
+        onTasks = onTasks,
         onBuy = viewModel::buy,
         onDismiss = viewModel::dismiss,
         onRetry = viewModel::retry,
@@ -71,6 +73,7 @@ fun ShopContent(
     onBack: () -> Unit,
     onPlan: () -> Unit = {},
     onSavings: () -> Unit = {},
+    onTasks: () -> Unit = {},
     onBuy: (ItemId) -> Unit = {},
     onDismiss: () -> Unit = {},
     onRetry: () -> Unit = {},
@@ -100,6 +103,7 @@ fun ShopContent(
             onBack = onBack,
             onPlan = onPlan,
             onSavings = onSavings,
+            onTasks = onTasks,
             onBuy = onBuy,
             onDismiss = onDismiss,
         )
@@ -112,6 +116,7 @@ private fun Ready(
     onBack: () -> Unit,
     onPlan: () -> Unit,
     onSavings: () -> Unit,
+    onTasks: () -> Unit,
     onBuy: (ItemId) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -165,7 +170,7 @@ private fun Ready(
             onDismiss = { pendingId = null },
         )
     }
-    state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss, onSavings = onSavings) }
+    state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss, onSavings = onSavings, onTasks = onTasks) }
 }
 
 /**
@@ -290,6 +295,7 @@ private fun OutcomeDialog(
     outcome: PurchaseOutcome,
     onDismiss: () -> Unit,
     onSavings: () -> Unit,
+    onTasks: () -> Unit,
 ) {
     when (outcome) {
         is PurchaseOutcome.Done -> FinnyDialog(
@@ -317,6 +323,7 @@ private fun OutcomeDialog(
             outcome = outcome,
             onDismiss = onDismiss,
             onSavings = onSavings,
+            onTasks = onTasks,
         )
     }
 }
@@ -324,24 +331,28 @@ private fun OutcomeDialog(
 /**
  * Отказ с объяснением и вариантами выхода (ТЗ 2.5.6, 2.5.9).
  *
- * Кнопками становятся только варианты, у которых есть куда вести: «купить
- * попозже» и «выбрать подешевле» возвращают к списку, «взять из копилки»
- * ведёт в копилку. Задание показывается подсказкой и станет кнопкой вместе
- * со своим экраном — кнопка в пустоту была бы тупиком (ТЗ 3.4). Главная
- * кнопка — тот вариант, который рекомендует домен, если он уже ведёт
- * куда-то; иначе первый из тех, что ведут.
+ * Все три пути восстановления — кнопки: «выполнить задание» ведёт в задания,
+ * «взять из копилки» — в копилку, «купить попозже» и «выбрать подешевле»
+ * возвращают к списку. Главная кнопка — вариант, который рекомендует домен;
+ * без экрана вариант показывался бы подсказкой, кнопка в пустоту — тупик
+ * (ТЗ 3.4).
  */
 @Composable
 private fun RejectedDialog(
     outcome: PurchaseOutcome.Rejected,
     onDismiss: () -> Unit,
     onSavings: () -> Unit,
+    onTasks: () -> Unit,
 ) {
     val (actionable, hints) = outcome.options.partition { it.option.action != RecoveryAction.Hint }
     val primary = actionable.firstOrNull { it.option == outcome.recommended } ?: actionable.firstOrNull()
     val act: (RecoveryChoice) -> Unit = { choice ->
         onDismiss()
-        if (choice.option.action == RecoveryAction.Savings) onSavings()
+        when (choice.option.action) {
+            RecoveryAction.Savings -> onSavings()
+            RecoveryAction.Tasks -> onTasks()
+            RecoveryAction.Close, RecoveryAction.Hint -> Unit
+        }
     }
     FinnyDialog(
         title = stringResource(R.string.shop_rejected_title),
@@ -390,19 +401,14 @@ private fun EffectLine(stat: PetStatKind, delta: Int) {
     )
 }
 
-/** Куда ведёт вариант выхода: назад к списку, в копилку или пока никуда. */
-private enum class RecoveryAction { Close, Savings, Hint }
+/** Куда ведёт вариант выхода: назад к списку, в копилку, в задания или пока никуда. */
+private enum class RecoveryAction { Close, Savings, Tasks, Hint }
 
 private val RecoveryOption.action: RecoveryAction
     get() = when (this) {
         RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER -> RecoveryAction.Close
         RecoveryOption.WITHDRAW_FROM_SAVINGS -> RecoveryAction.Savings
-        RecoveryOption.DO_TASK, RecoveryOption.ADJUST_NEXT_PLAN -> RecoveryAction.Hint
-    }
-
-private val PetStatKind.label: Int
-    get() = when (this) {
-        PetStatKind.MOOD -> R.string.stat_mood
-        PetStatKind.SATIETY -> R.string.stat_satiety
-        PetStatKind.CARE -> R.string.stat_care
+        RecoveryOption.DO_TASK -> RecoveryAction.Tasks
+        // Пересмотр плана — совет на завтра, экрана у него нет.
+        RecoveryOption.ADJUST_NEXT_PLAN -> RecoveryAction.Hint
     }

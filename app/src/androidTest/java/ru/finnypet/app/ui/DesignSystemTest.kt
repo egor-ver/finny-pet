@@ -23,6 +23,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.components.FinnyButton
@@ -36,6 +39,12 @@ import ru.finnypet.app.ui.components.StepButton
 import ru.finnypet.app.ui.screens.shop.ShopContent
 import ru.finnypet.app.ui.screens.shop.ShopItemView
 import ru.finnypet.app.ui.screens.shop.ShopState
+import ru.finnypet.app.ui.screens.tasks.OptionView
+import ru.finnypet.app.ui.screens.tasks.PickItemView
+import ru.finnypet.app.ui.screens.tasks.StepView
+import ru.finnypet.app.ui.screens.tasks.TaskContent
+import ru.finnypet.app.ui.screens.tasks.TaskStage
+import ru.finnypet.app.ui.screens.tasks.TaskState
 import ru.finnypet.app.ui.theme.FinnypetTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 
@@ -105,6 +114,60 @@ class DesignSystemTest {
             .assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
     }
+
+    /** Карточка товара на полке задания — кнопка, и не меньше 48 dp. */
+    @Test
+    fun карточка_полки_не_меньше_48_dp() {
+        compose.setContent {
+            FinnypetTheme {
+                TaskContent(
+                    state = taskState(
+                        StepView.Pick(
+                            prompt = "Что возьмём?",
+                            budget = Coins(30),
+                            items = listOf(PickItemView(ItemId("food"), "Каша", Coins(12), SpendCategory.MANDATORY)),
+                            picked = emptySet(),
+                        )
+                    ),
+                    onBack = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("Каша").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+    }
+
+    /** Вариант в задании — кнопка, и не меньше 48 dp. */
+    @Test
+    fun вариант_задания_не_меньше_48_dp() {
+        compose.setContent {
+            FinnypetTheme {
+                TaskContent(
+                    state = taskState(
+                        StepView.Choice(
+                            prompt = "Отложить?",
+                            options = listOf(OptionView("a", "Да"), OptionView("b", "Нет")),
+                            chosen = null,
+                        )
+                    ),
+                    onBack = {},
+                )
+            }
+        }
+
+        compose.onNodeWithText("Да").assertHeightIsAtLeast(48.dp).assertWidthIsAtLeast(48.dp)
+    }
+
+    private fun taskState(step: StepView) = TaskState.Ready(
+        id = TaskId("t"),
+        topic = TaskTopic.PAYMENTS,
+        intro = "Вступление",
+        appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        maxReward = Coins(15),
+        rewardAvailable = true,
+        canStart = true,
+        stage = TaskStage.Step(index = 0, total = 1, step = step),
+    )
 
     /** Строка товара в магазине — вся целиком кнопка, и как кнопка не меньше 48 dp. */
     @Test

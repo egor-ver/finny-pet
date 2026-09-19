@@ -30,7 +30,8 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
-import ru.finnypet.app.ui.components.StepButton
+import ru.finnypet.app.ui.components.PlanEditor
+import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -143,112 +144,21 @@ private fun Planning(
             amount = state.available,
         )
 
-        SpendCategory.entries.forEach { category ->
-            CategoryRow(
-                category = category,
-                amount = state.plan.amountFor(category),
-                canAdd = state.canAdd(),
-                canRemove = state.canRemove(category),
-                onAdd = { onAdd(category) },
-                onRemove = { onRemove(category) },
-            )
-        }
-
-        Remainder(state = state)
+        PlanEditor(
+            plan = state.plan,
+            available = state.available,
+            remainder = state.remainder,
+            overBy = state.overBy,
+            canAdd = state.canAdd(),
+            canRemove = state::canRemove,
+            onAdd = onAdd,
+            onRemove = onRemove,
+        )
 
         Text(
             text = stringResource(R.string.budget_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-/**
- * Одно направление: название, сумма и две кнопки.
- *
- * Суммы набираются кнопками, а не с клавиатуры: у семилетнего промах по цифре
- * ломает весь план, а лишний ноль превращает сорок монет в четыреста. Плюс
- * гаснет, когда распределять больше нечего — так ТЗ 2.5.5 требует не пускать
- * за пределы доступной суммы.
- */
-@Composable
-private fun CategoryRow(
-    category: SpendCategory,
-    amount: Coins,
-    canAdd: Boolean,
-    canRemove: Boolean,
-    onAdd: () -> Unit,
-    onRemove: () -> Unit,
-) {
-    val title = stringResource(category.label)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            // Подпись для озвучки склеивает название с суммой: иначе читается
-            // «Нужное», потом отдельно «двадцать монет», и связь теряется.
-            val spoken = stringResource(R.string.budget_amount, title, amount.amount)
-            Row(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
-                MoneyAmount(amount = amount)
-            }
-        }
-        StepButton(
-            symbol = "−",
-            description = stringResource(R.string.budget_remove, title),
-            enabled = canRemove,
-            onClick = onRemove,
-        )
-        StepButton(
-            symbol = "+",
-            description = stringResource(R.string.budget_add, title),
-            enabled = canAdd,
-            onClick = onAdd,
-        )
-    }
-}
-
-/**
- * Остаток. ТЗ 2.5.5 требует показывать его всегда, а не только когда он есть:
- * ноль — это тоже ответ, и ребёнок должен видеть, что монет больше не осталось.
- */
-@Composable
-private fun Remainder(state: BudgetState.Planning) {
-    when {
-        state.overBy > Coins.ZERO -> Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            modifier = Modifier.semantics(mergeDescendants = true) {},
-        ) {
-            Text(
-                text = stringResource(R.string.budget_over),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
-            MoneyAmount(amount = state.overBy)
-        }
-
-        state.isDistributed -> Text(
-            text = stringResource(R.string.budget_distributed),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-
-        else -> MoneyCard(
-            label = stringResource(R.string.budget_remainder),
-            amount = state.remainder,
         )
     }
 }
@@ -326,11 +236,3 @@ private fun Labelled(label: String, amount: Coins) {
         MoneyAmount(amount = amount, style = MaterialTheme.typography.bodyLarge)
     }
 }
-
-/** Названия направлений одни и те же на знакомстве, в плане и в магазине. */
-internal val SpendCategory.label: Int
-    get() = when (this) {
-        SpendCategory.MANDATORY -> R.string.category_mandatory
-        SpendCategory.OPTIONAL -> R.string.category_optional
-        SpendCategory.SAVINGS -> R.string.category_savings
-    }

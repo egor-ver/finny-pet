@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,6 +27,7 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
@@ -35,20 +37,22 @@ import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PetImage
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StatBar
+import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
- * Главный экран (ТЗ 2.5.3): питомец, баланс, накопления, цель и показатели
- * состояния видны одновременно, без переходов.
+ * Главный экран (ТЗ 2.5.3): питомец, баланс, накопления, цель, показатели
+ * состояния и задание дня видны одновременно, без переходов.
  *
- * Переходы в задания и раздел для взрослого появятся вместе с этими
- * экранами: кнопка, ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
+ * Переход в раздел для взрослого появится вместе с этим экраном: кнопка,
+ * ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
  */
 @Composable
 fun MainScreen(
     onPlan: () -> Unit,
     onShop: () -> Unit,
     onSavings: () -> Unit,
+    onTask: (TaskId) -> Unit,
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -59,6 +63,7 @@ fun MainScreen(
         onPlan = onPlan,
         onShop = onShop,
         onSavings = onSavings,
+        onTask = onTask,
     )
 }
 
@@ -73,6 +78,7 @@ fun MainContent(
     onPlan: () -> Unit = {},
     onShop: () -> Unit = {},
     onSavings: () -> Unit = {},
+    onTask: (TaskId) -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
@@ -82,6 +88,7 @@ fun MainContent(
             onPlan = onPlan,
             onShop = onShop,
             onSavings = onSavings,
+            onTask = onTask,
         )
     }
 }
@@ -119,6 +126,7 @@ private fun ReadyScreen(
     onPlan: () -> Unit,
     onShop: () -> Unit,
     onSavings: () -> Unit,
+    onTask: (TaskId) -> Unit,
 ) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
@@ -157,6 +165,7 @@ private fun ReadyScreen(
 
         MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
         SavingsCard(savings = state.savings, onOpen = onSavings)
+        state.task?.let { task -> TaskCard(task = task, onOpen = { onTask(task.id) }) }
 
         Text(
             text = stringResource(R.string.main_pet_state, state.petName),
@@ -305,6 +314,63 @@ private fun Goal(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
+    }
+}
+
+/**
+ * Задание дня (ТЗ 2.5.3): тема, начало вступления и состояние награды.
+ * Карточка целиком — кнопка в задание, подпись «Открыть» словом.
+ */
+@Composable
+private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(role = Role.Button, onClick = onOpen)
+            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(R.string.main_task),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(task.topic.label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = task.intro,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(
+                when {
+                    task.allDone -> R.string.main_task_all_done
+                    task.rewardAvailable -> R.string.main_task_reward
+                    else -> R.string.main_task_reward_taken
+                }
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.main_task_open),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.align(Alignment.End),
+        )
     }
 }
 

@@ -41,3 +41,11 @@ data object Shop : Route
 /** Копилка и цель (ТЗ 2.5.7). */
 @Serializable
 data object Savings : Route
+
+/** Список заданий (ТЗ 2.5.8). */
+@Serializable
+data object Tasks : Route
+
+/** Одно задание: вступление, шаги, разбор (ТЗ 2.5.8). */
+@Serializable
+data class Task(val taskId: String) : Route

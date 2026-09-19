@@ -155,6 +155,7 @@ class ShopPurchaseTest {
             ),
             wallet = WalletEngine(clock),
             recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), clock = clock),
+            balance = balance,
             content = content(),
         )
     }
