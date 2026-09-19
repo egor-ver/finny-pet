@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Change
@@ -30,7 +29,9 @@ import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
+import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
@@ -111,9 +112,9 @@ sealed interface ShopState {
  * Магазин (ТЗ 2.5.6): список товаров, покупка со списанием и записью
  * операции, отказ при нехватке денег с объяснением и вариантами выхода.
  *
- * Считает домен: [WalletEngine] решает, хватает ли, и собирает операцию,
- * [PetStateEngine] применяет влияние на питомца. Здесь только чтение базы,
- * запись результата и тексты.
+ * Считает домен: [WalletEngine] решает, хватает ли, и собирает операцию;
+ * операцию и влияние на питомца одной транзакцией пишет [OutcomeRecorder].
+ * Здесь только чтение базы и тексты.
  */
 @HiltViewModel
 class ShopViewModel @Inject constructor(
@@ -122,7 +123,7 @@ class ShopViewModel @Inject constructor(
     private val savings: SavingsRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val wallet: WalletEngine,
-    private val petState: PetStateEngine,
+    private val recorder: OutcomeRecorder,
     content: ContentRepository,
 ) : ViewModel() {
 
@@ -205,15 +206,15 @@ class ShopViewModel @Inject constructor(
         val title = texts.textOf(item.titleKey)
         outcome.value = when (result) {
             is PurchaseResult.Success -> {
-                // Сначала деньги, потом питомец: если приложение закроется
-                // между записями, трата останется в истории и будет видна,
-                // а «бесплатное» улучшение питомца — нет.
-                periods.addTransaction(result.transaction)
+                val changes = recorder.record(
+                    profileId,
+                    ActionOutcome(transaction = result.transaction, effects = result.effects),
+                )
                 PurchaseOutcome.Done(
                     title = title,
                     text = texts.textOf(result.explanation),
                     effects = result.effects,
-                    changes = applyEffects(profileId, result.effects),
+                    changes = changes,
                 )
             }
 
@@ -226,15 +227,6 @@ class ShopViewModel @Inject constructor(
                 recommended = result.explanation.nextStep,
             )
         }
-    }
-
-    /** Возвращает, что изменилось на самом деле — с учётом границ показателей. */
-    private suspend fun applyEffects(profileId: ProfileId, effects: List<PetEffect>): List<Change.PetStat> {
-        if (effects.isEmpty()) return emptyList()
-        val pet = profiles.pet(profileId) ?: return emptyList()
-        val applied = petState.apply(pet.state, effects)
-        profiles.savePet(profileId, applied.value, pet.growth)
-        return applied.changes.filterIsInstance<Change.PetStat>()
     }
 
     /**

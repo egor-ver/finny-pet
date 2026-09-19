@@ -17,3 +17,18 @@ data class CompletedTask(
         require(outcomeId.isNotBlank()) { "Пройденное задание обязано нести исход" }
     }
 }
+
+/**
+ * Что записать о только что пройденном задании. Время проставит хранилище:
+ * у экрана часов нет, а домен их и не должен знать.
+ */
+data class TaskCompletion(
+    val taskId: TaskId,
+    val outcomeId: String,
+    val reward: Coins,
+) {
+
+    init {
+        require(outcomeId.isNotBlank()) { "Пройденное задание обязано нести исход" }
+    }
+}

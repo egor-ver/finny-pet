@@ -21,6 +21,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import ru.finnypet.app.data.local.FinnyDatabase
+import ru.finnypet.app.data.repository.OutcomeRecorderImpl
 import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
 import ru.finnypet.app.data.repository.SavingsRepositoryImpl
@@ -153,7 +154,7 @@ class ShopPurchaseTest {
                 balance = balance,
             ),
             wallet = WalletEngine(clock),
-            petState = PetStateEngine(balance),
+            recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), clock = clock),
             content = content(),
         )
     }

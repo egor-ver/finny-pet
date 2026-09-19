@@ -26,7 +26,9 @@ import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
+import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
@@ -145,6 +147,7 @@ class SavingsViewModel @Inject constructor(
     private val savings: SavingsRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val engine: SavingsEngine,
+    private val recorder: OutcomeRecorder,
     content: ContentRepository,
 ) : ViewModel() {
 
@@ -281,11 +284,10 @@ class SavingsViewModel @Inject constructor(
             OperationKind.DEPOSIT -> engine.deposit(amount, balance, progress, goal, period.id)
             OperationKind.WITHDRAW -> engine.withdraw(amount, balance, progress, goal, period.id)
         }
-        // Сначала операция, потом прогресс: баланс считается по операциям,
-        // и если приложение закроется между записями, монеты будут видны в
-        // истории, а не пропадут.
-        periods.addTransaction(result.value.transaction)
-        savings.save(profileId, result.value.progress)
+        recorder.record(
+            profileId,
+            ActionOutcome(transaction = result.value.transaction, savings = result.value.progress),
+        )
         outcome.value = SavingsOutcomeView(
             text = texts.textOf(result.explanation),
             goalReached = result.value.goalReached,
