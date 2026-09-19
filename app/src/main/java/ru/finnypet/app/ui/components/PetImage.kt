@@ -27,19 +27,19 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.finnypet.app.R
+import ru.finnypet.app.data.content.PetImageFiles
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
- * Питомец: тело нужного окраса и стадии, поверх — аксессуар.
+ * Питомец нужного окраса и стадии, в аксессуаре, если он выбран.
  *
- * Картинки лежат в контент-паке и называются по составу внешности, поэтому
- * новый окрас появляется в игре добавлением файла, без правок кода (ТЗ 2.5.14).
- *
- * Отсутствующий файл не роняет экран, а показывает заглушку: пока контент
- * наполняется, приложение обязано работать, а ТЗ 3.4 запрещает блокирующие
- * ошибки во время демонстрации.
+ * Одна картинка, а не тело с накладкой: имена и причина — в [PetImageFiles].
+ * Нет файла в аксессуаре — показывается та же сова без него; нет и её —
+ * заглушка. Отсутствующий файл не роняет экран: пока контент наполняется,
+ * приложение обязано работать, а ТЗ 3.4 запрещает блокирующие ошибки во
+ * время демонстрации.
  */
 @Composable
 fun PetImage(
@@ -49,25 +49,16 @@ fun PetImage(
     size: Dp = 200.dp,
 ) {
     val context = LocalContext.current
-    val body by loadAsset(context, bodyPath(appearance, stage))
-    val accessory by loadAsset(context, appearance.accessoryId?.let { accessoryPath(it, stage) })
+    val picture by loadPet(context, appearance, stage)
 
     Box(
         modifier = modifier.size(size),
         contentAlignment = Alignment.Center,
     ) {
-        when (val picture = body) {
+        when (val bitmap = picture) {
             null -> MissingPet()
             else -> Image(
-                bitmap = picture,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        accessory?.let {
-            Image(
-                bitmap = it,
+                bitmap = bitmap,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
@@ -95,26 +86,18 @@ private fun MissingPet() {
     }
 }
 
-private fun bodyPath(appearance: PetAppearance, stage: GrowthStage) =
-    "content/v1/pets/${appearance.bodyId}_${appearance.colorId}_${stage.name.lowercase()}.png"
-
 /**
- * Аксессуар свой на каждую стадию: шея у птенца и у взрослой совы в разных
- * местах, и одна картинка поверх всех трёх села бы мимо.
- */
-private fun accessoryPath(accessoryId: String, stage: GrowthStage) =
-    "content/v1/pets/acc_${accessoryId}_${stage.name.lowercase()}.png"
-
-/**
- * Читает картинку из ассетов в фоне: разбор PNG на главном потоке задержал бы
- * отрисовку, а ТЗ 3.4 ограничивает отклик одной секундой.
+ * Читает первую найденную картинку из ассетов в фоне: разбор PNG на главном
+ * потоке задержал бы отрисовку, а ТЗ 3.4 ограничивает отклик одной секундой.
  */
 @Composable
-private fun loadAsset(context: Context, path: String?) = produceState<ImageBitmap?>(null, path) {
-    value = if (path == null) {
-        null
-    } else {
-        withContext(Dispatchers.IO) {
+private fun loadPet(
+    context: Context,
+    appearance: PetAppearance,
+    stage: GrowthStage,
+) = produceState<ImageBitmap?>(null, appearance, stage) {
+    value = withContext(Dispatchers.IO) {
+        PetImageFiles.candidates(appearance, stage).firstNotNullOfOrNull { path ->
             runCatching {
                 context.assets.open(path).use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
             }.getOrNull()
