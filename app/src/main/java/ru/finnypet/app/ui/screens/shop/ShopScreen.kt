@@ -27,7 +27,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.ItemId
-import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.ui.components.ButtonColumn
@@ -116,15 +115,17 @@ private fun Ready(
     var pendingId by rememberSaveable { mutableStateOf<String?>(null) }
     val pending = state.items.firstOrNull { it.id.value == pendingId }
 
+    // Ключи с префиксами: идентификаторы товаров пишет напарник в shop.json,
+    // и товар с id «balance» иначе столкнулся бы с шапкой списка.
     FinnyListScaffold(title = stringResource(R.string.shop_title), onBack = onBack) {
-        item(key = "balance") {
+        item(key = "header:balance") {
             MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
         }
         if (!state.canBuy) {
-            item(key = "planning") { PlanningHint(onPlan = onPlan) }
+            item(key = "header:planning") { PlanningHint(onPlan = onPlan) }
         }
         if (state.items.isEmpty()) {
-            item(key = "empty") {
+            item(key = "header:empty") {
                 Text(
                     text = stringResource(R.string.shop_empty),
                     style = MaterialTheme.typography.bodyLarge,
@@ -132,17 +133,25 @@ private fun Ready(
                 )
             }
         }
-        items(state.items, key = { it.id.value }) { item ->
-            ShopItemRow(
-                item = item,
-                enabled = state.canBuy,
-                onClick = { pendingId = item.id.value },
-            )
+        items(state.items, key = { "item:${it.id.value}" }) { item ->
+            ShopItemRow(item = item, onClick = { pendingId = item.id.value })
         }
     }
 
-    if (pending != null) {
-        ConfirmDialog(
+    when {
+        pending == null -> Unit
+
+        // Пока день планируется, нажатие на товар — не немой тупик, а та же
+        // дорога в план, что и в подсказке сверху (ТЗ 3.4).
+        !state.canBuy -> PlanningDialog(
+            onPlan = {
+                pendingId = null
+                onPlan()
+            },
+            onDismiss = { pendingId = null },
+        )
+
+        else -> ConfirmDialog(
             item = pending,
             onConfirm = {
                 pendingId = null
@@ -179,6 +188,20 @@ private fun PlanningHint(onPlan: () -> Unit) {
     }
 }
 
+@Composable
+private fun PlanningDialog(onPlan: () -> Unit, onDismiss: () -> Unit) {
+    FinnyDialog(
+        title = stringResource(R.string.budget_title),
+        onDismiss = onDismiss,
+        buttons = {
+            FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
+            FinnySecondaryButton(text = stringResource(R.string.shop_not_now), onClick = onDismiss)
+        },
+    ) {
+        Text(text = stringResource(R.string.shop_planning_hint), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
 /**
  * Строка товара — вся целиком кнопка: по ней проще попасть, чем по маленькой
  * «Купить» справа, и озвучка читает её одной фразой — название, направление,
@@ -187,7 +210,6 @@ private fun PlanningHint(onPlan: () -> Unit) {
 @Composable
 private fun ShopItemRow(
     item: ShopItemView,
-    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -197,7 +219,7 @@ private fun ShopItemRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
@@ -211,7 +233,7 @@ private fun ShopItemRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            item.effects.forEach { effect -> EffectLine(effect) }
+            item.effects.forEach { effect -> EffectLine(stat = effect.stat, delta = effect.delta) }
         }
         MoneyAmount(amount = item.price)
     }
@@ -253,7 +275,7 @@ private fun ConfirmDialog(
         )
         if (item.effects.isNotEmpty()) {
             Text(text = stringResource(R.string.shop_pet_change), style = MaterialTheme.typography.titleMedium)
-            item.effects.forEach { effect -> EffectLine(effect) }
+            item.effects.forEach { effect -> EffectLine(stat = effect.stat, delta = effect.delta) }
         }
     }
 }
@@ -270,7 +292,16 @@ private fun OutcomeDialog(outcome: PurchaseOutcome, onDismiss: () -> Unit) {
         ) {
             Text(text = outcome.title, style = MaterialTheme.typography.titleMedium)
             Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
-            outcome.effects.forEach { effect -> EffectLine(effect) }
+            // Показываем, что изменилось на самом деле. Если товар влияет,
+            // а показатель упёрся в границу — так и говорим, а не «+15».
+            outcome.changes.forEach { change -> EffectLine(stat = change.kind, delta = change.delta) }
+            if (outcome.effects.isNotEmpty() && outcome.changes.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.shop_no_change),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         is PurchaseOutcome.Rejected -> RejectedDialog(outcome = outcome, onDismiss = onDismiss)
@@ -283,24 +314,28 @@ private fun OutcomeDialog(outcome: PurchaseOutcome, onDismiss: () -> Unit) {
  * Кнопками становятся только варианты, у которых есть куда вести: «купить
  * попозже» и «выбрать подешевле» возвращают к списку. Задание и копилка
  * показываются подсказкой и станут кнопками вместе со своими экранами —
- * кнопка в пустоту была бы тупиком (ТЗ 3.4).
+ * кнопка в пустоту была бы тупиком (ТЗ 3.4). Главная кнопка — тот вариант,
+ * который рекомендует домен, если он уже ведёт куда-то; иначе первый из тех,
+ * что ведут.
  */
 @Composable
 private fun RejectedDialog(outcome: PurchaseOutcome.Rejected, onDismiss: () -> Unit) {
-    val (closing, hints) = outcome.options.partition { it.option.closesDialog }
+    val (actionable, hints) = outcome.options.partition { it.option.closesDialog }
+    val primary = actionable.firstOrNull { it.option == outcome.recommended } ?: actionable.firstOrNull()
     FinnyDialog(
         title = stringResource(R.string.shop_rejected_title),
         onDismiss = onDismiss,
         buttons = {
-            closing.forEachIndexed { index, choice ->
-                if (index == 0) {
-                    FinnyButton(text = choice.label, onClick = onDismiss)
-                } else {
-                    FinnySecondaryButton(text = choice.label, onClick = onDismiss)
-                }
-            }
-            if (closing.isEmpty()) {
+            // Домен всегда добавляет «выбрать подешевле», так что кнопка есть.
+            // Запасная — на случай, если это правило когда-нибудь изменится:
+            // окно без кнопки было бы тупиком.
+            if (primary == null) {
                 FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
+            } else {
+                FinnyButton(text = primary.label, onClick = onDismiss)
+            }
+            actionable.filter { it != primary }.forEach { choice ->
+                FinnySecondaryButton(text = choice.label, onClick = onDismiss)
             }
         },
     ) {
@@ -318,15 +353,17 @@ private fun RejectedDialog(outcome: PurchaseOutcome.Rejected, onDismiss: () -> U
     }
 }
 
-/** «Сытость +20»: показатель словом и знак числом — цвет здесь не нужен вовсе. */
+/**
+ * «Сытость +20»: показатель словом и знак числом — цвет здесь не нужен вовсе.
+ *
+ * Знак ставится руками, а не через `%+d`: тот форматирует по локали
+ * устройства и на арабской подставил бы свои цифры рядом с нашими.
+ */
 @Composable
-private fun EffectLine(effect: PetEffect) {
+private fun EffectLine(stat: PetStatKind, delta: Int) {
+    val signed = if (delta > 0) "+$delta" else delta.toString()
     Text(
-        text = stringResource(
-            R.string.shop_effect,
-            stringResource(effect.stat.label),
-            "%+d".format(effect.delta),
-        ),
+        text = stringResource(R.string.shop_effect, stringResource(stat.label), signed),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

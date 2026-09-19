@@ -85,6 +85,7 @@
     <string name="shop_buy">Купить</string>
     <string name="shop_not_now">Не сейчас</string>
     <string name="shop_done_title">Готово!</string>
+    <string name="shop_no_change">Питомцу и так хорошо — показатели не изменились.</string>
     <string name="shop_rejected_title">Монет не хватает</string>
     <string name="shop_options">Что можно сделать</string>
     <string name="shop_option_hint">• %1$s</string>

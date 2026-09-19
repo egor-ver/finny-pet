@@ -20,6 +20,7 @@ import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.ItemId
@@ -62,17 +63,28 @@ data class RecoveryChoice(
  */
 sealed interface PurchaseOutcome {
 
+    /**
+     * [changes] — что на самом деле изменилось, а не что обещал товар:
+     * показатель у верхней границы не растёт, и говорить ребёнку «+15»
+     * при неподвижной полосе было бы обманом (ТЗ 2.5.9). [effects] нужны,
+     * чтобы отличить «товар ни на что не влияет» от «влияет, но упёрлось».
+     */
     data class Done(
         val title: String,
         val text: String,
         val effects: List<PetEffect>,
+        val changes: List<Change.PetStat>,
     ) : PurchaseOutcome
 
+    /**
+     * [recommended] — вариант, который домен считает лучшим. Экран делает
+     * его главной кнопкой, как только у варианта появляется экран.
+     */
     data class Rejected(
         val title: String,
-        val shortfall: Coins,
         val text: String,
         val options: List<RecoveryChoice>,
+        val recommended: RecoveryOption?,
     ) : PurchaseOutcome
 }
 
@@ -116,6 +128,17 @@ class ShopViewModel @Inject constructor(
 
     private val items: List<ShopItem> = content.pack().shop
     private val texts: Map<String, String> = content.pack().texts
+
+    /** Витрина не зависит от баланса, собирается один раз. */
+    private val itemViews: List<ShopItemView> = items.map { item ->
+        ShopItemView(
+            id = item.id,
+            title = texts.textOf(item.titleKey),
+            price = item.price,
+            category = item.category,
+            effects = item.effects,
+        )
+    }
 
     private val failed = MutableStateFlow(false)
     private val outcome = MutableStateFlow<PurchaseOutcome?>(null)
@@ -186,29 +209,32 @@ class ShopViewModel @Inject constructor(
                 // между записями, трата останется в истории и будет видна,
                 // а «бесплатное» улучшение питомца — нет.
                 periods.addTransaction(result.transaction)
-                applyEffects(profileId, result.effects)
                 PurchaseOutcome.Done(
                     title = title,
                     text = texts.textOf(result.explanation),
                     effects = result.effects,
+                    changes = applyEffects(profileId, result.effects),
                 )
             }
 
             is PurchaseResult.Rejected -> PurchaseOutcome.Rejected(
                 title = title,
-                shortfall = result.shortfall,
                 text = texts.textOf(result.explanation),
                 options = result.options.map { option ->
                     RecoveryChoice(option = option, label = texts.textOf("recovery.${option.name}"))
                 },
+                recommended = result.explanation.nextStep,
             )
         }
     }
 
-    private suspend fun applyEffects(profileId: ProfileId, effects: List<PetEffect>) {
-        if (effects.isEmpty()) return
-        val pet = profiles.pet(profileId) ?: return
-        profiles.savePet(profileId, petState.apply(pet.state, effects).value, pet.growth)
+    /** Возвращает, что изменилось на самом деле — с учётом границ показателей. */
+    private suspend fun applyEffects(profileId: ProfileId, effects: List<PetEffect>): List<Change.PetStat> {
+        if (effects.isEmpty()) return emptyList()
+        val pet = profiles.pet(profileId) ?: return emptyList()
+        val applied = petState.apply(pet.state, effects)
+        profiles.savePet(profileId, applied.value, pet.growth)
+        return applied.changes.filterIsInstance<Change.PetStat>()
     }
 
     /**
@@ -242,15 +268,7 @@ class ShopViewModel @Inject constructor(
         }
 
     private fun ready(period: GamePeriod, balance: Coins, outcome: PurchaseOutcome?) = ShopState.Ready(
-        items = items.map { item ->
-            ShopItemView(
-                id = item.id,
-                title = texts.textOf(item.titleKey),
-                price = item.price,
-                category = item.category,
-                effects = item.effects,
-            )
-        },
+        items = itemViews,
         balance = balance,
         canBuy = period.status == PeriodStatus.RUNNING,
         outcome = outcome,

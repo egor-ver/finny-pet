@@ -33,9 +33,13 @@ import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GoalId
+import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ProfileId
@@ -98,11 +102,21 @@ class ShopPurchaseTest {
         category = SpendCategory.OPTIONAL,
     )
 
+    /** Обязательное и не по карману: сюда домен предлагает копилку. */
+    private val vet = ShopItem(
+        id = ItemId("vet"),
+        titleKey = "shop.vet",
+        price = Coins(100),
+        category = SpendCategory.MANDATORY,
+        effects = listOf(PetEffect(PetStatKind.CARE, 30)),
+    )
+
     private lateinit var storeFile: File
     private lateinit var store: DataStore<Preferences>
     private lateinit var db: FinnyDatabase
     private lateinit var profiles: ProfileRepositoryImpl
     private lateinit var periods: PeriodRepositoryImpl
+    private lateinit var savings: SavingsRepositoryImpl
     private lateinit var viewModel: ShopViewModel
     private var profileId: ProfileId = ProfileId("не создан")
 
@@ -127,10 +141,11 @@ class ShopPurchaseTest {
             petName = "Пушок",
             appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
         ).id
+        savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
         viewModel = ShopViewModel(
             profiles = profiles,
             periods = periods,
-            savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions()),
+            savings = savings,
             openPeriod = OpenPeriodIfNeeded(
                 periods = periods,
                 wallet = WalletEngine(clock),
@@ -155,7 +170,10 @@ class ShopPurchaseTest {
     fun товары_показываются_с_названиями_из_контента() = runBlocking {
         val ready = awaitReady()
 
-        assertEquals(listOf("Вкусная каша", "Яркий мячик", "Замок", "Качели"), ready.items.map { it.title })
+        assertEquals(
+            listOf("Вкусная каша", "Яркий мячик", "Замок", "Качели", "Ветеринар"),
+            ready.items.map { it.title },
+        )
         assertEquals(balance.startingBalance + balance.periodIncome, ready.balance)
     }
 
@@ -184,6 +202,11 @@ class ShopPurchaseTest {
         assertEquals("Вкусная каша", done.title)
         assertEquals("Осталось 68 монет.", done.text)
         assertEquals(food.effects, done.effects)
+        val initial = Stat(balance.initialStat)
+        assertEquals(
+            listOf(Change.PetStat(PetStatKind.SATIETY, from = initial, to = initial + 20)),
+            done.changes,
+        )
 
         val after = await { it.balance == before.balance - food.price }
         assertEquals(Coins(68), after.balance)
@@ -199,6 +222,26 @@ class ShopPurchaseTest {
         assertEquals(Stat(balance.initialStat), pet.state.mood)
     }
 
+    /**
+     * ТЗ 2.5.9: объясняется то, что случилось на самом деле. Показатель у
+     * верхней границы не растёт, и обещанные «+20» превращаются в ничего —
+     * об этом и надо сказать, а не повторить обещание.
+     */
+    @Test
+    fun у_границы_показателя_изменений_нет() = runBlocking {
+        startDay()
+        val pet = profiles.pet(profileId)!!
+        profiles.savePet(profileId, pet.state.with(PetStatKind.SATIETY, Stat.MAX), pet.growth)
+        awaitReady()
+
+        viewModel.buy(food.id)
+
+        val done = awaitOutcome<PurchaseOutcome.Done>()
+        assertEquals(food.effects, done.effects)
+        assertEquals(emptyList<Change.PetStat>(), done.changes)
+        assertEquals(Stat.MAX, profiles.pet(profileId)!!.state.satiety)
+    }
+
     /** ТЗ 2.5.6: отказ объясняется и предлагает выход, но ничего не списывает. */
     @Test
     fun нехватка_объясняется_и_ничего_не_списывает() = runBlocking {
@@ -209,17 +252,38 @@ class ShopPurchaseTest {
 
         val rejected = awaitOutcome<PurchaseOutcome.Rejected>()
         assertEquals("Замок", rejected.title)
-        assertEquals(Coins(20), rejected.shortfall)
         assertEquals("Не хватает 20 монет.", rejected.text)
         assertEquals(
             listOf(RecoveryOption.DO_TASK, RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER),
             rejected.options.map { it.option },
         )
         assertEquals("Выполнить задание", rejected.options.first().label)
+        assertEquals(RecoveryOption.DO_TASK, rejected.recommended)
 
         assertEquals(before.balance, settle().balance)
         assertEquals(emptyList<TransactionType>(), purchases())
         assertEquals(Stat(balance.initialStat), profiles.pet(profileId)!!.state.mood)
+    }
+
+    /**
+     * Копилка попадает в варианты выхода только для обязательного и только
+     * если в ней хватает на недостачу — значит, вьюмодель обязана передать
+     * домену настоящую сумму накоплений, а не ноль.
+     */
+    @Test
+    fun при_нехватке_на_обязательное_предлагается_копилка() = runBlocking {
+        startDay()
+        savings.save(profileId, GoalProgress(goalId = GoalId("bike"), saved = Coins(30), isActive = true))
+        awaitReady()
+
+        viewModel.buy(vet.id)
+
+        val rejected = awaitOutcome<PurchaseOutcome.Rejected>()
+        assertEquals(
+            listOf(RecoveryOption.DO_TASK, RecoveryOption.WITHDRAW_FROM_SAVINGS, RecoveryOption.CHOOSE_CHEAPER),
+            rejected.options.map { it.option },
+        )
+        assertEquals("Взять из копилки", rejected.options[1].label)
     }
 
     /**
@@ -292,7 +356,7 @@ class ShopPurchaseTest {
                 colors = listOf(ContentOption("cream", "pet.color.cream")),
                 accessories = emptyList(),
             ),
-            shop = listOf(food, toy, castle, swing),
+            shop = listOf(food, toy, castle, swing, vet),
             goals = emptyList(),
             tasks = emptyList(),
             glossary = emptyList(),
@@ -301,10 +365,12 @@ class ShopPurchaseTest {
                 "shop.toy" to "Яркий мячик",
                 "shop.castle" to "Замок",
                 "shop.swing" to "Качели",
+                "shop.vet" to "Ветеринар",
                 "purchase.done" to "Осталось {balance} монет.",
                 "purchase.rejected" to "Не хватает {shortfall} монет.",
                 "recovery.DO_TASK" to "Выполнить задание",
                 "recovery.POSTPONE_PURCHASE" to "Купить попозже",
+                "recovery.WITHDRAW_FROM_SAVINGS" to "Взять из копилки",
                 "recovery.CHOOSE_CHEAPER" to "Выбрать подешевле",
             ),
         )

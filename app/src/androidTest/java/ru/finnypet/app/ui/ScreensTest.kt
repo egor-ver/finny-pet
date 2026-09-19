@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -30,6 +31,7 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.BudgetPlan
+import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.screens.budget.BudgetContent
@@ -276,15 +278,31 @@ class ScreensTest {
 
     /** ТЗ 2.5.5 и 3.4: пока день планируется, покупать нельзя, но дорога в план есть. */
     @Test
-    fun `пока_день_планируется_товары_недоступны_и_есть_дорога_в_план`() {
+    fun `пока_день_планируется_подсказка_ведёт_в_план`() {
         var planned = false
         showShop(ready(canBuy = false), onPlan = { planned = true })
 
         compose.onNodeWithText(text(R.string.shop_planning_hint)).assertIsDisplayed()
-        compose.onNodeWithText("Вкусная каша").assertIsNotEnabled()
         compose.onNodeWithText(text(R.string.budget_action_plan)).performClick()
 
         assertTrue(planned)
+    }
+
+    /** Нажатие на товар в это время — не немой тупик, а та же дорога в план. */
+    @Test
+    fun `пока_день_планируется_товар_зовёт_в_план_а_не_продаётся`() {
+        var planned = false
+        var bought: ItemId? = null
+        showShop(ready(canBuy = false), onPlan = { planned = true }, onBuy = { bought = it })
+
+        compose.onNodeWithText("Вкусная каша").performClick()
+
+        compose.onNodeWithText(text(R.string.shop_buy)).assertDoesNotExist()
+        // Кнопка в план теперь и в подсказке, и в окне — жмём ту, что в окне.
+        compose.onAllNodesWithText(text(R.string.budget_action_plan))[1].performClick()
+
+        assertTrue(planned)
+        assertEquals(null, bought)
     }
 
     @Test
@@ -294,13 +312,32 @@ class ScreensTest {
             title = "Вкусная каша",
             text = "Осталось 68 монет.",
             effects = food.effects,
+            changes = listOf(Change.PetStat(PetStatKind.SATIETY, from = Stat(75), to = Stat(95))),
         )
-        showShop(ready(outcome = done), onDismiss = { dismissed = true })
+        // В списке только мячик: иначе «Сытость +20» нашлось бы и в строке каши.
+        showShop(ready(outcome = done, items = listOf(toy)), onDismiss = { dismissed = true })
 
         compose.onNodeWithText("Осталось 68 монет.").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.shop_effect, text(R.string.stat_satiety), "+20")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.action_ok)).performClick()
 
         assertTrue(dismissed)
+    }
+
+    /** ТЗ 2.5.9: показатель упёрся в границу — говорим об этом, а не «+20». */
+    @Test
+    fun `покупка_без_изменений_говорит_об_этом_честно`() {
+        val done = PurchaseOutcome.Done(
+            title = "Вкусная каша",
+            text = "Осталось 68 монет.",
+            effects = food.effects,
+            changes = emptyList(),
+        )
+        showShop(ready(outcome = done, items = listOf(toy)))
+
+        compose.onNodeWithText(text(R.string.shop_no_change)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.shop_effect, text(R.string.stat_satiety), "+20"))
+            .assertDoesNotExist()
     }
 
     /**
@@ -313,13 +350,13 @@ class ScreensTest {
         var dismissed = false
         val rejected = PurchaseOutcome.Rejected(
             title = "Замок",
-            shortfall = Coins(20),
             text = "Не хватает 20 монет.",
             options = listOf(
                 RecoveryChoice(RecoveryOption.DO_TASK, "Выполнить задание"),
                 RecoveryChoice(RecoveryOption.POSTPONE_PURCHASE, "Купить попозже"),
                 RecoveryChoice(RecoveryOption.CHOOSE_CHEAPER, "Выбрать подешевле"),
             ),
+            recommended = RecoveryOption.DO_TASK,
         )
         showShop(ready(outcome = rejected), onDismiss = { dismissed = true })
 
@@ -329,6 +366,15 @@ class ScreensTest {
         compose.onNodeWithText("Купить попозже").performClick()
 
         assertTrue(dismissed)
+    }
+
+    /** Идентификаторы товаров пишет напарник, и «balance» — законное имя. */
+    @Test
+    fun `товар_с_id_как_у_шапки_списка_не_роняет_экран`() {
+        showShop(ready(items = listOf(food.copy(id = ItemId("balance")), toy.copy(id = ItemId("planning")))))
+
+        scrollToText("Вкусная каша")
+        scrollToText("Яркий мячик")
     }
 
     /** ТЗ 3.4: сбой не оставляет экран без выхода. */
@@ -362,8 +408,9 @@ class ScreensTest {
     private fun ready(
         canBuy: Boolean = true,
         outcome: PurchaseOutcome? = null,
+        items: List<ShopItemView> = listOf(food, toy),
     ) = ShopState.Ready(
-        items = listOf(food, toy),
+        items = items,
         balance = Coins(80),
         canBuy = canBuy,
         outcome = outcome,
