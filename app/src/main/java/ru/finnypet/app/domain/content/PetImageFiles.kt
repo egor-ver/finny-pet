@@ -1,4 +1,4 @@
-package ru.finnypet.app.data.content
+package ru.finnypet.app.domain.content
 
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
@@ -12,11 +12,13 @@ import ru.finnypet.app.domain.model.PetAppearance
  * положение аксессуара на холсте, — он перерисовывает кадр заново.
  *
  * Имя собирается из идентификаторов `pets.json`, поэтому новый окрас или
- * аксессуар появляется в игре добавлением файлов, без правок кода (ТЗ 2.5.14).
+ * аксессуар появляется в игре записью в `pets.json` и файлами, без правок
+ * кода (ТЗ 2.5.14). Живёт в домене: это правило контент-пака, а не экрана
+ * и не хранилища, и экрану нужно уметь его спросить, не завися от data.
  */
 object PetImageFiles {
 
-    const val DIR = "content/v1/pets"
+    const val DIR = "${ContentPack.FOLDER}/pets"
 
     /** `owl_cream_cub.png` без аксессуара, `owl_cream_cub_scarf.png` с ним. */
     fun name(

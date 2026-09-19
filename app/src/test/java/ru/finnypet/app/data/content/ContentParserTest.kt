@@ -8,7 +8,6 @@ import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskStep
-import java.io.File
 
 /**
  * Разбор проверяется на настоящих файлах из ассетов, а не на выдуманных
@@ -211,21 +210,7 @@ class ContentParserTest {
         shop: String? = null,
         goals: String? = null,
         tasks: String? = null,
-    ) = RawContent(
-        balance = balance ?: asset("balance.json"),
-        pets = pets ?: asset("pets.json"),
-        shop = shop ?: asset("shop.json"),
-        goals = goals ?: asset("goals.json"),
-        tasks = tasks ?: asset("tasks.json"),
-        glossary = asset("glossary.json"),
-        explanations = asset("explanations.json"),
-    )
-
-    private fun asset(name: String): String {
-        val file = File("src/main/assets/content/v1/$name")
-        assertTrue("Не найден файл контент-пака: ${file.absolutePath}", file.exists())
-        return file.readText()
-    }
+    ) = RealContent.raw(balance, pets, shop, goals, tasks)
 
     private companion object {
 

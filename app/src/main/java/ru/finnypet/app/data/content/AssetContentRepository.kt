@@ -41,12 +41,8 @@ class AssetContentRepository @Inject constructor(
     override fun pack(): ContentPack = pack
 
     private fun read(name: String): String = try {
-        context.assets.open("$FOLDER/$name").bufferedReader().use { it.readText() }
+        context.assets.open("${ContentPack.FOLDER}/$name").bufferedReader().use { it.readText() }
     } catch (error: IOException) {
-        throw ContentParseException("Не найден файл контент-пака $FOLDER/$name в ассетах", error)
-    }
-
-    private companion object {
-        const val FOLDER = "content/v1"
+        throw ContentParseException("Не найден файл контент-пака ${ContentPack.FOLDER}/$name в ассетах", error)
     }
 }

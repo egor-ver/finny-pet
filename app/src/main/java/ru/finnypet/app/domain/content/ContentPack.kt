@@ -21,7 +21,16 @@ data class ContentPack(
     val tasks: List<LearningTask>,
     val glossary: List<GlossaryTerm>,
     val texts: Map<String, String>,
-)
+) {
+
+    companion object {
+        /**
+         * Папка контент-пака в ассетах. Одна на JSON и картинки: смена версии
+         * контента — правка одной строки, а не двух в разных слоях.
+         */
+        const val FOLDER = "content/v1"
+    }
+}
 
 /** Один выбираемый вариант контента: идентификатор и ключ названия. */
 data class ContentOption(

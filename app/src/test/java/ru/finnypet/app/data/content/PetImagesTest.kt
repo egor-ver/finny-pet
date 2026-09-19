@@ -1,8 +1,8 @@
 package ru.finnypet.app.data.content
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import ru.finnypet.app.domain.content.PetImageFiles
 import ru.finnypet.app.domain.content.PetOptions
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
@@ -76,6 +76,37 @@ class PetImagesTest {
         assertEquals("нет базовых картинок: $missing", emptyList<String>(), missing)
     }
 
+    /**
+     * У каждого аксессуара картинки на всех окрасах и стадиях. Приложение
+     * прячет пропуск, показывая сову без аксессуара, поэтому ловить его
+     * должен тест. Известные дыры перечислены явно: `main` остаётся зелёным,
+     * пока напарник дорисовывает, а любая новая дыра — красная.
+     */
+    @Test
+    fun `у каждого аксессуара есть картинки на всех окрасах и стадиях`() {
+        val present = imageFiles().map { it.name }.toSet()
+        val options = pets()
+
+        val missing = options.accessories.flatMap { accessory ->
+            options.bodies.flatMap { body ->
+                options.colors.flatMap { color ->
+                    GrowthStage.entries.map { stage -> PetImageFiles.name(body.id, color.id, stage, accessory.id) }
+                }
+            }
+        }.filterNot { it in present }
+
+        assertEquals(
+            "нет картинок аксессуаров сверх известных дыр: ${missing - KNOWN_GAPS}",
+            emptyList<String>(),
+            missing - KNOWN_GAPS,
+        )
+        assertEquals(
+            "дыра закрыта — убери из KNOWN_GAPS: ${KNOWN_GAPS - missing.toSet()}",
+            emptySet<String>(),
+            KNOWN_GAPS - missing.toSet(),
+        )
+    }
+
     @Test
     fun `в папке только png`() {
         val others = petsDir().listFiles().orEmpty().filterNot { it.extension == "png" }.map { it.name }
@@ -100,27 +131,18 @@ class PetImagesTest {
         }
     }
 
-    private fun pets(): PetOptions = parser.parse(
-        RawContent(
-            balance = asset("balance.json"),
-            pets = asset("pets.json"),
-            shop = asset("shop.json"),
-            goals = asset("goals.json"),
-            tasks = asset("tasks.json"),
-            glossary = asset("glossary.json"),
-            explanations = asset("explanations.json"),
-        )
-    ).pets
+    private fun pets(): PetOptions = parser.parse(RealContent.raw()).pets
 
     private fun imageFiles(): List<File> = petsDir().listFiles().orEmpty().filter { it.extension == "png" }
 
-    private fun petsDir(): File = File("src/main/assets/${PetImageFiles.DIR}").also {
-        assertTrue("Не найдена папка картинок: ${it.absolutePath}", it.isDirectory)
-    }
+    private fun petsDir(): File = RealContent.petsDir()
 
-    private fun asset(name: String): String {
-        val file = File("src/main/assets/content/v1/$name")
-        assertTrue("Не найден файл контент-пака: ${file.absolutePath}", file.exists())
-        return file.readText()
+    private companion object {
+        /**
+         * Белой сове в шарфе не хватает птенца и подростка: файлы с этими
+         * именами напарник залил под именами бурой. Его задание 1.1 от
+         * 18 сентября; после него список должен опустеть.
+         */
+        val KNOWN_GAPS = setOf("owl_white_cub_scarf.png", "owl_white_young_scarf.png")
     }
 }
