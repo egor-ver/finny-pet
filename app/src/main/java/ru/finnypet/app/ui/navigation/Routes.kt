@@ -34,6 +34,10 @@ data object Main : Route
 @Serializable
 data object Budget : Route
 
+/** Итоги игрового дня и его закрытие (ТЗ 2.5.9, 2.5.10). */
+@Serializable
+data object Day : Route
+
 /** Магазин: покупки и расходы (ТЗ 2.5.6). */
 @Serializable
 data object Shop : Route

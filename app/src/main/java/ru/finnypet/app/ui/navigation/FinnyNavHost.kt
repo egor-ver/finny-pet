@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
+import ru.finnypet.app.ui.screens.day.DayScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
 import ru.finnypet.app.ui.screens.savings.SavingsScreen
@@ -58,6 +59,19 @@ fun FinnyNavHost(
                 onShop = { navController.navigate(Shop) },
                 onSavings = { navController.navigate(Savings) },
                 onTask = { taskId -> navController.navigate(Task(taskId.value)) },
+                onFinishDay = { navController.navigate(Day) },
+            )
+        }
+
+        composable<Day> {
+            DayScreen(
+                onBack = { navController.popBackStack() },
+                onPlan = {
+                    // Из «день ещё планируется» дорога одна — в план, и итоги
+                    // в стеке не нужны: закрывать пока нечего.
+                    navController.popBackStack()
+                    navController.navigate(Budget)
+                },
             )
         }
 

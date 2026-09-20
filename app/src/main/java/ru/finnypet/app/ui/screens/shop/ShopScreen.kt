@@ -36,6 +36,8 @@ import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.StatChangeLine
+import ru.finnypet.app.ui.components.StatEffectLine
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.label
@@ -220,7 +222,7 @@ private fun ShopItemRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            item.effects.forEach { effect -> EffectLine(stat = effect.stat, delta = effect.delta) }
+            item.effects.forEach { effect -> StatEffectLine(effect = effect) }
         }
         MoneyAmount(amount = item.price)
     }
@@ -262,7 +264,7 @@ private fun ConfirmDialog(
         )
         if (item.effects.isNotEmpty()) {
             Text(text = stringResource(R.string.shop_pet_change), style = MaterialTheme.typography.titleMedium)
-            item.effects.forEach { effect -> EffectLine(stat = effect.stat, delta = effect.delta) }
+            item.effects.forEach { effect -> StatEffectLine(effect = effect) }
         }
     }
 }
@@ -286,7 +288,7 @@ private fun OutcomeDialog(
             Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
             // Показываем, что изменилось на самом деле. Если товар влияет,
             // а показатель упёрся в границу — так и говорим, а не «+15».
-            outcome.changes.forEach { change -> EffectLine(stat = change.kind, delta = change.delta) }
+            outcome.changes.forEach { change -> StatChangeLine(change = change) }
             if (outcome.effects.isNotEmpty() && outcome.changes.isEmpty()) {
                 Text(
                     text = stringResource(R.string.shop_no_change),
@@ -368,15 +370,6 @@ private fun RejectedDialog(
  * Знак ставится руками, а не через `%+d`: тот форматирует по локали
  * устройства и на арабской подставил бы свои цифры рядом с нашими.
  */
-@Composable
-private fun EffectLine(stat: PetStatKind, delta: Int) {
-    val signed = if (delta > 0) "+$delta" else delta.toString()
-    Text(
-        text = stringResource(R.string.shop_effect, stringResource(stat.label), signed),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
 
 /** Куда ведёт вариант выхода: назад к списку, в копилку, в задания или пока никуда. */
 private enum class RecoveryAction { Close, Savings, Tasks, Hint }

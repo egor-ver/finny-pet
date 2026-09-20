@@ -14,7 +14,10 @@ import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.repository.ContentRepository
+import ru.finnypet.app.domain.repository.DayRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
+import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import javax.inject.Singleton
 
@@ -54,6 +57,19 @@ object DomainModule {
 
     @Provides
     fun taskEngine(clock: GameClock): TaskEngine = TaskEngine(clock)
+
+    @Provides
+    fun closeDay(
+        periods: PeriodRepository,
+        profiles: ProfileRepository,
+        engine: PeriodEngine,
+        recorder: DayRecorder,
+    ): CloseDay = CloseDay(
+        periods = periods,
+        profiles = profiles,
+        engine = engine,
+        recorder = recorder,
+    )
 
     @Provides
     fun openPeriodIfNeeded(

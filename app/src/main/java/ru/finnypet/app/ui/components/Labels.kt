@@ -2,6 +2,7 @@ package ru.finnypet.app.ui.components
 
 import androidx.annotation.StringRes
 import ru.finnypet.app.R
+import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskTopic
@@ -31,4 +32,11 @@ val TaskTopic.label: Int
         TaskTopic.PLANNING -> R.string.topic_planning
         TaskTopic.SAVING -> R.string.topic_saving
         TaskTopic.PAYMENTS -> R.string.topic_payments
+    }
+
+val GrowthStage.label: Int
+    @StringRes get() = when (this) {
+        GrowthStage.CUB -> R.string.stage_cub
+        GrowthStage.YOUNG -> R.string.stage_young
+        GrowthStage.GROWN -> R.string.stage_grown
     }

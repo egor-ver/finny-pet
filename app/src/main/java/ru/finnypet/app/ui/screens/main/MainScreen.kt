@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,6 +54,7 @@ fun MainScreen(
     onShop: () -> Unit,
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
+    onFinishDay: () -> Unit,
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -64,6 +66,7 @@ fun MainScreen(
         onShop = onShop,
         onSavings = onSavings,
         onTask = onTask,
+        onFinishDay = onFinishDay,
     )
 }
 
@@ -79,6 +82,7 @@ fun MainContent(
     onShop: () -> Unit = {},
     onSavings: () -> Unit = {},
     onTask: (TaskId) -> Unit = {},
+    onFinishDay: () -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
@@ -89,6 +93,7 @@ fun MainContent(
             onShop = onShop,
             onSavings = onSavings,
             onTask = onTask,
+            onFinishDay = onFinishDay,
         )
     }
 }
@@ -127,6 +132,7 @@ private fun ReadyScreen(
     onShop: () -> Unit,
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
+    onFinishDay: () -> Unit,
 ) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
@@ -151,15 +157,7 @@ private fun ReadyScreen(
             }
         },
     ) {
-        Text(
-            text = stringResource(
-                R.string.main_period,
-                state.periodNumber,
-                stringResource(state.periodStatus.label),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        DayLine(state = state, onFinishDay = onFinishDay)
 
         Pet(state = state)
 
@@ -181,6 +179,54 @@ private fun ReadyScreen(
             label = stringResource(R.string.stat_care),
             stat = state.stats.care,
             color = MaterialTheme.colorScheme.tertiary,
+        )
+    }
+}
+
+/**
+ * Строка игрового дня. Пока день идёт — ещё и дорога к его итогам.
+ *
+ * Третьей кнопки внизу нет намеренно: она вытеснила бы показатели питомца
+ * с экрана, а ТЗ 2.5.3 требует показать всё сразу. При системном шрифте в
+ * полтора раза три кнопки занимали больше половины экрана. Поэтому действие
+ * живёт в самой строке — тем же приёмом, что и в карточке копилки.
+ */
+@Composable
+private fun DayLine(state: MainState.Ready, onFinishDay: () -> Unit) {
+    val line = stringResource(
+        R.string.main_period,
+        state.periodNumber,
+        stringResource(state.periodStatus.label),
+    )
+    if (state.periodStatus == PeriodStatus.PLANNING) {
+        Text(
+            text = line,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .clickable(role = Role.Button, onClick = onFinishDay)
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .semantics(mergeDescendants = true) {},
+    ) {
+        Text(
+            text = line,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        // Подпись говорит, что строка нажимается: цветом это не передашь (ТЗ 3.6).
+        Text(
+            text = stringResource(R.string.day_action_close),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }
@@ -379,13 +425,6 @@ private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
     }
 }
 
-/** Названия стадий и этапов живут рядом с экраном, который их показывает. */
-private val GrowthStage.label: Int
-    get() = when (this) {
-        GrowthStage.CUB -> R.string.stage_cub
-        GrowthStage.YOUNG -> R.string.stage_young
-        GrowthStage.GROWN -> R.string.stage_grown
-    }
 
 private val PeriodStatus.label: Int
     get() = when (this) {

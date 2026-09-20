@@ -28,6 +28,8 @@
     <string name="stat_mood">Настроение</string>
     <string name="stat_satiety">Сытость</string>
     <string name="stat_care">Уход</string>
+    <!-- Насколько сдвинулся показатель: «Настроение +15» -->
+    <string name="stat_change">%1$s %2$s</string>
 
     <!-- Главный экран -->
     <string name="main_title">Финни</string>
@@ -56,6 +58,21 @@
     <string name="category_optional">Желаемое</string>
     <string name="category_savings">Копилка</string>
 
+    <!-- Итоги игрового дня (ТЗ 2.5.9, 2.5.10) -->
+    <string name="day_title">Итоги дня</string>
+    <string name="day_action_close">Закончить день</string>
+    <string name="day_action_next">Начать день %1$d</string>
+    <string name="day_running">Вот что получилось за день %1$d</string>
+    <string name="day_closed">День %1$d завершён</string>
+    <string name="day_confirm_title">Закончить день?</string>
+    <string name="day_confirm_text">Потратить монеты сегодня уже не получится. Неистраченное перейдёт на завтра.</string>
+    <string name="day_not_started">День ещё планируется. Сначала распредели монеты, а закончить его можно будет потом.</string>
+    <string name="day_pet_changes">Что стало с питомцем</string>
+    <string name="day_pet_same">Показатели питомца не изменились.</string>
+    <string name="day_new_stage">Новая стадия: %1$s</string>
+    <string name="day_carry_over">Перешло на завтра</string>
+    <string name="day_failed">Не получилось закончить день. Попробуй ещё раз.</string>
+
     <!-- План личного бюджета -->
     <string name="budget_title">План на день</string>
     <string name="budget_action_plan">Спланировать день</string>
@@ -81,7 +98,6 @@
     <string name="shop_planning_hint">Сначала спланируй день — потом можно покупать.</string>
     <string name="shop_empty">В магазине пока пусто.</string>
     <string name="shop_price">Цена</string>
-    <string name="shop_effect">%1$s %2$s</string>
     <string name="shop_pet_change">Что изменится у питомца</string>
     <string name="shop_buy">Купить</string>
     <string name="shop_done_title">Готово!</string>

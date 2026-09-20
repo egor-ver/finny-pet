@@ -1,5 +1,6 @@
 package ru.finnypet.app.ui
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -45,7 +46,10 @@ import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.screens.budget.BudgetContent
-import ru.finnypet.app.ui.screens.budget.BudgetLine
+import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.screens.day.DayContent
+import ru.finnypet.app.ui.screens.day.DayState
+import ru.finnypet.app.ui.screens.day.DaySummary
 import ru.finnypet.app.ui.screens.budget.BudgetState
 import ru.finnypet.app.ui.screens.createpet.AppearanceOption
 import ru.finnypet.app.ui.screens.createpet.CreatePetContent
@@ -307,6 +311,31 @@ class ScreensTest {
         assertTrue(opened)
     }
 
+    /**
+     * Дорога к итогам живёт в строке дня, а не третьей кнопкой внизу: при
+     * крупном системном шрифте три кнопки съедали больше половины экрана.
+     */
+    @Test
+    fun `из_идущего_дня_можно_попасть_в_итоги`() {
+        var opened = false
+        showMain(
+            readyState(periodStatus = PeriodStatus.RUNNING),
+            onFinishDay = { opened = true },
+        )
+
+        compose.onNodeWithText(text(R.string.day_action_close)).performClick()
+
+        assertTrue(opened)
+    }
+
+    /** Пока день планируется, заканчивать нечего — и подписи нет. */
+    @Test
+    fun `в_день_на_планировании_итогов_не_предлагают`() {
+        showMain(readyState())
+
+        compose.onAllNodesWithText(text(R.string.day_action_close)).assertCountEquals(0)
+    }
+
     // --- Магазин (ТЗ 2.5.6) ---
 
     @Test
@@ -316,7 +345,7 @@ class ScreensTest {
         scrollToDescription("80 монет")
         scrollToText("Вкусная каша")
         scrollToText(text(R.string.category_mandatory))
-        scrollToText(text(R.string.shop_effect, text(R.string.stat_satiety), "+20"))
+        scrollToText(text(R.string.stat_change, text(R.string.stat_satiety), "+20"))
         scrollToDescription("12 монет")
         scrollToText("Яркий мячик")
         scrollToText(text(R.string.category_optional))
@@ -392,7 +421,7 @@ class ScreensTest {
         showShop(ready(outcome = done, items = listOf(toy)), onDismiss = { dismissed = true })
 
         compose.onNodeWithText("Осталось 68 монет.").assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.shop_effect, text(R.string.stat_satiety), "+20")).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.stat_change, text(R.string.stat_satiety), "+20")).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.action_ok)).performClick()
 
         assertTrue(dismissed)
@@ -410,7 +439,7 @@ class ScreensTest {
         showShop(ready(outcome = done, items = listOf(toy)))
 
         compose.onNodeWithText(text(R.string.shop_no_change)).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.shop_effect, text(R.string.stat_satiety), "+20"))
+        compose.onNodeWithText(text(R.string.stat_change, text(R.string.stat_satiety), "+20"))
             .assertDoesNotExist()
     }
 
@@ -720,7 +749,7 @@ class ScreensTest {
         scrollToText("Молодец, отложил!")
         scrollToText(text(R.string.task_reward))
         scrollToDescription("15 монет")
-        scrollToText(text(R.string.shop_effect, text(R.string.stat_mood), "+5"))
+        scrollToText(text(R.string.stat_change, text(R.string.stat_mood), "+5"))
         compose.onNodeWithText(text(R.string.task_finish)).performClick()
 
         assertTrue(finished)
@@ -1119,6 +1148,120 @@ class ScreensTest {
         scrollToDescription("75 монет")
     }
 
+    // --- Итоги дня (ТЗ 2.5.9, 2.5.10) ---
+
+    /** ТЗ 2.5.9: после действия видно, что изменилось, и почему. */
+    @Test
+    fun `итоги_дня_объясняют_и_показывают_изменения`() {
+        showDay(
+            DayState.Closed(
+                DaySummary(
+                    number = 1,
+                    nextNumber = 2,
+                    headline = "День успешно завершён.",
+                    growthText = "Питомец стал опытнее: +6 очков роста!",
+                    lines = comparisonLines(),
+                    planTotal = Coins(80),
+                    factTotal = Coins(75),
+                    statChanges = listOf(
+                        Change.PetStat(PetStatKind.MOOD, Stat(60), Stat(75)),
+                    ),
+                    newStage = GrowthStage.YOUNG,
+                    carryOver = Coins(5),
+                )
+            )
+        )
+
+        scrollToText("День успешно завершён.")
+        scrollToDescription(text(R.string.category_mandatory) + ": по плану 40, потрачено 35")
+        scrollToText(text(R.string.stat_change, text(R.string.stat_mood), "+15"))
+        scrollToText("Питомец стал опытнее: +6 очков роста!")
+        scrollToText(text(R.string.day_new_stage, text(R.string.stage_young)))
+        // «5 монет» вхождением нашлось бы и в «75 монет» — ищем по подписи.
+        scrollToText(text(R.string.day_carry_over))
+        compose.onNodeWithText(text(R.string.day_action_next, 2)).assertIsDisplayed()
+    }
+
+    /** Ничего не изменилось — так и говорим, а не показываем пустоту. */
+    @Test
+    fun `день_без_изменений_говорит_об_этом`() {
+        showDay(
+            DayState.Closed(
+                DaySummary(
+                    number = 1,
+                    nextNumber = 2,
+                    headline = "День завершён.",
+                    growthText = "В этот раз питомец отдыхает.",
+                    lines = comparisonLines(),
+                    planTotal = Coins(80),
+                    factTotal = Coins(75),
+                    statChanges = emptyList(),
+                    newStage = null,
+                    carryOver = Coins.ZERO,
+                )
+            )
+        )
+
+        scrollToText(text(R.string.day_pet_same))
+    }
+
+    /**
+     * День не вернуть, поэтому закрытие спрашивает подтверждения: кнопка стоит
+     * там же, где на других экранах стоит безобидное действие.
+     */
+    @Test
+    fun `закончить_день_спрашивает_подтверждение`() {
+        var closed = false
+        showDay(running(), onClose = { closed = true })
+
+        compose.onNodeWithText(text(R.string.day_action_close)).performClick()
+        compose.onNodeWithText(text(R.string.day_confirm_text)).assertIsDisplayed()
+        assertEquals(false, closed)
+
+        // Кнопка с тем же словом есть и на экране, и в окне — жмём ту, что в окне.
+        compose.onNode(
+            hasText(text(R.string.day_action_close)) and hasAnyAncestor(isDialog()),
+        ).performClick()
+
+        assertTrue(closed)
+    }
+
+    @Test
+    fun `пока_день_планируется_закрывать_нечего`() {
+        var toPlan = false
+        showDay(DayState.Planning, onPlan = { toPlan = true })
+
+        compose.onNodeWithText(text(R.string.day_not_started)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.budget_action_plan)).performClick()
+
+        assertTrue(toPlan)
+    }
+
+    private fun showDay(
+        state: DayState,
+        onClose: () -> Unit = {},
+        onPlan: () -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                DayContent(state = state, onBack = {}, onPlan = onPlan, onClose = onClose)
+            }
+        }
+    }
+
+    private fun running() = DayState.Running(
+        number = 1,
+        lines = comparisonLines(),
+        planTotal = Coins(80),
+        factTotal = Coins(75),
+    )
+
+    private fun comparisonLines() = listOf(
+        BudgetLine(SpendCategory.MANDATORY, Coins(40), Coins(35), followed = false),
+        BudgetLine(SpendCategory.OPTIONAL, Coins(20), Coins(20), followed = true),
+        BudgetLine(SpendCategory.SAVINGS, Coins(20), Coins(20), followed = true),
+    )
+
     private fun showBudget(
         state: BudgetState,
         onAdd: (SpendCategory) -> Unit = {},
@@ -1142,6 +1285,7 @@ class ScreensTest {
     private fun showMain(
         state: MainState,
         onRetry: () -> Unit = {},
+        onFinishDay: () -> Unit = {},
         onPlan: () -> Unit = {},
         onShop: () -> Unit = {},
         onSavings: () -> Unit = {},
@@ -1156,6 +1300,7 @@ class ScreensTest {
                     onShop = onShop,
                     onSavings = onSavings,
                     onTask = onTask,
+                    onFinishDay = onFinishDay,
                 )
             }
         }
@@ -1189,6 +1334,7 @@ class ScreensTest {
             price = Coins(120),
         ),
         task: TaskOfDay? = null,
+        periodStatus: PeriodStatus = PeriodStatus.PLANNING,
     ) = MainState.Ready(
         childName = "Егор",
         petName = "Пушок",
@@ -1199,7 +1345,7 @@ class ScreensTest {
         savings = savings,
         task = task,
         periodNumber = 1,
-        periodStatus = PeriodStatus.PLANNING,
+        periodStatus = periodStatus,
     )
 
     private fun showCreatePet(

@@ -30,6 +30,7 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.PlanComparison
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
@@ -174,65 +175,11 @@ private fun Started(state: BudgetState.Started, onBack: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
         )
 
-        state.lines.forEach { line -> ComparisonRow(line = line) }
-
-        MoneyCard(label = stringResource(R.string.budget_planned), amount = state.planTotal)
-        MoneyCard(label = stringResource(R.string.budget_fact), amount = state.factTotal)
-    }
-}
-
-/**
- * План против факта по одному направлению.
- *
- * Соблюдение плана показано не цветом, а словами «по плану» и «потрачено» с
- * числами: ТЗ 3.6 запрещает передавать смысл одним цветом.
- */
-@Composable
-private fun ComparisonRow(line: BudgetLine) {
-    val title = stringResource(line.category.label)
-    val spoken = stringResource(
-        R.string.budget_line,
-        title,
-        line.planned.amount,
-        line.actual.amount,
-    )
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clearAndSetSemantics { contentDescription = spoken }
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (line.followed) FontWeight.SemiBold else FontWeight.Normal,
+        PlanComparison(
+            lines = state.lines,
+            planTotal = state.planTotal,
+            factTotal = state.factTotal,
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Dimens.Space),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Labelled(label = stringResource(R.string.budget_planned), amount = line.planned)
-            Labelled(label = stringResource(R.string.budget_fact), amount = line.actual)
-        }
     }
 }
 
-@Composable
-private fun Labelled(label: String, amount: Coins) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        MoneyAmount(amount = amount, style = MaterialTheme.typography.bodyLarge)
-    }
-}

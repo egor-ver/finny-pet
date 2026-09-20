@@ -25,17 +25,10 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import javax.inject.Inject
-
-/** Строка сравнения: сколько задумали и сколько вышло на самом деле. */
-data class BudgetLine(
-    val category: SpendCategory,
-    val planned: Coins,
-    val actual: Coins,
-    val followed: Boolean,
-)
 
 /**
  * Что показывает экран плана.

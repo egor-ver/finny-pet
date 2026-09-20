@@ -40,6 +40,7 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.PetImage
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
@@ -441,15 +442,7 @@ private fun Done(outcome: TaskOutcomeView, appearance: PetAppearance, onBack: ()
             Text(text = stringResource(R.string.task_reward_none), style = MaterialTheme.typography.bodyLarge)
         }
         outcome.changes.forEach { change ->
-            Text(
-                text = stringResource(
-                    R.string.shop_effect,
-                    stringResource(change.kind.label),
-                    if (change.delta > 0) "+${change.delta}" else change.delta.toString(),
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            StatChangeLine(change = change)
         }
     }
 }
