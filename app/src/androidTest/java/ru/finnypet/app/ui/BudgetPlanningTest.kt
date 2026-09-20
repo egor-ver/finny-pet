@@ -172,6 +172,11 @@ class BudgetPlanningTest {
      */
     @Test
     fun последние_монеты_добираются_неполным_шагом() = runBlocking {
+        // Дожидаемся, пока вьюмодель из setUp откроет день первому профилю.
+        // Иначе она всё ещё ждёт активный профиль, дожидается уже второго и
+        // открывает день ему — своими числами, а не теми, что проверяем.
+        awaitPlanning()
+
         // 22 + 60 = 82 — на пять не делится, в конце останется две монеты.
         val odd = balance.copy(startingBalance = Coins(22))
         profiles.create(
@@ -179,6 +184,12 @@ class BudgetPlanningTest {
             petName = "Сова",
             appearance = PetAppearance(bodyId = "owl", colorId = "white", accessoryId = null),
         )
+        // Активный профиль хранится в DataStore, и запись доходит до
+        // подписчиков не мгновенно. Без ожидания вьюмодель успевала взять
+        // прежний профиль и открывала его день вместо нового.
+        withTimeout(TIMEOUT_MS) {
+            profiles.observeActive().first { it?.childName == "Аня" }
+        }
         val second = BudgetViewModel(
             profiles = profiles,
             periods = periods,

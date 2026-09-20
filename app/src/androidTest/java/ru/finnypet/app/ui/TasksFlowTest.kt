@@ -133,7 +133,12 @@ class TasksFlowTest {
 
         pass(saving, reward = Coins(15))
 
-        val ready = vm.await { it.groups.flatMap { g -> g.tasks }.any { it.completed } }
+        // Пометка и лимит приходят из разных потоков базы и обновляются не
+        // одновременно. Ждём оба признака, иначе проверка ловит промежуточное
+        // состояние — и тем чаще, чем быстрее устройство.
+        val ready = vm.await { state ->
+            state.groups.flatMap { g -> g.tasks }.any { it.completed } && !state.rewardAvailable
+        }
         assertEquals(listOf("story"), ready.groups.flatMap { g -> g.tasks }.filter { it.completed }.map { it.id.value })
         assertFalse(ready.rewardAvailable)
     }

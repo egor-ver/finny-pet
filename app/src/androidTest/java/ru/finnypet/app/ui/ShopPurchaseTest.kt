@@ -175,13 +175,15 @@ class ShopPurchaseTest {
 
     @Test
     fun товары_показываются_с_названиями_из_контента() = runBlocking {
-        val ready = awaitReady()
+        // Ждём именно баланс с доходом: экран готов раньше, чем начисление
+        // дойдёт до подписчиков, и на быстром устройстве проверка ловила
+        // стартовый остаток без дохода дня.
+        val ready = await { it.balance == balance.startingBalance + balance.periodIncome }
 
         assertEquals(
             listOf("Вкусная каша", "Яркий мячик", "Замок", "Качели", "Ветеринар"),
             ready.items.map { it.title },
         )
-        assertEquals(balance.startingBalance + balance.periodIncome, ready.balance)
     }
 
     /** ТЗ 2.5.5: пока сумма распределяется, тратить её нельзя. */
