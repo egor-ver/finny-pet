@@ -27,6 +27,7 @@ class GameBalanceTest {
         growthThresholds = growthThresholds,
         unexpectedExpenseChance = unexpectedExpenseChance,
         carryOverUnspent = true,
+        parentBonus = Coins(10),
     )
 
     @Test

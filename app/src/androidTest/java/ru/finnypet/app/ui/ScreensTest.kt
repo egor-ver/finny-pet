@@ -53,6 +53,7 @@ import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.screens.adult.AdultContent
 import ru.finnypet.app.ui.screens.adult.AdultGateContent
 import ru.finnypet.app.ui.screens.adult.AdultState
+import ru.finnypet.app.ui.screens.adult.AwardState
 import ru.finnypet.app.ui.screens.adult.Riddle
 import ru.finnypet.app.ui.screens.adult.TopicProgress
 import ru.finnypet.app.ui.screens.budget.BudgetContent
@@ -1323,18 +1324,27 @@ class ScreensTest {
         showAdult(adultState(), onAward = { awarded = true })
 
         compose.onNode(hasScrollAction())
-            .performScrollToNode(hasText(text(R.string.adult_bonus_action, 10)))
-        compose.onNodeWithText(text(R.string.adult_bonus_action, 10)).performClick()
+            .performScrollToNode(hasText(text(R.string.adult_bonus_action, text(R.string.coins_many, 10))))
+        compose.onNodeWithText(text(R.string.adult_bonus_action, text(R.string.coins_many, 10))).performClick()
 
         assertTrue(awarded)
     }
 
     @Test
     fun `выданный_за_день_бонус_не_предлагается_снова`() {
-        showAdult(adultState(bonusAvailable = false))
+        showAdult(adultState(AwardState.USED))
 
-        compose.onAllNodesWithText(text(R.string.adult_bonus_action, 10)).assertCountEquals(0)
+        compose.onAllNodesWithText(text(R.string.adult_bonus_action, text(R.string.coins_many, 10))).assertCountEquals(0)
         scrollToText(text(R.string.adult_bonus_used))
+    }
+
+    /** Без игрового дня начислять некуда — это не «уже начислено». */
+    @Test
+    fun `без_игрового_дня_бонус_не_обещают_и_не_объявляют_выданным`() {
+        showAdult(adultState(AwardState.NO_DAY))
+
+        compose.onAllNodesWithText(text(R.string.adult_bonus_used)).assertCountEquals(0)
+        scrollToText(text(R.string.adult_bonus_no_day))
     }
 
     @Test
@@ -1370,7 +1380,7 @@ class ScreensTest {
         assertTrue(retried)
     }
 
-    private fun adultState(bonusAvailable: Boolean = true) = AdultState.Ready(
+    private fun adultState(award: AwardState = AwardState.AVAILABLE) = AdultState.Ready(
         childName = "Егор",
         petName = "Пушок",
         about = listOf("Игра учит планировать."),
@@ -1385,7 +1395,7 @@ class ScreensTest {
         balance = Coins(40),
         saved = Coins(30),
         bonus = Coins(10),
-        bonusAvailable = bonusAvailable,
+        award = award,
         soundEnabled = true,
         animationsEnabled = true,
     )

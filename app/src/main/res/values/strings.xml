@@ -93,9 +93,10 @@
     <string name="adult_balance">Сейчас на балансе</string>
     <string name="adult_saved">Отложено на цель</string>
     <string name="adult_bonus">Монеты от взрослого</string>
-    <string name="adult_bonus_explain">Раз в игровой день можно начислить %1$d монет за дело вне игры — за уборку, за помощь, за что считаете нужным.</string>
-    <string name="adult_bonus_action">Начислить %1$d монет</string>
+    <string name="adult_bonus_explain">Раз в игровой день можно начислить %1$s за дело вне игры — за уборку, за помощь, за что считаете нужным.</string>
+    <string name="adult_bonus_action">Начислить %1$s</string>
     <string name="adult_bonus_used">Сегодня монеты уже начислены. Следующие — в новом игровом дне.</string>
+    <string name="adult_bonus_no_day">Игровой день ещё не начался — начислять пока некуда.</string>
     <string name="adult_settings">Звук и движение</string>
     <string name="adult_sound">Звук в игре</string>
     <string name="adult_animations">Движение на экране</string>

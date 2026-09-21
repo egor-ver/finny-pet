@@ -23,8 +23,11 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
+import ru.finnypet.app.ui.components.Explanation
 import ru.finnypet.app.ui.components.FinnySecondaryButton
-import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.Heading
+import ru.finnypet.app.ui.components.LabelledLine
+import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -144,7 +147,7 @@ private fun ColumnScope.About(about: List<String>) {
 private fun ColumnScope.Topics(topics: List<TopicProgress>) {
     Heading(stringResource(R.string.adult_topics))
     topics.forEach { topic ->
-        Line(
+        LabelledLine(
             label = stringResource(topic.topic.label),
             value = when (topic.total) {
                 0 -> stringResource(R.string.adult_topic_none)
@@ -157,24 +160,24 @@ private fun ColumnScope.Topics(topics: List<TopicProgress>) {
 @Composable
 private fun ColumnScope.Overview(state: AdultState.Ready) {
     Heading(stringResource(R.string.adult_overview, state.childName))
-    Line(stringResource(R.string.adult_days), state.days.toString())
-    Line(stringResource(R.string.adult_stage), stringResource(state.stage.label))
-    Line(stringResource(R.string.adult_points), state.points.toString())
-    Line(stringResource(R.string.adult_balance)) { MoneyAmount(amount = state.balance) }
-    Line(stringResource(R.string.adult_saved)) { MoneyAmount(amount = state.saved) }
+    LabelledLine(stringResource(R.string.adult_days), state.days.toString())
+    LabelledLine(stringResource(R.string.adult_stage), stringResource(state.stage.label))
+    LabelledLine(stringResource(R.string.adult_points), state.points.toString())
+    LabelledLine(stringResource(R.string.adult_balance), state.balance)
+    LabelledLine(stringResource(R.string.adult_saved), state.saved)
 }
 
 @Composable
 private fun ColumnScope.Bonus(state: AdultState.Ready, onAward: () -> Unit) {
+    val bonus = coinsText(state.bonus)
     Heading(stringResource(R.string.adult_bonus))
-    Explanation(stringResource(R.string.adult_bonus_explain, state.bonus.amount))
-    if (state.bonusAvailable) {
-        FinnyButton(
-            text = stringResource(R.string.adult_bonus_action, state.bonus.amount),
-            onClick = onAward,
-        )
-    } else {
-        Explanation(stringResource(R.string.adult_bonus_used))
+    Explanation(stringResource(R.string.adult_bonus_explain, bonus))
+    when (state.award) {
+        AwardState.AVAILABLE ->
+            FinnyButton(text = stringResource(R.string.adult_bonus_action, bonus), onClick = onAward)
+
+        AwardState.USED -> Explanation(stringResource(R.string.adult_bonus_used))
+        AwardState.NO_DAY -> Explanation(stringResource(R.string.adult_bonus_no_day))
     }
 }
 
@@ -209,45 +212,6 @@ private fun Toggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit)
         )
         Switch(checked = checked, onCheckedChange = null)
     }
-}
-
-/** Подпись слева, значение справа. Строка озвучивается целиком, а не по кускам. */
-@Composable
-private fun Line(label: String, value: @Composable () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics(mergeDescendants = true) {},
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        value()
-    }
-}
-
-@Composable
-private fun Line(label: String, value: String) = Line(label) {
-    Text(text = value, style = MaterialTheme.typography.bodyLarge)
-}
-
-@Composable
-private fun Heading(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleMedium)
-}
-
-@Composable
-private fun Explanation(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable

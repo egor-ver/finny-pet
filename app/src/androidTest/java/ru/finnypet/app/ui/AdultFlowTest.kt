@@ -42,11 +42,13 @@ import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskOutcome
 import ru.finnypet.app.domain.model.TaskStep
 import ru.finnypet.app.domain.model.TaskTopic
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.ui.screens.adult.AdultState
 import ru.finnypet.app.ui.screens.adult.AdultViewModel
+import ru.finnypet.app.ui.screens.adult.AwardState
 import java.io.File
 
 /**
@@ -140,7 +142,7 @@ class AdultFlowTest {
     fun бонус_виден_на_балансе_и_запирается_до_нового_дня() = runBlocking {
         val period = openPeriod()
         val model = viewModel()
-        val before = await { it.bonusAvailable }.balance
+        val before = await { it.award == AwardState.AVAILABLE }.balance
 
         model.award()
 
@@ -148,9 +150,25 @@ class AdultFlowTest {
         // запросов к базе, и между ними есть состояние «бонус уже выдан, а
         // баланс ещё прежний» — доли секунды, но тест его ловит.
         val expected = before + balance.parentBonus
-        val after = await { !it.bonusAvailable && it.balance == expected }
+        val after = await { it.award == AwardState.USED && it.balance == expected }
 
         assertNotNull(after.awarded)
+        assertEquals(expected, periods.balance(period))
+    }
+
+    /** Два нажатия подряд — один бонус, иначе правило «раз в день» ничего не стоит. */
+    @Test
+    fun двойное_нажатие_начисляет_один_раз() = runBlocking {
+        val period = openPeriod()
+        val model = viewModel()
+        val before = await { it.award == AwardState.AVAILABLE }.balance
+
+        model.award()
+        model.award()
+
+        val expected = before + balance.parentBonus
+        await { it.award == AwardState.USED && it.balance == expected }
+        assertEquals(1, periods.transactions(period.id).count { it.type == TransactionType.INCOME_PARENT })
         assertEquals(expected, periods.balance(period))
     }
 
@@ -158,7 +176,9 @@ class AdultFlowTest {
     fun звук_и_анимации_переключаются_взрослым() = runBlocking {
         openPeriod()
         val model = viewModel()
-        assertTrue(await { it.soundEnabled }.animationsEnabled)
+        // Начальное состояние целиком, а не наполовину: ждать один признак и
+        // утверждать про другой — та самая гонка, что уже ловили трижды.
+        await { it.soundEnabled && it.animationsEnabled }
 
         model.setSound(false)
         model.setAnimations(false)

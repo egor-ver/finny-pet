@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
@@ -47,6 +49,18 @@ data class TopicProgress(
     val total: Int,
 )
 
+/** Что сегодня можно сказать про бонус. */
+enum class AwardState {
+    /** Бонус этого дня ещё не выдан. */
+    AVAILABLE,
+
+    /** Бонус этого дня уже выдан. */
+    USED,
+
+    /** Игрового дня нет — начислять некуда, а не «уже начислено». */
+    NO_DAY,
+}
+
 /** Что видит взрослый. */
 sealed interface AdultState {
 
@@ -66,8 +80,7 @@ sealed interface AdultState {
         val balance: Coins,
         val saved: Coins,
         val bonus: Coins,
-        /** Бонус этого дня ещё не выдан и есть куда его начислить. */
-        val bonusAvailable: Boolean,
+        val award: AwardState,
         val soundEnabled: Boolean,
         val animationsEnabled: Boolean,
         /** Текст начисления, пока взрослый его не закрыл. */
@@ -107,6 +120,7 @@ class AdultViewModel @Inject constructor(
     /** Смена значения перечитывает раздел заново — повтор после сбоя. */
     private val attempts = MutableStateFlow(0)
     private val awarded = MutableStateFlow<String?>(null)
+    private val awarding = Mutex()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<AdultState> = attempts
@@ -124,17 +138,23 @@ class AdultViewModel @Inject constructor(
     }
 
     fun award() = act { profileId ->
-        val credited = awardBonus(profileId) ?: return@act
-        awarded.value = texts.textOf(credited.explanation)
+        // Замок против двойного нажатия: обе корутины успели бы прочитать
+        // операции дня до того, как первая записала бонус, и начислили бы
+        // дважды. Проверка «сегодня уже выдан» живёт внутри сценария, и
+        // попасть в неё второй вызов должен уже после записи первого.
+        awarding.withLock {
+            val credited = awardBonus(profileId) ?: return@withLock
+            awarded.value = texts.textOf(credited.explanation)
+        }
     }
 
     fun dismissAward() {
         awarded.value = null
     }
 
-    fun setSound(enabled: Boolean) = act { settings.setSoundEnabled(enabled) }
+    fun setSound(enabled: Boolean) = guarded { settings.setSoundEnabled(enabled) }
 
-    fun setAnimations(enabled: Boolean) = act { settings.setAnimationsEnabled(enabled) }
+    fun setAnimations(enabled: Boolean) = guarded { settings.setAnimationsEnabled(enabled) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun screen(): Flow<AdultState> =
@@ -173,15 +193,13 @@ class AdultViewModel @Inject constructor(
     ) { pet, goal, completed -> Progress(pet, goal, completed) }
 
     private fun moneyOf(period: GamePeriod?): Flow<Money> {
-        if (period == null) return flowOf(Money(Coins.ZERO, bonusAvailable = false))
+        if (period == null) return flowOf(Money(Coins.ZERO, AwardState.NO_DAY))
         return combine(
             periods.observeBalance(period),
             periods.observeTransactions(period.id),
         ) { balance, transactions ->
-            Money(
-                balance = balance,
-                bonusAvailable = transactions.none { it.type == TransactionType.INCOME_PARENT },
-            )
+            val used = transactions.any { it.type == TransactionType.INCOME_PARENT }
+            Money(balance, if (used) AwardState.USED else AwardState.AVAILABLE)
         }
     }
 
@@ -210,7 +228,7 @@ class AdultViewModel @Inject constructor(
             balance = money.balance,
             saved = progress.goal?.saved ?: Coins.ZERO,
             bonus = gameBalance.parentBonus,
-            bonusAvailable = money.bonusAvailable,
+            award = money.award,
             soundEnabled = view.sound,
             animationsEnabled = view.animations,
             awarded = view.awarded,
@@ -235,7 +253,7 @@ class AdultViewModel @Inject constructor(
         val completed: List<CompletedTask>,
     )
 
-    private data class Money(val balance: Coins, val bonusAvailable: Boolean)
+    private data class Money(val balance: Coins, val award: AwardState)
 
     private data class View(val sound: Boolean, val animations: Boolean, val awarded: String?)
 

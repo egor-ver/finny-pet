@@ -32,7 +32,7 @@ data class GameBalance(
      * игровой день, иначе бонус обесценил бы план: доход дня известен
      * заранее, а бонус без предела делает его неважным.
      */
-    val parentBonus: Coins = Coins(10),
+    val parentBonus: Coins,
 ) {
 
     init {
@@ -84,6 +84,7 @@ data class GameBalance(
             growthThresholds = listOf(0, 10, 25),
             unexpectedExpenseChance = 15,
             carryOverUnspent = true,
+            parentBonus = Coins(10),
         )
     }
 }

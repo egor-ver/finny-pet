@@ -31,6 +31,7 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PlanningHint
@@ -237,8 +238,8 @@ private fun ActiveGoal(goal: GoalView, periodsToGoal: Int?) {
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
         Text(text = goal.title, style = MaterialTheme.typography.titleLarge)
-        Labelled(label = stringResource(R.string.savings_price), amount = goal.price)
-        Labelled(label = stringResource(R.string.main_savings), amount = goal.saved)
+        LabelledLine(label = stringResource(R.string.savings_price), amount = goal.price)
+        LabelledLine(label = stringResource(R.string.main_savings), amount = goal.saved)
         ProgressLine(
             fraction = goal.fraction,
             contentDescription = stringResource(
@@ -255,7 +256,7 @@ private fun ActiveGoal(goal: GoalView, periodsToGoal: Int?) {
                 color = MaterialTheme.colorScheme.primary,
             )
         } else {
-            Labelled(label = stringResource(R.string.main_goal_left), amount = goal.remaining)
+            LabelledLine(label = stringResource(R.string.main_goal_left), amount = goal.remaining)
             Text(
                 text = when (periodsToGoal) {
                     null -> stringResource(R.string.savings_eta_unknown)
@@ -265,25 +266,6 @@ private fun ActiveGoal(goal: GoalView, periodsToGoal: Int?) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-private fun Labelled(label: String, amount: Coins) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics(mergeDescendants = true) {},
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        MoneyAmount(amount = amount)
     }
 }
 
@@ -385,7 +367,7 @@ private fun WithdrawDialog(
         },
     ) {
         AmountStepper(draft = draft, onAdd = onAdd, onRemove = onRemove)
-        Labelled(label = stringResource(R.string.savings_withdraw_left), amount = draft.preview.savingsAfter)
+        LabelledLine(label = stringResource(R.string.savings_withdraw_left), amount = draft.preview.savingsAfter)
         val before = draft.preview.periodsBefore
         val after = draft.preview.periodsAfter
         Text(

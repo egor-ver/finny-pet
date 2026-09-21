@@ -33,6 +33,8 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.Explanation
+import ru.finnypet.app.ui.components.Heading
 import ru.finnypet.app.ui.components.GoalProgressBar
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.PlanComparison
@@ -211,20 +213,6 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
         Heading(title)
         content()
     }
-}
-
-@Composable
-private fun Heading(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleMedium)
-}
-
-@Composable
-private fun Explanation(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 /** Подложка, одинаковая у задания и термина: текст разный, вид один. */

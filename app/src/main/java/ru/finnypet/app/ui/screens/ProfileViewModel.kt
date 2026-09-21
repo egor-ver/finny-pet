@@ -25,11 +25,18 @@ abstract class ProfileViewModel(
 
     protected val failed = MutableStateFlow(false)
 
-    protected fun act(block: suspend (ProfileId) -> Unit) {
+    protected fun act(block: suspend (ProfileId) -> Unit) = guarded {
+        block(profiles.observeActive().filterNotNull().first().id)
+    }
+
+    /**
+     * Действие, которому профиль не нужен: настройки живут отдельно от игры
+     * и переживают смену профиля, ждать его было бы неправдой.
+     */
+    protected fun guarded(block: suspend () -> Unit) {
         viewModelScope.launch {
-            val profile = profiles.observeActive().filterNotNull().first()
             try {
-                block(profile.id)
+                block()
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {

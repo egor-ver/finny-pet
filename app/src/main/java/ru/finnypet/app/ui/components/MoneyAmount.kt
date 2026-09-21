@@ -61,9 +61,14 @@ fun MoneyAmount(
     }
 }
 
-/** Склонение по числу: одна монета, две монеты, пять монет. */
+/**
+ * Склонение по числу: одна монета, две монеты, пять монет.
+ *
+ * Нужно везде, где число монет попадает внутрь фразы, а не рисуется рядом со
+ * значком: подставить «монет» строкой нельзя, форму выбирает правило языка.
+ */
 @Composable
-private fun coinsText(amount: Coins): String = stringResource(
+fun coinsText(amount: Coins): String = stringResource(
     when (wordFormOf(amount.amount)) {
         WordForm.ONE -> R.string.coins_one
         WordForm.FEW -> R.string.coins_few
