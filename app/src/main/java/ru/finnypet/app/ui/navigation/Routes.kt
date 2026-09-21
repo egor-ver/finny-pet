@@ -42,6 +42,10 @@ data object Day : Route
 @Serializable
 data object Shop : Route
 
+/** История, учебный прогресс и справочник (ТЗ 2.5.11). */
+@Serializable
+data object Progress : Route
+
 /** Копилка и цель (ТЗ 2.5.7). */
 @Serializable
 data object Savings : Route

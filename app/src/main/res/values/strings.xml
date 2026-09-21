@@ -58,6 +58,20 @@
     <string name="category_optional">Желаемое</string>
     <string name="category_savings">Копилка</string>
 
+    <!-- История и учебный прогресс (ТЗ 2.5.11) -->
+    <string name="progress_title">Мой прогресс</string>
+    <string name="progress_action">Открыть мой прогресс</string>
+    <string name="progress_last_day">Как прошёл день %1$d</string>
+    <string name="progress_last_day_none">Как прошёл день</string>
+    <string name="progress_no_days">Ни один день ещё не закончен. Закончи первый — и здесь появятся итоги.</string>
+    <string name="progress_goal">На что копим</string>
+    <string name="progress_tasks">Пройденные задания</string>
+    <string name="progress_no_tasks">Заданий пока не пройдено.</string>
+    <string name="progress_glossary">Что это значит</string>
+    <string name="progress_failed">Не получилось открыть прогресс. Попробуй ещё раз.</string>
+    <string name="progress_term_opened">Свернуть «%1$s»</string>
+    <string name="progress_term_closed">Открыть «%1$s»</string>
+
     <!-- Итоги игрового дня (ТЗ 2.5.9, 2.5.10) -->
     <string name="day_title">Итоги дня</string>
     <string name="day_action_close">Закончить день</string>

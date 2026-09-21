@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
-import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.TaskId
@@ -33,10 +32,10 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.GoalProgressBar
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PetImage
-import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StatBar
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
@@ -51,6 +50,7 @@ import ru.finnypet.app.ui.theme.Dimens
 @Composable
 fun MainScreen(
     onPlan: () -> Unit,
+    onProgress: () -> Unit,
     onShop: () -> Unit,
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
@@ -67,6 +67,7 @@ fun MainScreen(
         onSavings = onSavings,
         onTask = onTask,
         onFinishDay = onFinishDay,
+        onProgress = onProgress,
     )
 }
 
@@ -83,6 +84,7 @@ fun MainContent(
     onSavings: () -> Unit = {},
     onTask: (TaskId) -> Unit = {},
     onFinishDay: () -> Unit = {},
+    onProgress: () -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
@@ -94,6 +96,7 @@ fun MainContent(
             onSavings = onSavings,
             onTask = onTask,
             onFinishDay = onFinishDay,
+            onProgress = onProgress,
         )
     }
 }
@@ -133,6 +136,7 @@ private fun ReadyScreen(
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
     onFinishDay: () -> Unit,
+    onProgress: () -> Unit,
 ) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
@@ -180,7 +184,28 @@ private fun ReadyScreen(
             stat = state.stats.care,
             color = MaterialTheme.colorScheme.tertiary,
         )
+
+        ProgressLink(onProgress)
     }
+}
+
+/**
+ * Дорога в прогресс — строкой внизу, а не кнопкой: кнопок внизу уже две, а
+ * третья вытесняет показатели питомца за край экрана при крупном шрифте.
+ */
+@Composable
+private fun ProgressLink(onOpen: () -> Unit) {
+    Text(
+        text = stringResource(R.string.progress_action),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .clickable(role = Role.Button, onClick = onOpen)
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .padding(vertical = Dimens.SpaceSmall),
+    )
 }
 
 /**
@@ -309,7 +334,7 @@ private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Goal(savings = savings, title = title, price = price)
+            GoalProgressBar(title = title, saved = savings.saved, price = price)
         }
 
         Text(
@@ -318,48 +343,6 @@ private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.align(Alignment.End),
         )
-    }
-}
-
-@Composable
-private fun Goal(
-    savings: SavingsView,
-    title: String,
-    price: Coins,
-) {
-    Text(text = title, style = MaterialTheme.typography.titleMedium)
-    ProgressLine(
-        fraction = savings.fraction,
-        // Полосу озвучка иначе пропустит: цифры внутри неё нет, а смысл есть.
-        contentDescription = stringResource(
-            R.string.main_goal_progress,
-            title,
-            savings.saved.amount,
-            price.amount,
-        ),
-    )
-    if (savings.isReached) {
-        Text(
-            text = stringResource(R.string.main_goal_reached),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    } else {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            modifier = Modifier.semantics(mergeDescendants = true) {},
-        ) {
-            Text(
-                text = stringResource(R.string.main_goal_left),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            MoneyAmount(
-                amount = savings.remaining,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
     }
 }
 

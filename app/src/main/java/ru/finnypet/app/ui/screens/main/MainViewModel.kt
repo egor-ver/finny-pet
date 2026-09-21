@@ -43,18 +43,7 @@ data class SavingsView(
     val saved: Coins,
     val goalTitle: String? = null,
     val price: Coins? = null,
-) {
-
-    val remaining: Coins get() = price?.let(saved::shortfallTo) ?: Coins.ZERO
-
-    val isReached: Boolean get() = price != null && saved.covers(price)
-
-    val fraction: Float
-        get() = when {
-            price == null || price.amount == 0 -> 0f
-            else -> saved.amount.toFloat() / price.amount
-        }
-}
+)
 
 /**
  * Задание дня (ТЗ 2.5.3: активное задание видно на главном). Заголовка у

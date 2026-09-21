@@ -11,6 +11,7 @@ import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.day.DayScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
+import ru.finnypet.app.ui.screens.progress.ProgressScreen
 import ru.finnypet.app.ui.screens.savings.SavingsScreen
 import ru.finnypet.app.ui.screens.shop.ShopScreen
 import ru.finnypet.app.ui.screens.tasks.TaskScreen
@@ -60,7 +61,12 @@ fun FinnyNavHost(
                 onSavings = { navController.navigate(Savings) },
                 onTask = { taskId -> navController.navigate(Task(taskId.value)) },
                 onFinishDay = { navController.navigate(Day) },
+                onProgress = { navController.navigate(Progress) },
             )
+        }
+
+        composable<Progress> {
+            ProgressScreen(onBack = { navController.popBackStack() })
         }
 
         composable<Day> {

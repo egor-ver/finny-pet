@@ -28,6 +28,7 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.components.goalFraction
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
@@ -47,9 +48,7 @@ data class GoalView(
 
     val isReached: Boolean get() = saved.covers(price)
 
-    /** Цена в домене больше нуля, но экран не должен падать и на выдуманной. */
-    val fraction: Float
-        get() = if (price.amount == 0) 1f else (saved.amount.toFloat() / price.amount).coerceAtMost(1f)
+    val fraction: Float get() = goalFraction(saved, price)
 }
 
 /**

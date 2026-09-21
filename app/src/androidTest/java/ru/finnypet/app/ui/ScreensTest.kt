@@ -1,5 +1,8 @@
 package ru.finnypet.app.ui
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -59,6 +62,12 @@ import ru.finnypet.app.ui.screens.main.MainState
 import ru.finnypet.app.ui.screens.main.SavingsView
 import ru.finnypet.app.ui.screens.main.TaskOfDay
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
+import ru.finnypet.app.ui.screens.progress.GoalSummary
+import ru.finnypet.app.ui.screens.progress.LastDay
+import ru.finnypet.app.ui.screens.progress.PassedTask
+import ru.finnypet.app.ui.screens.progress.ProgressContent
+import ru.finnypet.app.ui.screens.progress.ProgressState
+import ru.finnypet.app.ui.screens.progress.Term
 import ru.finnypet.app.ui.screens.savings.GoalView
 import ru.finnypet.app.ui.screens.savings.SavingsContent
 import ru.finnypet.app.ui.screens.savings.SavingsDraft
@@ -1148,6 +1157,103 @@ class ScreensTest {
         scrollToDescription("75 монет")
     }
 
+    // --- Прогресс и справочник (ТЗ 2.5.11) ---
+
+    @Test
+    fun `прогресс_показывает_итоги_цель_и_задания`() {
+        showProgress(
+            ProgressState.Ready(
+                lastDay = LastDay(
+                    number = 2,
+                    lines = comparisonLines(),
+                    planTotal = Coins(80),
+                    factTotal = Coins(75),
+                ),
+                goal = GoalSummary(title = "Самокат мечты", saved = Coins(30), price = Coins(120)),
+                passed = listOf(
+                    PassedTask(
+                        id = TaskId("plan"),
+                        title = "Разложи монеты",
+                        topic = TaskTopic.PLANNING,
+                        reward = Coins(15),
+                    ),
+                ),
+                terms = listOf(Term(id = "budget", title = "Бюджет", body = "Это сколько у тебя есть монеток.")),
+            )
+        )
+
+        scrollToText(text(R.string.progress_last_day, 2))
+        scrollToDescription(text(R.string.category_mandatory) + ": по плану 40, потрачено 35")
+        scrollToText("Самокат мечты")
+        scrollToText("Разложи монеты")
+        scrollToText(text(R.string.topic_planning))
+    }
+
+    /** Пока день не закончен и заданий нет — экран объясняет, а не пустует. */
+    @Test
+    fun `пустой_прогресс_объясняет_что_будет_дальше`() {
+        showProgress(ProgressState.Ready(lastDay = null, goal = null, passed = emptyList(), terms = emptyList()))
+
+        scrollToText(text(R.string.progress_no_days))
+        scrollToText(text(R.string.main_goal_none))
+        scrollToText(text(R.string.progress_no_tasks))
+    }
+
+    /**
+     * Справочник свёрнут: шесть объяснений подряд заняли бы весь экран.
+     *
+     * Что будет по нажатию — подписью действия, а не описанием: описание
+     * заменило бы собой объяснение термина в озвучке (ТЗ 3.6).
+     */
+    @Test
+    fun `термин_разворачивается_по_нажатию`() {
+        val body = "Это сколько у тебя есть монеток."
+        showProgress(
+            ProgressState.Ready(
+                lastDay = null,
+                goal = null,
+                passed = emptyList(),
+                terms = listOf(Term(id = "budget", title = "Бюджет", body = body)),
+            )
+        )
+
+        compose.onAllNodesWithText(body).assertCountEquals(0)
+        compose.onNode(hasClickLabel(text(R.string.progress_term_closed, "Бюджет"))).performClick()
+
+        scrollToText(body)
+        compose.onNode(hasClickLabel(text(R.string.progress_term_opened, "Бюджет"))).assert(hasText(body))
+    }
+
+    @Test
+    fun `с_главного_экрана_можно_попасть_в_прогресс`() {
+        var opened = false
+        showMain(readyState(), onProgress = { opened = true })
+
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.progress_action)))
+        compose.onNodeWithText(text(R.string.progress_action)).performClick()
+
+        assertTrue(opened)
+    }
+
+    @Test
+    fun `сбой_прогресса_предлагает_повтор`() {
+        var retried = false
+        showProgress(ProgressState.Failed, onRetry = { retried = true })
+
+        compose.onNodeWithText(text(R.string.progress_failed)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_retry)).performClick()
+
+        assertTrue(retried)
+    }
+
+    private fun showProgress(state: ProgressState, onRetry: () -> Unit = {}) {
+        compose.setContent {
+            FinnypetTheme {
+                ProgressContent(state = state, onBack = {}, onRetry = onRetry)
+            }
+        }
+    }
+
     // --- Итоги дня (ТЗ 2.5.9, 2.5.10) ---
 
     /** ТЗ 2.5.9: после действия видно, что изменилось, и почему. */
@@ -1285,6 +1391,7 @@ class ScreensTest {
     private fun showMain(
         state: MainState,
         onRetry: () -> Unit = {},
+        onProgress: () -> Unit = {},
         onFinishDay: () -> Unit = {},
         onPlan: () -> Unit = {},
         onShop: () -> Unit = {},
@@ -1301,6 +1408,7 @@ class ScreensTest {
                     onSavings = onSavings,
                     onTask = onTask,
                     onFinishDay = onFinishDay,
+                    onProgress = onProgress,
                 )
             }
         }
@@ -1309,6 +1417,11 @@ class ScreensTest {
     private fun scrollToText(label: String) {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(label))
         compose.onNodeWithText(label).assertIsDisplayed()
+    }
+
+    /** Подпись действия у нажимаемого узла: озвучка читает её вслед за текстом. */
+    private fun hasClickLabel(label: String) = SemanticsMatcher("подпись действия «$label»") { node ->
+        node.config.getOrNull(SemanticsActions.OnClick)?.label == label
     }
 
     /** Когда узлов с такой подписью несколько — достаточно, чтобы показался первый. */
