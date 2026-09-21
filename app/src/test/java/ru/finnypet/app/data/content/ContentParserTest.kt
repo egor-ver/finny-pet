@@ -102,7 +102,10 @@ class ContentParserTest {
     /** Поле появилось позже остальных: старый файл без него читается как «одно в день». */
     @Test
     fun `без поля лимита заданий подставляется единица`() {
-        val without = RealContent.asset("balance.json").replace(",\n  \"rewardedTasksPerPeriod\": 1", "")
+        // Выражением, а не подстрокой с переводом строки: в рабочей копии файл
+        // бывает и с CRLF, и с LF, и поле не обязано стоять последним.
+        val without = RealContent.asset("balance.json")
+            .replace(Regex(""",?\s*"rewardedTasksPerPeriod"\s*:\s*\d+"""), "")
         assertTrue("поле должно было удалиться из копии", "rewardedTasksPerPeriod" !in without)
 
         assertEquals(1, parser.parse(realContent(balance = without)).balance.rewardedTasksPerPeriod)

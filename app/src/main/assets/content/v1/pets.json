@@ -9,6 +9,7 @@
     { "id": "white", "titleKey": "pet.color.white" }
   ],
   "accessories": [
-    { "id": "scarf", "titleKey": "pet.accessory.scarf" }
+    { "id": "scarf", "titleKey": "pet.accessory.scarf" },
+    { "id": "glasses", "titleKey": "pet.accessory.glasses" }
   ]
 }
