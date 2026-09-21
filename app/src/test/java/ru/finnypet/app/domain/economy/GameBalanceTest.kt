@@ -87,6 +87,13 @@ class GameBalanceTest {
     }
 
     @Test
+    fun `нулевой бонус родителя не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            GameBalance.PLACEHOLDER.copy(parentBonus = Coins.ZERO)
+        }
+    }
+
+    @Test
     fun `отрицательные очки роста не допускаются`() {
         assertThrows(IllegalArgumentException::class.java) { balance(growthForMandatoryCovered = -1) }
     }

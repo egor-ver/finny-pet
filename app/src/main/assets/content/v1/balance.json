@@ -10,6 +10,7 @@
   "growthForSavingsKept": 2,
   "growthThresholds": [0, 10, 25],
   "carryOverUnspent": true,
-  "rewardedTasksPerPeriod": 1
+  "rewardedTasksPerPeriod": 1,
+  "parentBonus": 10
 }
 

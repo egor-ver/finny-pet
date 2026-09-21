@@ -73,6 +73,7 @@ class TransactionTest {
     fun `доход не относится ни к одному направлению плана`() {
         assertNull(TransactionType.INCOME_PERIOD.category)
         assertNull(TransactionType.INCOME_TASK.category)
+        assertNull(TransactionType.INCOME_PARENT.category)
     }
 
     @Test
@@ -99,6 +100,7 @@ class TransactionTest {
             listOf(
                 TransactionType.INCOME_PERIOD,
                 TransactionType.INCOME_TASK,
+                TransactionType.INCOME_PARENT,
                 TransactionType.SAVINGS_WITHDRAW,
             ),
             income,
@@ -116,7 +118,7 @@ class TransactionTest {
     fun `имена типов транзакций не меняются`() {
         assertEquals(
             listOf(
-                "INCOME_PERIOD", "INCOME_TASK",
+                "INCOME_PERIOD", "INCOME_TASK", "INCOME_PARENT",
                 "PURCHASE_MANDATORY", "PURCHASE_OPTIONAL",
                 "SAVINGS_DEPOSIT", "SAVINGS_WITHDRAW",
                 "UNEXPECTED_EXPENSE",

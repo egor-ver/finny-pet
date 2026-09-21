@@ -86,7 +86,8 @@ class WalletEngine(private val clock: GameClock) {
         periodId: Long,
     ): GameResult<CreditOutcome> {
         require(type in CREDITABLE) {
-            "Начислить можно только доход периода или награду за задание, получен: ${type.name}"
+            "Начислить можно доход периода, награду за задание или бонус родителя, " +
+                "получен: ${type.name}"
         }
         require(amount > Coins.ZERO) { "Начисление нуля не имеет смысла" }
 
@@ -160,7 +161,11 @@ class WalletEngine(private val clock: GameClock) {
 
     private companion object {
         const val UNSAVED = 0L
-        val CREDITABLE = setOf(TransactionType.INCOME_PERIOD, TransactionType.INCOME_TASK)
+        val CREDITABLE = setOf(
+            TransactionType.INCOME_PERIOD,
+            TransactionType.INCOME_TASK,
+            TransactionType.INCOME_PARENT,
+        )
         const val KEY_DONE = "purchase.done"
         const val KEY_REJECTED = "purchase.rejected"
         const val KEY_CREDITED = "balance.credited"

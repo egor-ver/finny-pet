@@ -28,6 +28,8 @@ data class BalanceDto(
     val carryOverUnspent: Boolean,
     /** Появилось позже остальных: старый balance.json без него читается как «одно в день». */
     val rewardedTasksPerPeriod: Int = 1,
+    /** Бонус родителя (ТЗ 2.5.12). Без него пак читается со значением по умолчанию. */
+    val parentBonus: Int = 10,
 )
 
 @Serializable

@@ -17,6 +17,7 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.DayRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import javax.inject.Singleton
@@ -57,6 +58,17 @@ object DomainModule {
 
     @Provides
     fun taskEngine(clock: GameClock): TaskEngine = TaskEngine(clock)
+
+    @Provides
+    fun awardParentBonus(
+        periods: PeriodRepository,
+        wallet: WalletEngine,
+        balance: GameBalance,
+    ): AwardParentBonus = AwardParentBonus(
+        periods = periods,
+        wallet = wallet,
+        balance = balance,
+    )
 
     @Provides
     fun closeDay(

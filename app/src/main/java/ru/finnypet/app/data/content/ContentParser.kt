@@ -89,6 +89,7 @@ class ContentParser @Inject constructor() {
                 unexpectedExpenseChance = 0,
                 carryOverUnspent = dto.carryOverUnspent,
                 rewardedTasksPerPeriod = dto.rewardedTasksPerPeriod,
+                parentBonus = Coins(dto.parentBonus),
             )
         }
     }

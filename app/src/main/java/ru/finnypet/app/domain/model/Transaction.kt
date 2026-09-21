@@ -6,6 +6,7 @@ enum class TransactionType(
 ) {
     INCOME_PERIOD(null, true),
     INCOME_TASK(null, true),
+    INCOME_PARENT(null, true),
     PURCHASE_MANDATORY(SpendCategory.MANDATORY, false),
     PURCHASE_OPTIONAL(SpendCategory.OPTIONAL, false),
     SAVINGS_DEPOSIT(SpendCategory.SAVINGS, false),
