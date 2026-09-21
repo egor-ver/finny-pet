@@ -46,6 +46,14 @@ data object Shop : Route
 @Serializable
 data object Progress : Route
 
+/** Пример, отделяющий раздел взрослого от детской части (ТЗ 2.5.12). */
+@Serializable
+data object AdultGate : Route
+
+/** Раздел для взрослого (ТЗ 2.5.12). */
+@Serializable
+data object Adult : Route
+
 /** Копилка и цель (ТЗ 2.5.7). */
 @Serializable
 data object Savings : Route

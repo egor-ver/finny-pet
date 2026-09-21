@@ -72,6 +72,34 @@
     <string name="progress_term_opened">Свернуть «%1$s»</string>
     <string name="progress_term_closed">Открыть «%1$s»</string>
 
+    <!-- Раздел для взрослого (ТЗ 2.5.12) -->
+    <string name="adult_action">Открыть раздел для взрослого</string>
+    <string name="adult_gate_title">Только для взрослого</string>
+    <string name="adult_gate_explain">Этот раздел для родителя. Реши пример, чтобы открыть его.</string>
+    <string name="adult_gate_prompt">Сколько будет %1$d × %2$d?</string>
+    <string name="adult_gate_answer">Ответ</string>
+    <string name="adult_gate_open">Открыть раздел</string>
+    <string name="adult_gate_wrong">Ответ неверный. Посчитай ещё раз.</string>
+    <string name="adult_title">Раздел для взрослого</string>
+    <string name="adult_failed">Не получилось открыть раздел. Попробуйте ещё раз.</string>
+    <string name="adult_about">Чему учит игра</string>
+    <string name="adult_topics">Пройденные темы</string>
+    <string name="adult_topic_passed">пройдено %1$d из %2$d</string>
+    <string name="adult_topic_none">заданий по теме пока нет</string>
+    <string name="adult_overview">Как идут дела у %1$s</string>
+    <string name="adult_days">Сыграно дней</string>
+    <string name="adult_stage">Стадия питомца</string>
+    <string name="adult_points">Очки роста</string>
+    <string name="adult_balance">Сейчас на балансе</string>
+    <string name="adult_saved">Отложено на цель</string>
+    <string name="adult_bonus">Монеты от взрослого</string>
+    <string name="adult_bonus_explain">Раз в игровой день можно начислить %1$d монет за дело вне игры — за уборку, за помощь, за что считаете нужным.</string>
+    <string name="adult_bonus_action">Начислить %1$d монет</string>
+    <string name="adult_bonus_used">Сегодня монеты уже начислены. Следующие — в новом игровом дне.</string>
+    <string name="adult_settings">Звук и движение</string>
+    <string name="adult_sound">Звук в игре</string>
+    <string name="adult_animations">Движение на экране</string>
+
     <!-- Итоги игрового дня (ТЗ 2.5.9, 2.5.10) -->
     <string name="day_title">Итоги дня</string>
     <string name="day_action_close">Закончить день</string>

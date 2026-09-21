@@ -21,11 +21,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -48,6 +50,11 @@ import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.ui.screens.adult.AdultContent
+import ru.finnypet.app.ui.screens.adult.AdultGateContent
+import ru.finnypet.app.ui.screens.adult.AdultState
+import ru.finnypet.app.ui.screens.adult.Riddle
+import ru.finnypet.app.ui.screens.adult.TopicProgress
 import ru.finnypet.app.ui.screens.budget.BudgetContent
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.screens.day.DayContent
@@ -1254,6 +1261,162 @@ class ScreensTest {
         }
     }
 
+    // --- Раздел для взрослого (ТЗ 2.5.12) ---
+
+    /** Барьер: верный ответ пускает, неверный — нет и говорит об этом словом. */
+    @Test
+    fun `верный_ответ_открывает_раздел_взрослого`() {
+        var opened = false
+        showGate(Riddle(14, 3), onSolved = { opened = true })
+
+        compose.onNodeWithText(text(R.string.adult_gate_answer)).performTextInput("42")
+        compose.onNodeWithText(text(R.string.adult_gate_open)).performClick()
+
+        assertTrue(opened)
+    }
+
+    @Test
+    fun `неверный_ответ_не_пускает_и_объясняет`() {
+        var opened = false
+        showGate(Riddle(14, 3), onSolved = { opened = true })
+
+        compose.onNodeWithText(text(R.string.adult_gate_answer)).performTextInput("41")
+        compose.onNodeWithText(text(R.string.adult_gate_open)).performClick()
+
+        assertFalse(opened)
+        // С прокруткой: на маленьком экране клавиатура сдвигает объяснение
+        // за нижний край, и «есть в дереве» ещё не значит «видно».
+        scrollToText(text(R.string.adult_gate_wrong))
+    }
+
+    /** Пока ответа нет, открывать нечего — кнопка недоступна. */
+    @Test
+    fun `без_ответа_кнопка_недоступна`() {
+        showGate(Riddle(14, 3))
+
+        compose.onNodeWithText(text(R.string.adult_gate_open)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `раздел_показывает_цели_темы_и_прогресс`() {
+        showAdult(adultState())
+
+        scrollToText("Игра учит планировать.")
+        scrollToText(text(R.string.topic_planning))
+        scrollToText(text(R.string.adult_topic_passed, 1, 2))
+        scrollToText(text(R.string.adult_overview, "Егор"))
+        scrollToText(text(R.string.adult_days))
+    }
+
+    /** ТЗ 2.5.12: никаких негативных оценок — только «пройдено N из M». */
+    @Test
+    fun `нетронутая_тема_показана_без_упрёка`() {
+        showAdult(adultState())
+
+        scrollToText(text(R.string.topic_payments))
+        scrollToText(text(R.string.adult_topic_passed, 0, 2))
+    }
+
+    @Test
+    fun `бонус_начисляется_кнопкой`() {
+        var awarded = false
+        showAdult(adultState(), onAward = { awarded = true })
+
+        compose.onNode(hasScrollAction())
+            .performScrollToNode(hasText(text(R.string.adult_bonus_action, 10)))
+        compose.onNodeWithText(text(R.string.adult_bonus_action, 10)).performClick()
+
+        assertTrue(awarded)
+    }
+
+    @Test
+    fun `выданный_за_день_бонус_не_предлагается_снова`() {
+        showAdult(adultState(bonusAvailable = false))
+
+        compose.onAllNodesWithText(text(R.string.adult_bonus_action, 10)).assertCountEquals(0)
+        scrollToText(text(R.string.adult_bonus_used))
+    }
+
+    @Test
+    fun `звук_выключается_нажатием_на_строку`() {
+        var enabled: Boolean? = null
+        showAdult(adultState(), onSound = { enabled = it })
+
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.adult_sound)))
+        compose.onNodeWithText(text(R.string.adult_sound)).performClick()
+
+        assertEquals(false, enabled)
+    }
+
+    @Test
+    fun `с_главного_экрана_можно_попасть_к_взрослому`() {
+        var opened = false
+        showMain(readyState(), onAdult = { opened = true })
+
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.adult_action)))
+        compose.onNodeWithText(text(R.string.adult_action)).performClick()
+
+        assertTrue(opened)
+    }
+
+    @Test
+    fun `сбой_раздела_взрослого_предлагает_повтор`() {
+        var retried = false
+        showAdult(AdultState.Failed, onRetry = { retried = true })
+
+        compose.onNodeWithText(text(R.string.adult_failed)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.action_retry)).performClick()
+
+        assertTrue(retried)
+    }
+
+    private fun adultState(bonusAvailable: Boolean = true) = AdultState.Ready(
+        childName = "Егор",
+        petName = "Пушок",
+        about = listOf("Игра учит планировать."),
+        topics = listOf(
+            TopicProgress(TaskTopic.PLANNING, passed = 1, total = 2),
+            TopicProgress(TaskTopic.SAVING, passed = 2, total = 2),
+            TopicProgress(TaskTopic.PAYMENTS, passed = 0, total = 2),
+        ),
+        days = 3,
+        stage = GrowthStage.YOUNG,
+        points = 12,
+        balance = Coins(40),
+        saved = Coins(30),
+        bonus = Coins(10),
+        bonusAvailable = bonusAvailable,
+        soundEnabled = true,
+        animationsEnabled = true,
+    )
+
+    private fun showGate(riddle: Riddle, onSolved: () -> Unit = {}) {
+        compose.setContent {
+            FinnypetTheme {
+                AdultGateContent(riddle = riddle, onSolved = onSolved, onBack = {})
+            }
+        }
+    }
+
+    private fun showAdult(
+        state: AdultState,
+        onRetry: () -> Unit = {},
+        onAward: () -> Unit = {},
+        onSound: (Boolean) -> Unit = {},
+    ) {
+        compose.setContent {
+            FinnypetTheme {
+                AdultContent(
+                    state = state,
+                    onBack = {},
+                    onRetry = onRetry,
+                    onAward = onAward,
+                    onSound = onSound,
+                )
+            }
+        }
+    }
+
     // --- Итоги дня (ТЗ 2.5.9, 2.5.10) ---
 
     /** ТЗ 2.5.9: после действия видно, что изменилось, и почему. */
@@ -1392,6 +1555,7 @@ class ScreensTest {
         state: MainState,
         onRetry: () -> Unit = {},
         onProgress: () -> Unit = {},
+        onAdult: () -> Unit = {},
         onFinishDay: () -> Unit = {},
         onPlan: () -> Unit = {},
         onShop: () -> Unit = {},
@@ -1409,6 +1573,7 @@ class ScreensTest {
                     onTask = onTask,
                     onFinishDay = onFinishDay,
                     onProgress = onProgress,
+                    onAdult = onAdult,
                 )
             }
         }

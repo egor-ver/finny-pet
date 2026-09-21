@@ -51,6 +51,7 @@ import ru.finnypet.app.ui.theme.Dimens
 fun MainScreen(
     onPlan: () -> Unit,
     onProgress: () -> Unit,
+    onAdult: () -> Unit,
     onShop: () -> Unit,
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
@@ -68,6 +69,7 @@ fun MainScreen(
         onTask = onTask,
         onFinishDay = onFinishDay,
         onProgress = onProgress,
+        onAdult = onAdult,
     )
 }
 
@@ -85,6 +87,7 @@ fun MainContent(
     onTask: (TaskId) -> Unit = {},
     onFinishDay: () -> Unit = {},
     onProgress: () -> Unit = {},
+    onAdult: () -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
@@ -97,6 +100,7 @@ fun MainContent(
             onTask = onTask,
             onFinishDay = onFinishDay,
             onProgress = onProgress,
+            onAdult = onAdult,
         )
     }
 }
@@ -137,6 +141,7 @@ private fun ReadyScreen(
     onTask: (TaskId) -> Unit,
     onFinishDay: () -> Unit,
     onProgress: () -> Unit,
+    onAdult: () -> Unit,
 ) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
@@ -185,18 +190,22 @@ private fun ReadyScreen(
             color = MaterialTheme.colorScheme.tertiary,
         )
 
-        ProgressLink(onProgress)
+        Link(stringResource(R.string.progress_action), onProgress)
+        Link(stringResource(R.string.adult_action), onAdult)
     }
 }
 
 /**
- * Дорога в прогресс — строкой внизу, а не кнопкой: кнопок внизу уже две, а
+ * Дорога в раздел — строкой внизу, а не кнопкой: кнопок внизу уже две, а
  * третья вытесняет показатели питомца за край экрана при крупном шрифте.
+ *
+ * Текст называет действие словом: цвет — не единственный признак того, что
+ * строка нажимается (ТЗ 3.6).
  */
 @Composable
-private fun ProgressLink(onOpen: () -> Unit) {
+private fun Link(text: String, onOpen: () -> Unit) {
     Text(
-        text = stringResource(R.string.progress_action),
+        text = text,
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier

@@ -6,6 +6,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import ru.finnypet.app.ui.screens.adult.AdultGateScreen
+import ru.finnypet.app.ui.screens.adult.AdultScreen
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.day.DayScreen
@@ -62,11 +64,27 @@ fun FinnyNavHost(
                 onTask = { taskId -> navController.navigate(Task(taskId.value)) },
                 onFinishDay = { navController.navigate(Day) },
                 onProgress = { navController.navigate(Progress) },
+                onAdult = { navController.navigate(AdultGate) },
             )
         }
 
         composable<Progress> {
             ProgressScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable<AdultGate> {
+            AdultGateScreen(
+                // Пример убирается из стека: «назад» из раздела должен вести
+                // на главный экран, а не снова спрашивать пример.
+                onSolved = {
+                    navController.navigate(Adult) { popUpTo(AdultGate) { inclusive = true } }
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable<Adult> {
+            AdultScreen(onBack = { navController.popBackStack() })
         }
 
         composable<Day> {
