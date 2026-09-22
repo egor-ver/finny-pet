@@ -3,29 +3,192 @@
     {
       "id": "plan-pocket-money",
       "topic": "PLANNING",
-      "introKey": "task.plan_pocket_money.intro",
+      "titleKey": "task.plan_pocket_money.intro",
       "steps": [
         {
-          "type": "DISTRIBUTE",
+          "type": "THREE_JARS",
           "promptKey": "task.plan_pocket_money.step1",
-          "budget": 40
+          "totalCoins": 40,
+          "jars": [
+            { "id": "mandatory", "labelKey": "task.jar.mandatory" },
+            { "id": "wants", "labelKey": "task.jar.wants" },
+            { "id": "savings", "labelKey": "task.jar.savings" }
+          ]
         }
       ],
       "outcomes": [
         {
-          "id": "saved_enough",
-          "condition": { "type": "SAVED_AT_LEAST", "amount": 10 },
-          "reward": 15,
-          "explanationKey": "task.plan_pocket_money.saved",
-          "effects": [
-            { "stat": "MOOD", "delta": 5 }
-          ]
+          "condition": {
+            "type": "JARS_DISTRIBUTION",
+            "minMandatory": 15,
+            "minSavings": 5
+          },
+          "explanationKey": "task.plan_pocket_money.saved"
         },
         {
-          "id": "otherwise",
-          "condition": { "type": "OTHERWISE" },
-          "reward": 5,
+          "condition": {
+            "type": "OTHERWISE"
+          },
           "explanationKey": "task.plan_pocket_money.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "plan-school-supplies",
+      "topic": "PLANNING",
+      "titleKey": "task.plan_school_supplies.intro",
+      "steps": [
+        {
+          "type": "SHELF",
+          "promptKey": "task.plan_school_supplies.step1",
+          "budget": 35,
+          "items": [
+            { "id": "notebook", "titleKey": "task.item.notebook", "price": 10, "isMandatory": true },
+            { "id": "pens", "titleKey": "task.item.pens", "price": 12, "isMandatory": true },
+            { "id": "ruler", "titleKey": "task.item.ruler", "price": 5, "isMandatory": true },
+            { "id": "keychain", "titleKey": "task.item.keychain", "price": 15, "isMandatory": false },
+            { "id": "sparkle-pad", "titleKey": "task.item.sparkle_pad", "price": 14, "isMandatory": false }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": {
+            "type": "BASKET_CONTAINS_ALL",
+            "requiredItemIds": ["notebook", "pens", "ruler"]
+          },
+          "explanationKey": "task.plan_school_supplies.success"
+        },
+        {
+          "condition": {
+            "type": "OTHERWISE"
+          },
+          "explanationKey": "task.plan_school_supplies.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "save-gift-coins",
+      "topic": "SAVING",
+      "titleKey": "task.save_gift_coins.intro",
+      "steps": [
+        {
+          "type": "THREE_JARS",
+          "promptKey": "task.save_gift_coins.step1",
+          "totalCoins": 30,
+          "jars": [
+            { "id": "savings", "labelKey": "task.jar.savings" },
+            { "id": "wants", "labelKey": "task.jar.wants" },
+            { "id": "mandatory", "labelKey": "task.jar.reserve" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": {
+            "type": "JARS_DISTRIBUTION",
+            "minSavings": 15
+          },
+          "explanationKey": "task.save_gift_coins.success"
+        },
+        {
+          "condition": {
+            "type": "OTHERWISE"
+          },
+          "explanationKey": "task.save_gift_coins.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "save-fair-temptation",
+      "topic": "SAVING",
+      "titleKey": "task.save_fair_temptation.intro",
+      "steps": [
+        {
+          "type": "CHOICE",
+          "promptKey": "task.save_fair_temptation.step1",
+          "options": [
+            { "id": "save_to_goal", "textKey": "task.choice.save_to_goal" },
+            { "id": "pause_one_day", "textKey": "task.choice.pause_day" },
+            { "id": "buy_now", "textKey": "task.choice.buy_spinner_now" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": {
+            "type": "SELECTED_OPTION",
+            "optionIds": ["save_to_goal", "pause_one_day"]
+          },
+          "explanationKey": "task.save_fair_temptation.success"
+        },
+        {
+          "condition": {
+            "type": "OTHERWISE"
+          },
+          "explanationKey": "task.save_fair_temptation.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "pay-smart-pack",
+      "topic": "PAYMENTS",
+      "titleKey": "task.pay_smart_pack.intro",
+      "steps": [
+        {
+          "type": "SHELF",
+          "promptKey": "task.pay_smart_pack.step1",
+          "budget": 25,
+          "items": [
+            { "id": "juice_big", "titleKey": "task.item.juice_big", "price": 18, "isMandatory": true },
+            { "id": "juice_small", "titleKey": "task.item.juice_small", "price": 10, "isMandatory": false },
+            { "id": "lollipop", "titleKey": "task.item.lollipop", "price": 7, "isMandatory": false }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": {
+            "type": "BASKET_CONTAINS",
+            "itemId": "juice_big"
+          },
+          "explanationKey": "task.pay_smart_pack.success"
+        },
+        {
+          "condition": {
+            "type": "OTHERWISE"
+          },
+          "explanationKey": "task.pay_smart_pack.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "pay-cinema-cashier",
+      "topic": "PAYMENTS",
+      "titleKey": "task.pay_cinema_cashier.intro",
+      "steps": [
+        {
+          "type": "CHOICE",
+          "promptKey": "task.pay_cinema_cashier.step1",
+          "options": [
+            { "id": "only_ticket", "textKey": "task.choice.only_ticket" },
+            { "id": "combo_with_cup", "textKey": "task.choice.combo_with_cup" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": {
+            "type": "SELECTED_OPTION",
+            "optionId": "only_ticket"
+          },
+          "explanationKey": "task.pay_cinema_cashier.success"
+        },
+        {
+          "condition": {
+            "type": "OTHERWISE"
+          },
+          "explanationKey": "task.pay_cinema_cashier.otherwise"
         }
       ]
     }
