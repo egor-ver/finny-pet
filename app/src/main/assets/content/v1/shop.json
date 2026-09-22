@@ -3,20 +3,99 @@
     {
       "id": "food-porridge",
       "titleKey": "shop.food_porridge",
-      "price": 12,
+      "price": 14,
       "category": "MANDATORY",
       "effects": [
-        { "stat": "SATIETY", "delta": 20 }
+        {
+          "stat": "SATIETY",
+          "delta": 25
+        }
+      ]
+    },
+    {
+      "id": "water-fresh",
+      "titleKey": "shop.water_fresh",
+      "price": 8,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "SATIETY",
+          "delta": 15
+        }
+      ]
+    },
+    {
+      "id": "care-brush",
+      "titleKey": "shop.care_brush",
+      "price": 18,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "CARE",
+          "delta": 25
+        }
+      ]
+    },
+    {
+      "id": "care-vitamins",
+      "titleKey": "shop.care_vitamins",
+      "price": 15,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "CARE",
+          "delta": 20
+        }
+      ]
+    },
+    {
+      "id": "treat-berry",
+      "titleKey": "shop.treat_berry",
+      "price": 12,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 15
+        }
+      ]
+    },
+    {
+      "id": "sticker-star",
+      "titleKey": "shop.sticker_star",
+      "price": 10,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 10
+        }
       ]
     },
     {
       "id": "toy-ball",
       "titleKey": "shop.toy_ball",
-      "price": 18,
+      "price": 24,
       "category": "OPTIONAL",
       "effects": [
-        { "stat": "MOOD", "delta": 15 }
+        {
+          "stat": "MOOD",
+          "delta": 25
+        }
+      ]
+    },
+    {
+      "id": "toy-book",
+      "titleKey": "shop.toy_book",
+      "price": 32,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 35
+        }
       ]
     }
   ]
 }
+        
