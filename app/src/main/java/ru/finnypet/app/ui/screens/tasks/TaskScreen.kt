@@ -32,7 +32,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
-import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
@@ -82,7 +81,7 @@ fun TaskContent(
     onChoose: (String) -> Unit = {},
     onAdd: (SpendCategory) -> Unit = {},
     onRemove: (SpendCategory) -> Unit = {},
-    onToggle: (ItemId) -> Unit = {},
+    onToggle: (String) -> Unit = {},
     onNext: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) {
@@ -238,7 +237,7 @@ private fun Step(
     onChoose: (String) -> Unit,
     onAdd: (SpendCategory) -> Unit,
     onRemove: (SpendCategory) -> Unit,
-    onToggle: (ItemId) -> Unit,
+    onToggle: (String) -> Unit,
     onNext: () -> Unit,
 ) {
     val last = stage.index == stage.total - 1
@@ -289,6 +288,7 @@ private fun Step(
                     canRemove = step::canRemove,
                     onAdd = onAdd,
                     onRemove = onRemove,
+                    jars = step.jars,
                 )
             }
 
@@ -331,7 +331,7 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
  * не влезает в бюджет, подписан «не влезает» и не переключается.
  */
 @Composable
-private fun Shelf(step: StepView.Pick, onToggle: (ItemId) -> Unit) {
+private fun Shelf(step: StepView.Pick, onToggle: (String) -> Unit) {
     // Счётчик читается одной фразой: «в корзине 18 из 30 монет», а не
     // «корзина, 18 монет, слеш, 30 монет» и ещё раз то же самое с полосы.
     val spoken = stringResource(R.string.task_basket_progress, step.spent.amount, step.budget.amount)

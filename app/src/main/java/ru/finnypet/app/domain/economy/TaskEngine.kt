@@ -77,8 +77,21 @@ class TaskEngine(private val clock: GameClock) {
 
     private fun matches(condition: OutcomeCondition, attempt: TaskAttempt): Boolean = when (condition) {
         is OutcomeCondition.OptionChosen -> condition.optionId in attempt.chosenOptionIds
+        is OutcomeCondition.AnyOptionChosen -> condition.optionIds.any { it in attempt.chosenOptionIds }
         is OutcomeCondition.SavedAtLeast -> attempt.saved >= condition.amount
         is OutcomeCondition.SpentAtMost -> attempt.spent <= condition.amount
+
+        is OutcomeCondition.JarsAtLeast -> {
+            // Неназванная банка условию не мешает: «отложи хотя бы 15» ничего
+            // не говорит о том, сколько ушло на желания.
+            val plan = attempt.allocated
+            (condition.mandatory?.let { plan.mandatory >= it } ?: true) &&
+                (condition.optional?.let { plan.optional >= it } ?: true) &&
+                (condition.savings?.let { plan.savings >= it } ?: true)
+        }
+
+        is OutcomeCondition.BasketContains -> attempt.pickedItemIds.containsAll(condition.itemIds)
+
         OutcomeCondition.Otherwise -> true
     }
 
@@ -102,7 +115,11 @@ class TaskEngine(private val clock: GameClock) {
 
         is TaskStep.PickItems -> answer is StepAnswer.Picked &&
             answer.spent <= step.budget &&
-            step.itemIds.containsAll(answer.itemIds)
+            step.itemIds.map { it.value }.containsAll(answer.itemIds)
+
+        is TaskStep.Shelf -> answer is StepAnswer.Picked &&
+            answer.spent <= step.budget &&
+            step.items.map { it.id }.containsAll(answer.itemIds)
     }
 
     private fun rewardTransaction(outcome: TaskOutcome, periodId: Long) = Transaction(

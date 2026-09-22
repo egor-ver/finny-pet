@@ -10,10 +10,12 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.Jar
 import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.ShelfItem
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
@@ -148,9 +150,9 @@ class ContentParser @Inject constructor() {
                 LearningTask(
                     id = TaskId(task.id),
                     topic = enum<TaskTopic>(task.topic, "topic"),
-                    introKey = task.introKey,
+                    introKey = task.titleKey,
                     steps = task.steps.map(::step),
-                    outcomes = task.outcomes.map { outcome(it, defaultReward) },
+                    outcomes = task.outcomes.mapIndexed { index, it -> outcome(it, index, defaultReward) },
                 ).also { checkReferences(it, knownItems) }
             }
         }.also { tasks -> tasks.map { it.id.value }.requireUnique(TASKS, "задание") }
@@ -170,13 +172,30 @@ class ContentParser @Inject constructor() {
             .map { it.id }
             .toSet()
 
+        // Товары для условий по корзине берутся из обоих видов корзины: из
+        // магазина у PICK_ITEMS и с прилавка самого задания у SHELF.
+        val basketIds = task.steps.filterIsInstance<TaskStep.PickItems>()
+            .flatMap { step -> step.itemIds.map { it.value } }
+            .plus(task.steps.filterIsInstance<TaskStep.Shelf>().flatMap { step -> step.items.map { it.id } })
+            .toSet()
+
         task.outcomes.forEach { outcome ->
-            val condition = outcome.condition
-            if (condition is OutcomeCondition.OptionChosen) {
-                require(condition.optionId in optionIds) {
-                    "исход ${outcome.id} ждёт вариант \"${condition.optionId}\", " +
-                        "а в шагах задания есть только ${optionIds.joinToString()}"
+            when (val condition = outcome.condition) {
+                is OutcomeCondition.OptionChosen ->
+                    checkOptions(outcome.id, listOf(condition.optionId), optionIds)
+
+                is OutcomeCondition.AnyOptionChosen ->
+                    checkOptions(outcome.id, condition.optionIds, optionIds)
+
+                is OutcomeCondition.BasketContains -> {
+                    val unknown = condition.itemIds.filterNot { it in basketIds }
+                    require(unknown.isEmpty()) {
+                        "исход ${outcome.id} ждёт в корзине ${unknown.joinToString()}, " +
+                            "а взять в задании можно только ${basketIds.joinToString()}"
+                    }
                 }
+
+                else -> Unit
             }
         }
 
@@ -186,6 +205,14 @@ class ContentParser @Inject constructor() {
                 "шаг с корзиной ссылается на товары, которых нет в shop.json: " +
                     unknown.joinToString { it.value }
             }
+        }
+    }
+
+    private fun checkOptions(outcomeId: String, wanted: List<String>, known: Set<String>) {
+        val unknown = wanted.filterNot { it in known }
+        require(unknown.isEmpty()) {
+            "исход $outcomeId ждёт вариант \"${unknown.joinToString("\", \"")}\", " +
+                "а в шагах задания есть только ${known.joinToString()}"
         }
     }
 
@@ -201,7 +228,7 @@ class ContentParser @Inject constructor() {
     private fun step(dto: TaskStepDto): TaskStep = when (dto) {
         is TaskStepDto.Choice -> TaskStep.Choice(
             promptKey = dto.promptKey,
-            options = dto.options.map { TaskOption(id = it.id, labelKey = it.labelKey) },
+            options = dto.options.map { TaskOption(id = it.id, labelKey = it.textKey) },
         )
 
         is TaskStepDto.Distribute -> TaskStep.Distribute(
@@ -209,16 +236,55 @@ class ContentParser @Inject constructor() {
             budget = Coins(dto.budget),
         )
 
+        is TaskStepDto.ThreeJars -> TaskStep.Distribute(
+            promptKey = dto.promptKey,
+            budget = Coins(dto.totalCoins),
+            jars = dto.jars.map { Jar(category = jarCategory(it.id), labelKey = it.labelKey) },
+        )
+
         is TaskStepDto.PickItems -> TaskStep.PickItems(
             promptKey = dto.promptKey,
             itemIds = dto.itemIds.map(::ItemId),
             budget = Coins(dto.budget),
         )
+
+        is TaskStepDto.Shelf -> TaskStep.Shelf(
+            promptKey = dto.promptKey,
+            budget = Coins(dto.budget),
+            items = dto.items.map { item ->
+                ShelfItem(
+                    id = item.id,
+                    titleKey = item.titleKey,
+                    price = Coins(item.price),
+                    // Обязательная покупка и обязательный расход — одно и то
+                    // же направление: ребёнок уже видел его в плане дня.
+                    category = if (item.isMandatory) SpendCategory.MANDATORY else SpendCategory.OPTIONAL,
+                )
+            },
+        )
     }
 
-    /** Награда необязательна: не указана — берётся taskReward из balance.json. */
-    private fun outcome(dto: OutcomeDto, defaultReward: Coins) = TaskOutcome(
-        id = dto.id,
+    /**
+     * Банка называется направлением расхода. Своё имя вместо трёх известных —
+     * это опечатка продакта: молча отдать монеты не в ту банку хуже, чем
+     * назвать файл и строку.
+     */
+    private fun jarCategory(id: String): SpendCategory = when (id) {
+        "mandatory" -> SpendCategory.MANDATORY
+        "wants" -> SpendCategory.OPTIONAL
+        "savings" -> SpendCategory.SAVINGS
+        else -> throw IllegalArgumentException(
+            "банка \"$id\": допустимы mandatory, wants, savings"
+        )
+    }
+
+    /**
+     * Награда необязательна: не указана — берётся taskReward из balance.json.
+     * Имя исхода тоже: без него исход зовётся по месту в списке, и продакту
+     * не приходится выдумывать идентификатор ради записи о прохождении.
+     */
+    private fun outcome(dto: OutcomeDto, index: Int, defaultReward: Coins) = TaskOutcome(
+        id = dto.id ?: "outcome-${index + 1}",
         condition = condition(dto.condition),
         reward = dto.reward?.let(::Coins) ?: defaultReward,
         explanationKey = dto.explanationKey,
@@ -229,6 +295,30 @@ class ContentParser @Inject constructor() {
         is ConditionDto.OptionChosen -> OutcomeCondition.OptionChosen(dto.optionId)
         is ConditionDto.SavedAtLeast -> OutcomeCondition.SavedAtLeast(Coins(dto.amount))
         is ConditionDto.SpentAtMost -> OutcomeCondition.SpentAtMost(Coins(dto.amount))
+
+        is ConditionDto.SelectedOption -> {
+            val ids = listOfNotNull(dto.optionId) + dto.optionIds
+            require(ids.isNotEmpty()) {
+                "условие SELECTED_OPTION: назовите optionId или optionIds"
+            }
+            if (ids.size == 1) {
+                OutcomeCondition.OptionChosen(ids.single())
+            } else {
+                OutcomeCondition.AnyOptionChosen(ids)
+            }
+        }
+
+        is ConditionDto.JarsDistribution -> OutcomeCondition.JarsAtLeast(
+            mandatory = dto.minMandatory?.let(::Coins),
+            optional = dto.minWants?.let(::Coins),
+            savings = dto.minSavings?.let(::Coins),
+        )
+
+        is ConditionDto.BasketContains -> OutcomeCondition.BasketContains(listOf(dto.itemId))
+
+        is ConditionDto.BasketContainsAll ->
+            OutcomeCondition.BasketContains(dto.requiredItemIds)
+
         ConditionDto.Otherwise -> OutcomeCondition.Otherwise
     }
 

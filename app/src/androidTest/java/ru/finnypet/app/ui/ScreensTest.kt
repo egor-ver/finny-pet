@@ -730,16 +730,16 @@ class ScreensTest {
 
     @Test
     fun `полка_считает_корзину_и_не_даёт_взять_лишнее`() {
-        var toggled: ItemId? = null
+        var toggled: String? = null
         val step = StepView.Pick(
             prompt = "Что возьмём?",
             budget = Coins(30),
             items = listOf(
-                PickItemView(ItemId("food"), "Каша", Coins(12), SpendCategory.MANDATORY),
-                PickItemView(ItemId("toy"), "Мячик", Coins(18), SpendCategory.OPTIONAL),
-                PickItemView(ItemId("bike"), "Велосипед", Coins(25), SpendCategory.OPTIONAL),
+                PickItemView("food", "Каша", Coins(12), SpendCategory.MANDATORY),
+                PickItemView("toy", "Мячик", Coins(18), SpendCategory.OPTIONAL),
+                PickItemView("bike", "Велосипед", Coins(25), SpendCategory.OPTIONAL),
             ),
-            picked = setOf(ItemId("toy")),
+            picked = setOf("toy"),
         )
         showTask(taskReady(stage = TaskStage.Step(index = 0, total = 1, step = step)), onToggle = { toggled = it })
 
@@ -748,7 +748,7 @@ class ScreensTest {
         scrollToText(text(R.string.task_pick_full))
         compose.onNodeWithText("Каша").performClick()
 
-        assertEquals(ItemId("food"), toggled)
+        assertEquals("food", toggled)
     }
 
     /** ТЗ 2.5.8: объяснение независимо от результата; награда — отдельной строкой. */
@@ -844,7 +844,7 @@ class ScreensTest {
         onStart: () -> Unit = {},
         onChoose: (String) -> Unit = {},
         onAdd: (SpendCategory) -> Unit = {},
-        onToggle: (ItemId) -> Unit = {},
+        onToggle: (String) -> Unit = {},
         onNext: () -> Unit = {},
     ) {
         compose.setContent {

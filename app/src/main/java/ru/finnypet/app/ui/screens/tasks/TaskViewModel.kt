@@ -47,6 +47,7 @@ import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
+import ru.finnypet.app.ui.components.PlanJar
 import ru.finnypet.app.ui.navigation.Task
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
@@ -57,7 +58,8 @@ data class OptionView(
 )
 
 data class PickItemView(
-    val id: ItemId,
+    /** Товар магазина или товар с прилавка задания — идентификатор простой. */
+    val id: String,
     val title: String,
     val price: Coins,
     val category: SpendCategory,
@@ -86,6 +88,8 @@ sealed interface StepView {
         override val prompt: String,
         val budget: Coins,
         val plan: BudgetPlan,
+        /** Подписи и порядок банок из задания; пусто — названия редактора. */
+        val jars: List<PlanJar> = emptyList(),
     ) : StepView {
 
         val remainder: Coins get() = budget - plan.total
@@ -102,14 +106,14 @@ sealed interface StepView {
         override val prompt: String,
         val budget: Coins,
         val items: List<PickItemView>,
-        val picked: Set<ItemId>,
+        val picked: Set<String>,
     ) : StepView {
 
         val spent: Coins
             get() = items.filter { it.id in picked }.fold(Coins.ZERO) { total, item -> total + item.price }
 
         /** Взять можно то, что влезает; убрать — что уже в корзине. */
-        fun canToggle(id: ItemId): Boolean {
+        fun canToggle(id: String): Boolean {
             val item = items.firstOrNull { it.id == id } ?: return false
             return id in picked || budget.covers(spent + item.price)
         }
@@ -181,7 +185,7 @@ private sealed interface Draft {
     data object None : Draft
     data class Chosen(val optionId: String?) : Draft
     data class Allocated(val plan: BudgetPlan) : Draft
-    data class Picked(val ids: Set<ItemId>) : Draft
+    data class Picked(val ids: Set<String>) : Draft
 }
 
 /**
@@ -255,12 +259,12 @@ class TaskViewModel @Inject constructor(
     fun remove(category: SpendCategory) = move(category, -STEP)
 
     /** Можно ли взять — решает та же [StepView.Pick], что показана на экране: правило одно. */
-    fun toggle(itemId: ItemId) {
+    fun toggle(itemId: String) {
         val task = task ?: return
         progress.update { current ->
             val draft = current.draft as? Draft.Picked ?: return@update current
-            val step = task.steps[current.answers.size] as? TaskStep.PickItems ?: return@update current
-            val view = stepView(step, draft) as StepView.Pick
+            val step = task.steps.getOrNull(current.answers.size) ?: return@update current
+            val view = stepView(step, draft) as? StepView.Pick ?: return@update current
             if (!view.canToggle(itemId)) return@update current
             val ids = if (itemId in draft.ids) draft.ids - itemId else draft.ids + itemId
             current.copy(draft = Draft.Picked(ids))
@@ -347,6 +351,7 @@ class TaskViewModel @Inject constructor(
         is TaskStep.Choice -> Draft.Chosen(optionId = null)
         is TaskStep.Distribute -> Draft.Allocated(BudgetPlan.EMPTY)
         is TaskStep.PickItems -> Draft.Picked(emptySet())
+        is TaskStep.Shelf -> Draft.Picked(emptySet())
     }
 
     private fun answerOf(step: TaskStep, draft: Draft): StepAnswer? = when (step) {
@@ -357,8 +362,19 @@ class TaskViewModel @Inject constructor(
             ?.let { StepAnswer.Allocated(it.plan) }
 
         is TaskStep.PickItems -> (draft as? Draft.Picked)?.let { picked ->
-            val ids = step.itemIds.filter { it in picked.ids }
-            StepAnswer.Picked(ids, Coins(ids.sumOf { items.getValue(it).price.amount }))
+            val chosen = step.itemIds.filter { it.value in picked.ids }
+            StepAnswer.Picked(
+                itemIds = chosen.map { it.value },
+                spent = Coins(chosen.sumOf { items.getValue(it).price.amount }),
+            )
+        }
+
+        is TaskStep.Shelf -> (draft as? Draft.Picked)?.let { picked ->
+            val chosen = step.items.filter { it.id in picked.ids }
+            StepAnswer.Picked(
+                itemIds = chosen.map { it.id },
+                spent = Coins(chosen.sumOf { it.price.amount }),
+            )
         }
     }
 
@@ -414,13 +430,35 @@ class TaskViewModel @Inject constructor(
             prompt = texts.textOf(step.promptKey),
             budget = step.budget,
             plan = (draft as? Draft.Allocated)?.plan ?: BudgetPlan.EMPTY,
+            jars = step.jars.map { PlanJar(category = it.category, label = texts.textOf(it.labelKey)) },
         )
 
         is TaskStep.PickItems -> StepView.Pick(
             prompt = texts.textOf(step.promptKey),
             budget = step.budget,
             items = step.itemIds.mapNotNull { id ->
-                items[id]?.let { PickItemView(id = it.id, title = texts.textOf(it.titleKey), price = it.price, category = it.category) }
+                items[id]?.let {
+                    PickItemView(
+                        id = it.id.value,
+                        title = texts.textOf(it.titleKey),
+                        price = it.price,
+                        category = it.category,
+                    )
+                }
+            },
+            picked = (draft as? Draft.Picked)?.ids ?: emptySet(),
+        )
+
+        is TaskStep.Shelf -> StepView.Pick(
+            prompt = texts.textOf(step.promptKey),
+            budget = step.budget,
+            items = step.items.map {
+                PickItemView(
+                    id = it.id,
+                    title = texts.textOf(it.titleKey),
+                    price = it.price,
+                    category = it.category,
+                )
             },
             picked = (draft as? Draft.Picked)?.ids ?: emptySet(),
         )

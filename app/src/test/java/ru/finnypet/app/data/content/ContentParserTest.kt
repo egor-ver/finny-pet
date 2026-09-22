@@ -206,6 +206,120 @@ class ContentParserTest {
         assertEquals(Coins.ZERO, outcomes.first { it.id == "other" }.reward)
     }
 
+    @Test
+    fun `три банки разбираются с подписями и порядком из контента`() {
+        val pack = parser.parse(realContent(tasks = TASK_WITH_JARS_AND_SHELF))
+
+        val step = pack.tasks.single().steps.first() as TaskStep.Distribute
+        assertEquals(Coins(40), step.budget)
+        // Порядок банок — решение продакта: в задании про подарок копилка
+        // стоит первой, чтобы ребёнок начинал с неё.
+        assertEquals(
+            listOf(SpendCategory.SAVINGS, SpendCategory.MANDATORY, SpendCategory.OPTIONAL),
+            step.jars.map { it.category },
+        )
+        assertEquals("l.savings", step.jars.first().labelKey)
+    }
+
+    @Test
+    fun `прилавок разбирается в товары задания, обязательный — в обязательный расход`() {
+        val pack = parser.parse(realContent(tasks = TASK_WITH_JARS_AND_SHELF))
+
+        val step = pack.tasks.single().steps[1] as TaskStep.Shelf
+        assertEquals(Coins(25), step.budget)
+        assertEquals(listOf("juice", "candy"), step.items.map { it.id })
+        assertEquals(Coins(18), step.items.first().price)
+        assertEquals(SpendCategory.MANDATORY, step.items.first().category)
+        // Пометки нет — значит покупка необязательная.
+        assertEquals(SpendCategory.OPTIONAL, step.items[1].category)
+    }
+
+    @Test
+    fun `условие по банкам читает минимумы по направлениям`() {
+        val pack = parser.parse(realContent(tasks = TASK_WITH_JARS_AND_SHELF))
+
+        val condition = pack.tasks.single().outcomes
+            .map { it.condition }
+            .filterIsInstance<OutcomeCondition.JarsAtLeast>()
+            .single()
+        assertEquals(Coins(15), condition.mandatory)
+        assertEquals(Coins(5), condition.savings)
+        // Про желания в задании ничего не сказано — условие их не проверяет.
+        assertEquals(null, condition.optional)
+    }
+
+    @Test
+    fun `исход без имени зовётся по месту в списке`() {
+        val pack = parser.parse(realContent(tasks = TASK_WITH_JARS_AND_SHELF))
+
+        assertEquals(
+            listOf("outcome-1", "outcome-2", "outcome-3"),
+            pack.tasks.single().outcomes.map { it.id },
+        )
+    }
+
+    @Test
+    fun `неизвестная банка перечисляет допустимые`() {
+        val error = parseFailure(tasks = TASK_WITH_BAD_JAR)
+
+        val message = error.message.orEmpty()
+        assertTrue("Не названа банка: $message", message.contains("pocket"))
+        assertTrue("Не перечислены допустимые: $message", message.contains("savings"))
+    }
+
+    @Test
+    fun `выбор списком и выбор одним вариантом разбираются по-разному`() {
+        val pack = parser.parse(realContent(tasks = TASK_WITH_SELECTED_OPTIONS))
+
+        val outcomes = pack.tasks.single().outcomes.associateBy { it.id }
+        assertEquals(
+            OutcomeCondition.AnyOptionChosen(listOf("save", "pause")),
+            outcomes.getValue("patient").condition,
+        )
+        // Один вариант остаётся простым условием: списка из одного не бывает.
+        assertEquals(
+            OutcomeCondition.OptionChosen("buy"),
+            outcomes.getValue("hasty").condition,
+        )
+    }
+
+    @Test
+    fun `условие по корзине читает и один товар, и список`() {
+        val one = parser.parse(realContent(tasks = TASK_WITH_JARS_AND_SHELF))
+            .tasks.single().outcomes
+            .map { it.condition }
+            .filterIsInstance<OutcomeCondition.BasketContains>()
+            .single()
+        assertEquals(listOf("juice"), one.itemIds)
+
+        val all = parser.parse(realContent(tasks = TASK_WITH_BASKET_ALL))
+            .tasks.single().outcomes
+            .map { it.condition }
+            .filterIsInstance<OutcomeCondition.BasketContains>()
+            .single()
+        assertEquals(listOf("notebook", "pen"), all.itemIds)
+    }
+
+    @Test
+    fun `исход со ссылкой на товар не с прилавка отвергается`() {
+        val error = parseFailure(tasks = TASK_WITH_ITEM_OFF_SHELF)
+
+        val message = error.message.orEmpty()
+        assertTrue("Не назван товар: $message", message.contains("ruler"))
+        assertTrue("Не названо задание: $message", message.contains("ghost"))
+    }
+
+    @Test
+    fun `настоящие задания используют и банки, и прилавок`() {
+        val steps = parser.parse(realContent()).tasks.flatMap { it.steps }
+
+        assertTrue(
+            "В контент-паке нет шага с тремя банками",
+            steps.filterIsInstance<TaskStep.Distribute>().any { it.jars.size == 3 },
+        )
+        assertTrue("В контент-паке нет шага с прилавком", steps.any { it is TaskStep.Shelf })
+    }
+
     // --- Вспомогательное ---
 
     private fun parseFailure(
@@ -236,9 +350,9 @@ class ContentParserTest {
 
         val TASK_WITH_ALL_STEPS = """
         {"tasks":[{
-          "id":"all-steps","topic":"PAYMENTS","introKey":"i",
+          "id":"all-steps","topic":"PAYMENTS","titleKey":"i",
           "steps":[
-            {"type":"CHOICE","promptKey":"p1","options":[{"id":"a","labelKey":"la"},{"id":"b","labelKey":"lb"}]},
+            {"type":"CHOICE","promptKey":"p1","options":[{"id":"a","textKey":"la"},{"id":"b","textKey":"lb"}]},
             {"type":"DISTRIBUTE","promptKey":"p2","budget":40},
             {"type":"PICK_ITEMS","promptKey":"p3","itemIds":["food-porridge"],"budget":30}
           ],
@@ -251,9 +365,9 @@ class ContentParserTest {
 
         val TASK_WITH_ALL_CONDITIONS = """
         {"tasks":[{
-          "id":"all-conditions","topic":"SAVING","introKey":"i",
+          "id":"all-conditions","topic":"SAVING","titleKey":"i",
           "steps":[
-            {"type":"CHOICE","promptKey":"p1","options":[{"id":"x","labelKey":"lx"},{"id":"y","labelKey":"ly"}]},
+            {"type":"CHOICE","promptKey":"p1","options":[{"id":"x","textKey":"lx"},{"id":"y","textKey":"ly"}]},
             {"type":"DISTRIBUTE","promptKey":"p2","budget":40}
           ],
           "outcomes":[
@@ -267,7 +381,7 @@ class ContentParserTest {
 
         val TASK_WITHOUT_OTHERWISE = """
         {"tasks":[{
-          "id":"no-fallback","topic":"PLANNING","introKey":"i",
+          "id":"no-fallback","topic":"PLANNING","titleKey":"i",
           "steps":[{"type":"DISTRIBUTE","promptKey":"p","budget":40}],
           "outcomes":[
             {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":1,"explanationKey":"e1"},
@@ -279,8 +393,8 @@ class ContentParserTest {
 
         val TASK_WITH_UNKNOWN_OPTION = """
         {"tasks":[{
-          "id":"typo","topic":"PLANNING","introKey":"i",
-          "steps":[{"type":"CHOICE","promptKey":"p","options":[{"id":"wait","labelKey":"l"},{"id":"buy","labelKey":"l2"}]}],
+          "id":"typo","topic":"PLANNING","titleKey":"i",
+          "steps":[{"type":"CHOICE","promptKey":"p","options":[{"id":"wait","textKey":"l"},{"id":"buy","textKey":"l2"}]}],
           "outcomes":[
             {"id":"a","condition":{"type":"OPTION_CHOSEN","optionId":"waite"},"reward":1,"explanationKey":"e1"},
             {"id":"b","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e2"}
@@ -290,7 +404,7 @@ class ContentParserTest {
 
         val TASK_WITH_UNKNOWN_ITEM = """
         {"tasks":[{
-          "id":"basket","topic":"PAYMENTS","introKey":"i",
+          "id":"basket","topic":"PAYMENTS","titleKey":"i",
           "steps":[{"type":"PICK_ITEMS","promptKey":"p","itemIds":["no-such-item"],"budget":30}],
           "outcomes":[
             {"id":"a","condition":{"type":"SPENT_AT_MOST","amount":30},"reward":1,"explanationKey":"e1"},
@@ -301,7 +415,7 @@ class ContentParserTest {
 
         val TASK_WITHOUT_REWARD = """
         {"tasks":[{
-          "id":"no-reward","topic":"SAVING","introKey":"i",
+          "id":"no-reward","topic":"SAVING","titleKey":"i",
           "steps":[{"type":"DISTRIBUTE","promptKey":"p","budget":40}],
           "outcomes":[
             {"id":"saved","condition":{"type":"SAVED_AT_LEAST","amount":10},"explanationKey":"e1"},
@@ -310,9 +424,88 @@ class ContentParserTest {
         }]}
         """
 
+        /** Виды шагов и условий, которыми написан настоящий контент-пак. */
+        val TASK_WITH_JARS_AND_SHELF = """
+        {"tasks":[{
+          "id":"jars-and-shelf","topic":"PLANNING","titleKey":"i",
+          "steps":[
+            {"type":"THREE_JARS","promptKey":"p1","totalCoins":40,"jars":[
+              {"id":"savings","labelKey":"l.savings"},
+              {"id":"mandatory","labelKey":"l.mandatory"},
+              {"id":"wants","labelKey":"l.wants"}
+            ]},
+            {"type":"SHELF","promptKey":"p2","budget":25,"items":[
+              {"id":"juice","titleKey":"t.juice","price":18,"isMandatory":true},
+              {"id":"candy","titleKey":"t.candy","price":7}
+            ]}
+          ],
+          "outcomes":[
+            {"condition":{"type":"JARS_DISTRIBUTION","minMandatory":15,"minSavings":5},"explanationKey":"e1"},
+            {"condition":{"type":"BASKET_CONTAINS","itemId":"juice"},"explanationKey":"e2"},
+            {"condition":{"type":"OTHERWISE"},"explanationKey":"e3"}
+          ]
+        }]}
+        """
+
+        val TASK_WITH_BAD_JAR = """
+        {"tasks":[{
+          "id":"bad-jar","topic":"PLANNING","titleKey":"i",
+          "steps":[{"type":"THREE_JARS","promptKey":"p","totalCoins":40,"jars":[
+            {"id":"pocket","labelKey":"l"}
+          ]}],
+          "outcomes":[
+            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"explanationKey":"e1"},
+            {"id":"b","condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
+          ]
+        }]}
+        """
+
+        val TASK_WITH_SELECTED_OPTIONS = """
+        {"tasks":[{
+          "id":"selected","topic":"SAVING","titleKey":"i",
+          "steps":[{"type":"CHOICE","promptKey":"p","options":[
+            {"id":"save","textKey":"l1"},
+            {"id":"pause","textKey":"l2"},
+            {"id":"buy","textKey":"l3"}
+          ]}],
+          "outcomes":[
+            {"id":"patient","condition":{"type":"SELECTED_OPTION","optionIds":["save","pause"]},"explanationKey":"e1"},
+            {"id":"hasty","condition":{"type":"SELECTED_OPTION","optionId":"buy"},"explanationKey":"e2"},
+            {"id":"other","condition":{"type":"OTHERWISE"},"explanationKey":"e3"}
+          ]
+        }]}
+        """
+
+        val TASK_WITH_BASKET_ALL = """
+        {"tasks":[{
+          "id":"basket-all","topic":"PAYMENTS","titleKey":"i",
+          "steps":[{"type":"SHELF","promptKey":"p","budget":35,"items":[
+            {"id":"notebook","titleKey":"t1","price":10,"isMandatory":true},
+            {"id":"pen","titleKey":"t2","price":12,"isMandatory":true}
+          ]}],
+          "outcomes":[
+            {"id":"a","condition":{"type":"BASKET_CONTAINS_ALL","requiredItemIds":["notebook","pen"]},"explanationKey":"e1"},
+            {"id":"b","condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
+          ]
+        }]}
+        """
+
+        val TASK_WITH_ITEM_OFF_SHELF = """
+        {"tasks":[{
+          "id":"ghost","topic":"PAYMENTS","titleKey":"i",
+          "steps":[{"type":"SHELF","promptKey":"p","budget":35,"items":[
+            {"id":"notebook","titleKey":"t1","price":10,"isMandatory":true}
+          ]}],
+          "outcomes":[
+            {"id":"a","condition":{"type":"BASKET_CONTAINS","itemId":"ruler"},"explanationKey":"e1"},
+            {"id":"b","condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
+          ]
+        }]}
+        """
+
         val TASK_WITH_BAD_TOPIC = """
         {"tasks":[{
-          "id":"bad-topic","topic":"SHOPPING","introKey":"i",
+          "id":"bad-topic","topic":"SHOPPING","titleKey":"i",
           "steps":[{"type":"DISTRIBUTE","promptKey":"p","budget":40}],
           "outcomes":[
             {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":1,"explanationKey":"e1"},

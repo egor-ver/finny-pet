@@ -147,7 +147,9 @@
 **Задание — это игровая ситуация с выбором и последствиями**, а не тест с
 вариантами ответа. Так прямо сказано в ТЗ 2.5.8.
 
-### Шаги: три вида
+`titleKey` — заголовок задания, он же вступление на экране прохождения.
+
+### Шаги
 
 **`CHOICE` — выбор из вариантов.** Нужно не менее двух вариантов.
 
@@ -156,19 +158,54 @@
   "type": "CHOICE",
   "promptKey": "task.my_task.step1",
   "options": [
-    { "id": "buy_now", "labelKey": "task.my_task.opt_buy" },
-    { "id": "wait", "labelKey": "task.my_task.opt_wait" }
+    { "id": "buy_now", "textKey": "task.my_task.opt_buy" },
+    { "id": "wait", "textKey": "task.my_task.opt_wait" }
   ]
 }
 ```
 
-**`DISTRIBUTE` — разложить сумму по трём направлениям.**
+**`THREE_JARS` — разложить сумму по трём банкам.** Подписи и порядок банок
+задаёт задание: где-то разговор про «нужное и желания», где-то про копилку.
+Идентификатор банки — это направление расхода, их ровно три:
+`mandatory`, `wants`, `savings`.
+
+```
+{
+  "type": "THREE_JARS",
+  "promptKey": "task.my_task.step1",
+  "totalCoins": 40,
+  "jars": [
+    { "id": "mandatory", "labelKey": "task.jar.mandatory" },
+    { "id": "wants", "labelKey": "task.jar.wants" },
+    { "id": "savings", "labelKey": "task.jar.savings" }
+  ]
+}
+```
+
+**`SHELF` — собрать корзину на прилавке задания.** Товары описаны прямо
+здесь: тетради и сок в магазине питомца не продаются. `isMandatory` — то,
+без чего набор не собрать; необязательное поле, по умолчанию `false`.
+
+```
+{
+  "type": "SHELF",
+  "promptKey": "task.my_task.step1",
+  "budget": 35,
+  "items": [
+    { "id": "notebook", "titleKey": "task.item.notebook", "price": 10, "isMandatory": true },
+    { "id": "keychain", "titleKey": "task.item.keychain", "price": 15 }
+  ]
+}
+```
+
+**`DISTRIBUTE` — то же распределение, что и `THREE_JARS`, но с общими
+названиями направлений.**
 
 ```
 { "type": "DISTRIBUTE", "promptKey": "task.my_task.step1", "budget": 40 }
 ```
 
-**`PICK_ITEMS` — собрать корзину в рамках бюджета.** `itemIds` берутся из `shop.json`.
+**`PICK_ITEMS` — корзина из товаров магазина.** `itemIds` берутся из `shop.json`.
 
 ```
 {
@@ -185,16 +222,25 @@
 `OTHERWISE` срабатывает, когда не подошёл ни один другой. Без него задание не
 загрузится.
 
-`condition` бывает четырёх видов:
+`condition` бывает таких видов:
 
 | Вид | Когда срабатывает |
 |---|---|
-| `{"type": "OPTION_CHOSEN", "optionId": "wait"}` | ребёнок выбрал этот вариант |
+| `{"type": "SELECTED_OPTION", "optionId": "wait"}` | ребёнок выбрал этот вариант |
+| `{"type": "SELECTED_OPTION", "optionIds": ["wait", "pause"]}` | выбрал любой из перечисленных |
+| `{"type": "JARS_DISTRIBUTION", "minMandatory": 15, "minSavings": 5}` | в каждой названной банке не меньше указанного |
+| `{"type": "BASKET_CONTAINS", "itemId": "juice_big"}` | взял этот товар |
+| `{"type": "BASKET_CONTAINS_ALL", "requiredItemIds": ["notebook", "pens"]}` | взял все перечисленные |
 | `{"type": "SAVED_AT_LEAST", "amount": 10}` | отложил не меньше указанного |
 | `{"type": "SPENT_AT_MOST", "amount": 30}` | потратил не больше указанного |
 | `{"type": "OTHERWISE"}` | во всех остальных случаях |
 
-`reward` — награда в монетах, можно `0`. `effects` — как у товаров, необязательное поле.
+В `JARS_DISTRIBUTION` можно назвать любые банки: `minMandatory`, `minWants`,
+`minSavings`. Про неназванную банку условие ничего не проверяет.
+
+`id` исхода необязателен: без него исход зовётся по месту в списке.
+`reward` — награда в монетах, можно `0`; не указана — берётся `taskReward` из
+`balance.json`. `effects` — как у товаров, необязательное поле.
 
 **Монеты — не за каждое прохождение.** В день оплачивается столько заданий,
 сколько задано в `rewardedTasksPerPeriod` (сейчас одно); остальные ребёнок

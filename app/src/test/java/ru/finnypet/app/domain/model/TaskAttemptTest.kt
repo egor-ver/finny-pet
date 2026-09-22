@@ -41,7 +41,7 @@ class TaskAttemptTest {
         val attempt = TaskAttempt(
             listOf(
                 allocated(30, 20, 10),
-                StepAnswer.Picked(listOf(ItemId("apple")), Coins(25)),
+                StepAnswer.Picked(listOf("apple"), Coins(25)),
             ),
         )
         assertEquals(Coins(75), attempt.spent)

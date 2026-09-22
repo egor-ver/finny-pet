@@ -125,7 +125,7 @@ class DesignSystemTest {
                         StepView.Pick(
                             prompt = "Что возьмём?",
                             budget = Coins(30),
-                            items = listOf(PickItemView(ItemId("food"), "Каша", Coins(12), SpendCategory.MANDATORY)),
+                            items = listOf(PickItemView("food", "Каша", Coins(12), SpendCategory.MANDATORY)),
                             picked = emptySet(),
                         )
                     ),

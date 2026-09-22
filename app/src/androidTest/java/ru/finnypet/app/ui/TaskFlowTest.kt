@@ -280,10 +280,10 @@ class TaskFlowTest {
 
         val second = vm.await { (it.stage as? TaskStage.Step)?.index == 1 }.stage as TaskStage.Step
         assertTrue(second.step is StepView.Pick)
-        assertEquals(emptySet<ItemId>(), (second.step as StepView.Pick).picked)
+        assertEquals(emptySet<String>(), (second.step as StepView.Pick).picked)
         // Ответ первого шага не потерян: «дальше» на втором шаге разбирает оба.
-        vm.toggle(food.id)
-        vm.await { pick(it)?.picked == setOf(food.id) }
+        vm.toggle(food.id.value)
+        vm.await { pick(it)?.picked == setOf(food.id.value) }
         vm.next()
 
         val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
@@ -311,17 +311,17 @@ class TaskFlowTest {
         vm.start()
         vm.await { it.stage is TaskStage.Step }
 
-        vm.toggle(toy.id)
-        val picked = vm.await { pick(it)?.picked == setOf(toy.id) }
+        vm.toggle(toy.id.value)
+        val picked = vm.await { pick(it)?.picked == setOf(toy.id.value) }
         assertEquals(Coins(18), pick(picked)!!.spent)
-        assertFalse("велосипед за 25 к мячику за 18 не влезает в 30", pick(picked)!!.canToggle(bike.id))
+        assertFalse("велосипед за 25 к мячику за 18 не влезает в 30", pick(picked)!!.canToggle(bike.id.value))
 
-        vm.toggle(bike.id)
-        assertEquals(setOf(toy.id), pick(settle(vm))!!.picked)
+        vm.toggle(bike.id.value)
+        assertEquals(setOf(toy.id.value), pick(settle(vm))!!.picked)
 
         // Каша за 12 к мячику — ровно 30, влезает; но это больше двадцати.
-        vm.toggle(food.id)
-        assertEquals(Coins(30), pick(vm.await { pick(it)?.picked == setOf(toy.id, food.id) })!!.spent)
+        vm.toggle(food.id.value)
+        assertEquals(Coins(30), pick(vm.await { pick(it)?.picked == setOf(toy.id.value, food.id.value) })!!.spent)
         vm.next()
 
         val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
@@ -335,8 +335,8 @@ class TaskFlowTest {
         val vm = viewModel(shelf)
         vm.start()
         vm.await { it.stage is TaskStage.Step }
-        vm.toggle(food.id)
-        vm.await { pick(it)?.picked == setOf(food.id) }
+        vm.toggle(food.id.value)
+        vm.await { pick(it)?.picked == setOf(food.id.value) }
 
         vm.next()
 

@@ -13,6 +13,8 @@ import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.ShelfItem
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.StepAnswer
 import ru.finnypet.app.domain.model.TaskAttempt
 import ru.finnypet.app.domain.model.TaskId
@@ -247,7 +249,7 @@ class TaskEngineTest {
             budget = Coins(50),
         )
         val withPick = task(steps = listOf(pick))
-        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf(ItemId("apple")), Coins(51))))
+        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf("apple"), Coins(51))))
         assertThrows(IllegalArgumentException::class.java) {
             engine.evaluate(withPick, attempt, Coins(60), periodId = 1)
         }
@@ -261,9 +263,113 @@ class TaskEngineTest {
             budget = Coins(50),
         )
         val withPick = task(steps = listOf(pick))
-        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf(ItemId("rocket")), Coins(10))))
+        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf("rocket"), Coins(10))))
         assertThrows(IllegalArgumentException::class.java) {
             engine.evaluate(withPick, attempt, Coins(60), periodId = 1)
+        }
+    }
+
+    // --- Условия из контент-пака ---
+
+    /**
+     * Условие по банкам смотрит на раскладку, а не на общую сумму: отложить
+     * пятнадцать и при этом не закрыть обязательное — другой урок.
+     */
+    @Test
+    fun `условие по банкам проверяет каждую названную банку`() {
+        val jars = TaskOutcome(
+            id = "balanced",
+            condition = OutcomeCondition.JarsAtLeast(mandatory = Coins(15), savings = Coins(5)),
+            reward = Coins(10),
+            explanationKey = "task.balanced",
+        )
+        val withJars = task(outcomes = listOf(jars, fallback))
+
+        assertEquals("balanced", engine.evaluate(withJars, allocated(15, 40, 5), Coins(60), 1).value.outcome.id)
+        // Копилки хватает, а на обязательное отложено меньше — исход другой.
+        assertEquals("spent_all", engine.evaluate(withJars, allocated(14, 40, 6), Coins(60), 1).value.outcome.id)
+    }
+
+    @Test
+    fun `неназванная банка условию не мешает`() {
+        val onlySavings = TaskOutcome(
+            id = "thrifty",
+            condition = OutcomeCondition.JarsAtLeast(savings = Coins(15)),
+            reward = Coins(10),
+            explanationKey = "task.thrifty",
+        )
+        val withJars = task(outcomes = listOf(onlySavings, fallback))
+
+        // Про обязательное и желания в условии ничего нет — они любые.
+        assertEquals("thrifty", engine.evaluate(withJars, allocated(0, 45, 15), Coins(60), 1).value.outcome.id)
+        assertEquals("thrifty", engine.evaluate(withJars, allocated(45, 0, 15), Coins(60), 1).value.outcome.id)
+    }
+
+    @Test
+    fun `любой из перечисленных вариантов ведёт в один исход`() {
+        val step = TaskStep.Choice(
+            promptKey = "step.choice",
+            options = listOf(
+                TaskOption("save", "o.save"),
+                TaskOption("pause", "o.pause"),
+                TaskOption("buy", "o.buy"),
+            ),
+        )
+        val patient = TaskOutcome(
+            id = "patient",
+            condition = OutcomeCondition.AnyOptionChosen(listOf("save", "pause")),
+            reward = Coins(10),
+            explanationKey = "task.patient",
+        )
+        val withChoice = task(steps = listOf(step), outcomes = listOf(patient, fallback))
+
+        listOf("save", "pause").forEach { chosen ->
+            val attempt = TaskAttempt(listOf(StepAnswer.Chosen(chosen)))
+            assertEquals(chosen, "patient", engine.evaluate(withChoice, attempt, Coins(60), 1).value.outcome.id)
+        }
+        val hasty = TaskAttempt(listOf(StepAnswer.Chosen("buy")))
+        assertEquals("spent_all", engine.evaluate(withChoice, hasty, Coins(60), 1).value.outcome.id)
+    }
+
+    @Test
+    fun `условие по корзине требует все названные товары`() {
+        val shelf = TaskStep.Shelf(
+            promptKey = "step.shelf",
+            items = listOf(
+                ShelfItem("notebook", "t.notebook", Coins(10), SpendCategory.MANDATORY),
+                ShelfItem("pen", "t.pen", Coins(12), SpendCategory.MANDATORY),
+                ShelfItem("sticker", "t.sticker", Coins(5), SpendCategory.OPTIONAL),
+            ),
+            budget = Coins(35),
+        )
+        val ready = TaskOutcome(
+            id = "ready",
+            condition = OutcomeCondition.BasketContains(listOf("notebook", "pen")),
+            reward = Coins(10),
+            explanationKey = "task.ready",
+        )
+        val withShelf = task(steps = listOf(shelf), outcomes = listOf(ready, fallback))
+
+        val full = TaskAttempt(listOf(StepAnswer.Picked(listOf("notebook", "pen"), Coins(22))))
+        assertEquals("ready", engine.evaluate(withShelf, full, Coins(60), 1).value.outcome.id)
+
+        // Одна обязательная покупка забыта — набор не собран.
+        val partial = TaskAttempt(listOf(StepAnswer.Picked(listOf("notebook", "sticker"), Coins(15))))
+        assertEquals("spent_all", engine.evaluate(withShelf, partial, Coins(60), 1).value.outcome.id)
+    }
+
+    @Test
+    fun `товар не с прилавка не принимается`() {
+        val shelf = TaskStep.Shelf(
+            promptKey = "step.shelf",
+            items = listOf(ShelfItem("notebook", "t.notebook", Coins(10), SpendCategory.MANDATORY)),
+            budget = Coins(35),
+        )
+        val withShelf = task(steps = listOf(shelf))
+        val attempt = TaskAttempt(listOf(StepAnswer.Picked(listOf("rocket"), Coins(10))))
+
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.evaluate(withShelf, attempt, Coins(60), periodId = 1)
         }
     }
 }

@@ -119,12 +119,50 @@ sealed interface TaskStepDto {
         val itemIds: List<String>,
         val budget: Int,
     ) : TaskStepDto
+
+    /**
+     * «Три банки»: то же распределение, что и DISTRIBUTE, но подписи и порядок
+     * банок задаёт контент. Одни и те же монеты в разных заданиях делятся
+     * на «нужное и желания» или на «копилку и остальное».
+     */
+    @Serializable
+    @SerialName("THREE_JARS")
+    data class ThreeJars(
+        override val promptKey: String,
+        val totalCoins: Int,
+        val jars: List<JarDto>,
+    ) : TaskStepDto
+
+    /** «Прилавок»: корзина из товаров самого задания, а не из магазина. */
+    @Serializable
+    @SerialName("SHELF")
+    data class Shelf(
+        override val promptKey: String,
+        val budget: Int,
+        val items: List<ShelfItemDto>,
+    ) : TaskStepDto
 }
 
 @Serializable
 data class TaskOptionDto(
     val id: String,
+    val textKey: String,
+)
+
+/** Идентификатор банки — направление расхода: mandatory, wants, savings. */
+@Serializable
+data class JarDto(
+    val id: String,
     val labelKey: String,
+)
+
+@Serializable
+data class ShelfItemDto(
+    val id: String,
+    val titleKey: String,
+    val price: Int,
+    /** Обязательная покупка — то, без чего набор не собрать. */
+    val isMandatory: Boolean = false,
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -144,6 +182,34 @@ sealed interface ConditionDto {
     @SerialName("SPENT_AT_MOST")
     data class SpentAtMost(val amount: Int) : ConditionDto
 
+    /**
+     * Выбран один из вариантов. Пишется и одним ключом, и списком: разные
+     * решения с одним уроком получают одно объяснение.
+     */
+    @Serializable
+    @SerialName("SELECTED_OPTION")
+    data class SelectedOption(
+        val optionId: String? = null,
+        val optionIds: List<String> = emptyList(),
+    ) : ConditionDto
+
+    /** Сколько монет должно лежать в каждой банке; не названа — не проверяется. */
+    @Serializable
+    @SerialName("JARS_DISTRIBUTION")
+    data class JarsDistribution(
+        val minMandatory: Int? = null,
+        val minWants: Int? = null,
+        val minSavings: Int? = null,
+    ) : ConditionDto
+
+    @Serializable
+    @SerialName("BASKET_CONTAINS")
+    data class BasketContains(val itemId: String) : ConditionDto
+
+    @Serializable
+    @SerialName("BASKET_CONTAINS_ALL")
+    data class BasketContainsAll(val requiredItemIds: List<String>) : ConditionDto
+
     @Serializable
     @SerialName("OTHERWISE")
     data object Otherwise : ConditionDto
@@ -151,7 +217,8 @@ sealed interface ConditionDto {
 
 @Serializable
 data class OutcomeDto(
-    val id: String,
+    /** Не указан — парсер назовёт исход по его месту в списке. */
+    val id: String? = null,
     val condition: ConditionDto,
     /** Не указана — подставится taskReward из balance.json. */
     val reward: Int? = null,
@@ -166,7 +233,8 @@ data class TasksDto(val tasks: List<TaskDto>)
 data class TaskDto(
     val id: String,
     val topic: String,
-    val introKey: String,
+    /** Заголовок задания, он же вступление на экране прохождения. */
+    val titleKey: String,
     val steps: List<TaskStepDto>,
     val outcomes: List<OutcomeDto>,
 )

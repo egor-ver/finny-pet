@@ -23,6 +23,15 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
+ * Банка редактора: направление расхода и подпись, если её задаёт задание.
+ * [label] пустой — берётся общее название направления.
+ */
+data class PlanJar(
+    val category: SpendCategory,
+    val label: String?,
+)
+
+/**
  * Раскладка суммы по трём направлениям кнопками.
  *
  * Один и тот же редактор в плане дня и в задании «раздели монеты»: ребёнок
@@ -45,10 +54,17 @@ fun PlanEditor(
     canRemove: (SpendCategory) -> Boolean,
     onAdd: (SpendCategory) -> Unit,
     onRemove: (SpendCategory) -> Unit,
+    /**
+     * Банки задания: свои подписи и свой порядок. Пусто — план дня, там
+     * направления называются одинаково на всех экранах.
+     */
+    jars: List<PlanJar> = emptyList(),
 ) {
-    SpendCategory.entries.forEach { category ->
+    val rows = jars.ifEmpty { SpendCategory.entries.map { PlanJar(it, label = null) } }
+    rows.forEach { jar ->
+        val category = jar.category
         CategoryRow(
-            category = category,
+            title = jar.label ?: stringResource(category.label),
             amount = plan.amountFor(category),
             available = available,
             canAdd = canAdd,
@@ -88,7 +104,7 @@ fun PlanEditor(
 /** Одно направление: название, сумма, полоса доли и две кнопки. */
 @Composable
 private fun CategoryRow(
-    category: SpendCategory,
+    title: String,
     amount: Coins,
     available: Coins,
     canAdd: Boolean,
@@ -96,7 +112,6 @@ private fun CategoryRow(
     onAdd: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val title = stringResource(category.label)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
