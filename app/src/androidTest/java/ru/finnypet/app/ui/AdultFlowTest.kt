@@ -46,6 +46,7 @@ import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.domain.usecase.StartDemo
 import ru.finnypet.app.ui.screens.adult.AdultState
 import ru.finnypet.app.ui.screens.adult.AdultViewModel
 import ru.finnypet.app.ui.screens.adult.AwardState
@@ -206,6 +207,7 @@ class AdultFlowTest {
         tasks = tasks,
         settings = settings,
         awardBonus = AwardParentBonus(periods, WalletEngine(clock), balance),
+        startDemo = StartDemo(profiles, settings),
         gameBalance = balance,
         content = content(),
     ).also { viewModel = it }

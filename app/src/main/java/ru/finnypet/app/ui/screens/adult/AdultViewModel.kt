@@ -33,6 +33,7 @@ import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
+import ru.finnypet.app.domain.usecase.StartDemo
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
@@ -104,6 +105,7 @@ class AdultViewModel @Inject constructor(
     private val tasks: TaskProgressRepository,
     private val settings: SettingsRepository,
     private val awardBonus: AwardParentBonus,
+    private val startDemo: StartDemo,
     private val gameBalance: GameBalance,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
@@ -146,6 +148,12 @@ class AdultViewModel @Inject constructor(
             val credited = awardBonus(profileId) ?: return@withLock
             awarded.value = texts.textOf(credited.explanation)
         }
+    }
+
+    /** Запускает демонстрацию и отдаёт управление экрану: он уводит на главный. */
+    fun startDemo(onStarted: () -> Unit) = guarded {
+        startDemo.invoke()
+        onStarted()
     }
 
     fun dismissAward() {

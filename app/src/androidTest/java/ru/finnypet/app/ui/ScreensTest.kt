@@ -57,6 +57,7 @@ import ru.finnypet.app.ui.screens.adult.AwardState
 import ru.finnypet.app.ui.screens.adult.Riddle
 import ru.finnypet.app.ui.screens.adult.TopicProgress
 import ru.finnypet.app.ui.screens.budget.BudgetContent
+import ru.finnypet.app.ui.screens.demo.DemoBannerContent
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.screens.day.DayContent
 import ru.finnypet.app.ui.screens.day.DayState
@@ -1413,6 +1414,7 @@ class ScreensTest {
         onRetry: () -> Unit = {},
         onAward: () -> Unit = {},
         onSound: (Boolean) -> Unit = {},
+        onStartDemo: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
@@ -1422,9 +1424,56 @@ class ScreensTest {
                     onRetry = onRetry,
                     onAward = onAward,
                     onSound = onSound,
+                    onStartDemo = onStartDemo,
                 )
             }
         }
+    }
+
+    // --- Демонстрационный режим (ТЗ 2.5.13) ---
+
+    /** Вне демонстрации полосы нет совсем: ребёнок про этот режим не знает. */
+    @Test
+    fun `вне_демонстрации_полосы_нет`() {
+        compose.setContent { FinnypetTheme { DemoBannerContent(visible = false) } }
+
+        compose.onAllNodesWithText(text(R.string.demo_banner)).assertCountEquals(0)
+        compose.onAllNodesWithText(text(R.string.demo_play_day)).assertCountEquals(0)
+    }
+
+    /** В демонстрации видно словом, что это она, и оба действия рядом. */
+    @Test
+    fun `полоса_демонстрации_называет_режим_и_даёт_оба_действия`() {
+        var played = false
+        var exited = false
+        compose.setContent {
+            FinnypetTheme {
+                DemoBannerContent(
+                    visible = true,
+                    onPlayDay = { played = true },
+                    onExit = { exited = true },
+                )
+            }
+        }
+
+        compose.onNodeWithText(text(R.string.demo_banner)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.demo_play_day)).performClick()
+        compose.onNodeWithText(text(R.string.demo_exit)).performClick()
+
+        assertTrue(played)
+        assertTrue(exited)
+    }
+
+    @Test
+    fun `из_раздела_взрослого_запускается_демонстрация`() {
+        var started = false
+        showAdult(adultState(), onStartDemo = { started = true })
+
+        compose.onNode(hasScrollAction())
+            .performScrollToNode(hasText(text(R.string.adult_demo_action)))
+        compose.onNodeWithText(text(R.string.adult_demo_action)).performClick()
+
+        assertTrue(started)
     }
 
     // --- Итоги дня (ТЗ 2.5.9, 2.5.10) ---

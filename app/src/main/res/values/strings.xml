@@ -97,6 +97,13 @@
     <string name="adult_bonus_action">Начислить %1$s</string>
     <string name="adult_bonus_used">Сегодня монеты уже начислены. Следующие — в новом игровом дне.</string>
     <string name="adult_bonus_no_day">Игровой день ещё не начался — начислять пока некуда.</string>
+    <string name="adult_demo">Демонстрационный режим</string>
+    <string name="adult_demo_explain">Отдельный профиль для проверки: игра ребёнка не изменится. Запуск начинает демонстрацию с чистого листа.</string>
+    <string name="adult_demo_action">Запустить демонстрацию</string>
+    <string name="demo_banner">Демонстрационный режим</string>
+    <string name="demo_play_day">Прожить день</string>
+    <string name="demo_exit">Выйти из демонстрации</string>
+
     <string name="adult_settings">Звук и движение</string>
     <string name="adult_sound">Звук в игре</string>
     <string name="adult_animations">Движение на экране</string>

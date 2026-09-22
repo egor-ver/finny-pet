@@ -40,6 +40,7 @@ import ru.finnypet.app.ui.theme.Dimens
 @Composable
 fun AdultScreen(
     onBack: () -> Unit,
+    onDemoStarted: () -> Unit,
     viewModel: AdultViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -52,6 +53,7 @@ fun AdultScreen(
         onDismissAward = viewModel::dismissAward,
         onSound = viewModel::setSound,
         onAnimations = viewModel::setAnimations,
+        onStartDemo = { viewModel.startDemo(onDemoStarted) },
     )
 }
 
@@ -64,6 +66,7 @@ fun AdultContent(
     onDismissAward: () -> Unit = {},
     onSound: (Boolean) -> Unit = {},
     onAnimations: (Boolean) -> Unit = {},
+    onStartDemo: () -> Unit = {},
 ) {
     when (state) {
         AdultState.Loading -> Screen(onBack) {}
@@ -91,6 +94,7 @@ fun AdultContent(
             onDismissAward = onDismissAward,
             onSound = onSound,
             onAnimations = onAnimations,
+            onStartDemo = onStartDemo,
         )
     }
 }
@@ -103,6 +107,7 @@ private fun Ready(
     onDismissAward: () -> Unit,
     onSound: (Boolean) -> Unit,
     onAnimations: (Boolean) -> Unit,
+    onStartDemo: () -> Unit,
 ) {
     Screen(
         onBack = onBack,
@@ -117,6 +122,7 @@ private fun Ready(
         Overview(state)
         Bonus(state, onAward)
         Settings(state, onSound, onAnimations)
+        Demo(onStartDemo)
     }
 
     state.awarded?.let { text ->
@@ -179,6 +185,17 @@ private fun ColumnScope.Bonus(state: AdultState.Ready, onAward: () -> Unit) {
         AwardState.USED -> Explanation(stringResource(R.string.adult_bonus_used))
         AwardState.NO_DAY -> Explanation(stringResource(R.string.adult_bonus_no_day))
     }
+}
+
+/**
+ * Демонстрационный режим для проверяющего (ТЗ 2.5.13). Живёт здесь, за
+ * барьером: ребёнку он не нужен, а эксперт этот раздел откроет по ТЗ.
+ */
+@Composable
+private fun ColumnScope.Demo(onStart: () -> Unit) {
+    Heading(stringResource(R.string.adult_demo))
+    Explanation(stringResource(R.string.adult_demo_explain))
+    FinnyButton(text = stringResource(R.string.adult_demo_action), onClick = onStart)
 }
 
 /** Звук и анимации отключаются (ТЗ 3.6), и делает это взрослый. */

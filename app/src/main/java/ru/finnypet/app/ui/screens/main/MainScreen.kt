@@ -56,6 +56,7 @@ fun MainScreen(
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
     onFinishDay: () -> Unit,
+    banner: @Composable () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -70,6 +71,7 @@ fun MainScreen(
         onFinishDay = onFinishDay,
         onProgress = onProgress,
         onAdult = onAdult,
+        banner = banner,
     )
 }
 
@@ -88,6 +90,7 @@ fun MainContent(
     onFinishDay: () -> Unit = {},
     onProgress: () -> Unit = {},
     onAdult: () -> Unit = {},
+    banner: @Composable () -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
@@ -101,6 +104,7 @@ fun MainContent(
             onFinishDay = onFinishDay,
             onProgress = onProgress,
             onAdult = onAdult,
+            banner = banner,
         )
     }
 }
@@ -142,6 +146,7 @@ private fun ReadyScreen(
     onFinishDay: () -> Unit,
     onProgress: () -> Unit,
     onAdult: () -> Unit,
+    banner: @Composable () -> Unit,
 ) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
@@ -166,6 +171,8 @@ private fun ReadyScreen(
             }
         },
     ) {
+        banner()
+
         DayLine(state = state, onFinishDay = onFinishDay)
 
         Pet(state = state)
@@ -194,6 +201,7 @@ private fun ReadyScreen(
         Link(stringResource(R.string.adult_action), onAdult)
     }
 }
+
 
 /**
  * Дорога в раздел — строкой внизу, а не кнопкой: кнопок внизу уже две, а

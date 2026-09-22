@@ -6,9 +6,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.ui.screens.adult.AdultGateScreen
 import ru.finnypet.app.ui.screens.adult.AdultScreen
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
+import ru.finnypet.app.ui.screens.demo.DemoBanner
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.day.DayScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
@@ -65,6 +67,15 @@ fun FinnyNavHost(
                 onFinishDay = { navController.navigate(Day) },
                 onProgress = { navController.navigate(Progress) },
                 onAdult = { navController.navigate(AdultGate) },
+                banner = {
+                    // После демонстрации возвращаться некуда, если своей игры
+                    // не было: тогда ведём на знакомство, а не на пустой главный.
+                    DemoBanner(onEnded = { after ->
+                        if (after == AfterDemo.ONBOARDING) {
+                            navController.navigate(Onboarding) { popUpTo(Main) { inclusive = true } }
+                        }
+                    })
+                },
             )
         }
 
@@ -84,7 +95,14 @@ fun FinnyNavHost(
         }
 
         composable<Adult> {
-            AdultScreen(onBack = { navController.popBackStack() })
+            AdultScreen(
+                onBack = { navController.popBackStack() },
+                // Демонстрация начинается на главном: стек раздела взрослого
+                // за спиной привёл бы «назад» в чужую уже страницу.
+                onDemoStarted = {
+                    navController.navigate(Main) { popUpTo(Main) { inclusive = true } }
+                },
+            )
         }
 
         composable<Day> {
