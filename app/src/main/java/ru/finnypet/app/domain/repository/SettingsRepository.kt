@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import ru.finnypet.app.domain.model.ProfileId
 
 /**
  * Настройки приложения: состояние сессии, а не игровые данные.
@@ -16,6 +17,13 @@ interface SettingsRepository {
     suspend fun demoMode(): Boolean
 
     suspend fun setDemoMode(enabled: Boolean)
+
+    /** Профиль, в который надо вернуться после демонстрации. */
+    suspend fun profileBeforeDemo(): ProfileId?
+
+    suspend fun rememberProfileBeforeDemo(id: ProfileId)
+
+    suspend fun forgetProfileBeforeDemo()
 
     /** Звук и анимации отключаются (ТЗ 3.6). */
     fun observeSoundEnabled(): Flow<Boolean>

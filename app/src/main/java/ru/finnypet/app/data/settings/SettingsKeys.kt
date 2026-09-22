@@ -14,6 +14,13 @@ object SettingsKeys {
 
     val DEMO_MODE = booleanPreferencesKey("demo_mode")
 
+    /**
+     * Чей профиль играл до входа в демонстрационный режим. Переживает
+     * закрытие приложения: эксперт может выйти из него как угодно, а ребёнок
+     * обязан вернуться в свою игру, а не в чужую.
+     */
+    val PROFILE_BEFORE_DEMO = stringPreferencesKey("profile_before_demo")
+
     val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
 
     val ANIMATIONS_ENABLED = booleanPreferencesKey("animations_enabled")

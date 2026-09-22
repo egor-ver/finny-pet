@@ -71,6 +71,8 @@ class ProfileRepositoryImpl @Inject constructor(
         return profiles.byId(id)?.toDomain()
     }
 
+    override suspend fun byId(id: ProfileId): Profile? = profiles.byId(id.value)?.toDomain()
+
     /**
      * Профиль и питомец записываются одной транзакцией: профиля без питомца в
      * игре не существует, а главный экран по ТЗ 2.5.3 обязан показать его
@@ -104,6 +106,8 @@ class ProfileRepositoryImpl @Inject constructor(
         setActive(profile.id)
         return profile
     }
+
+    override suspend fun testProfile(): Profile? = profiles.testProfile()?.toDomain()
 
     override suspend fun setActive(id: ProfileId) {
         store.edit { it[SettingsKeys.ACTIVE_PROFILE_ID] = id.value }

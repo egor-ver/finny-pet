@@ -21,6 +21,8 @@ interface ProfileRepository {
 
     suspend fun active(): Profile?
 
+    suspend fun byId(id: ProfileId): Profile?
+
     /**
      * Создаёт профиль вместе с начальным состоянием питомца и делает его
      * активным. Ни настоящего имени, ни телефона, ни почты (ТЗ 3.5).
@@ -33,6 +35,9 @@ interface ProfileRepository {
     ): Profile
 
     suspend fun setActive(id: ProfileId)
+
+    /** Профиль демонстрационного режима, если он сейчас заведён (ТЗ 2.5.13). */
+    suspend fun testProfile(): Profile?
 
     /** Удаление профиля взрослым (ТЗ 3.5): каскад уносит всё его состояние. */
     suspend fun delete(id: ProfileId)

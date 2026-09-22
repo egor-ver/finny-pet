@@ -28,6 +28,10 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY createdAt")
     suspend fun all(): List<ProfileEntity>
 
+    /** Профиль демонстрационного режима. Он один: StartDemo сносит прежний. */
+    @Query("SELECT * FROM profiles WHERE isTest = 1 LIMIT 1")
+    suspend fun testProfile(): ProfileEntity?
+
     /** Удаление профиля взрослым (ТЗ 3.5). Каскад уносит всё связанное состояние. */
     @Query("DELETE FROM profiles WHERE id = :id")
     suspend fun delete(id: String)

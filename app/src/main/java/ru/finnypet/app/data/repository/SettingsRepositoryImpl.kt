@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import ru.finnypet.app.data.settings.SettingsKeys
+import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.repository.SettingsRepository
 import java.io.IOException
 import javax.inject.Inject
@@ -35,6 +36,17 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setDemoMode(enabled: Boolean) {
         store.edit { it[SettingsKeys.DEMO_MODE] = enabled }
+    }
+
+    override suspend fun profileBeforeDemo(): ProfileId? =
+        preferences.first()[SettingsKeys.PROFILE_BEFORE_DEMO]?.let(::ProfileId)
+
+    override suspend fun rememberProfileBeforeDemo(id: ProfileId) {
+        store.edit { it[SettingsKeys.PROFILE_BEFORE_DEMO] = id.value }
+    }
+
+    override suspend fun forgetProfileBeforeDemo() {
+        store.edit { it.remove(SettingsKeys.PROFILE_BEFORE_DEMO) }
     }
 
     // Звук и анимации включены по умолчанию: отключение — осознанный выбор

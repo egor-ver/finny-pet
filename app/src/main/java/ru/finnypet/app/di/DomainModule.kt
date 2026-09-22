@@ -15,11 +15,17 @@ import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.DayRecorder
+import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.domain.repository.SavingsRepository
+import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.CloseDay
+import ru.finnypet.app.domain.usecase.ExitDemo
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.domain.usecase.PlayDemoDay
+import ru.finnypet.app.domain.usecase.StartDemo
 import javax.inject.Singleton
 
 /**
@@ -68,6 +74,41 @@ object DomainModule {
         periods = periods,
         wallet = wallet,
         balance = balance,
+    )
+
+    @Provides
+    fun startDemo(
+        profiles: ProfileRepository,
+        settings: SettingsRepository,
+    ): StartDemo = StartDemo(profiles = profiles, settings = settings)
+
+    @Provides
+    fun exitDemo(
+        profiles: ProfileRepository,
+        settings: SettingsRepository,
+    ): ExitDemo = ExitDemo(profiles = profiles, settings = settings)
+
+    @Provides
+    fun playDemoDay(
+        periods: PeriodRepository,
+        savings: SavingsRepository,
+        content: ContentRepository,
+        openPeriod: OpenPeriodIfNeeded,
+        closeDay: CloseDay,
+        wallet: WalletEngine,
+        savingsEngine: SavingsEngine,
+        periodEngine: PeriodEngine,
+        recorder: OutcomeRecorder,
+    ): PlayDemoDay = PlayDemoDay(
+        periods = periods,
+        savings = savings,
+        content = content,
+        openPeriod = openPeriod,
+        closeDay = closeDay,
+        wallet = wallet,
+        savingsEngine = savingsEngine,
+        periodEngine = periodEngine,
+        recorder = recorder,
     )
 
     @Provides
