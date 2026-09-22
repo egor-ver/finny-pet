@@ -1,9 +1,20 @@
 {
   "goals": [
     {
-      "id": "bike",
+      "id": "goal-book",
+      "titleKey": "goal.book",
+      "price": 40
+    },
+    {
+      "id": "goal-board-game",
+      "titleKey": "goal.board_game",
+      "price": 70
+    },
+    {
+      "id": "goal-bike",
       "titleKey": "goal.bike",
       "price": 120
     }
   ]
 }
+
