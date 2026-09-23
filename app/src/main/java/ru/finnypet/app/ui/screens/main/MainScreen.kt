@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PetImage
 import ru.finnypet.app.ui.components.StatBar
+import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -161,18 +163,14 @@ private fun ReadyScreen(
         title = stringResource(R.string.main_hello, state.childName),
         spacing = Dimens.SpaceMedium,
         bottomBar = {
-            ButtonColumn {
-                // Главное действие сверху, и оно меняется с днём: пока день
-                // планируется — распределить монеты, когда идёт — покупать.
-                // Второе всегда под ним, чтобы дорога была одна и та же.
-                if (state.periodStatus == PeriodStatus.PLANNING) {
-                    FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
-                    FinnySecondaryButton(text = stringResource(R.string.shop_action), onClick = onShop)
-                } else {
-                    FinnyButton(text = stringResource(R.string.shop_action), onClick = onShop)
-                    FinnySecondaryButton(text = stringResource(R.string.budget_action_show), onClick = onPlan)
-                }
-            }
+            NextStepBar(
+                state = state,
+                onPlan = onPlan,
+                onTask = onTask,
+                onShop = onShop,
+                onSavings = onSavings,
+                onFinishDay = onFinishDay,
+            )
         },
     ) {
         banner()
@@ -183,7 +181,13 @@ private fun ReadyScreen(
 
         MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
         SavingsCard(savings = state.savings, onOpen = onSavings)
-        state.task?.let { task -> TaskCard(task = task, onOpen = { onTask(task.id) }) }
+        state.task?.let { task ->
+            TaskCard(
+                task = task,
+                locked = state.periodStatus == PeriodStatus.PLANNING,
+                onOpen = { onTask(task.id) },
+            )
+        }
 
         Text(
             text = stringResource(R.string.main_pet_state, state.petName),
@@ -207,6 +211,51 @@ private fun ReadyScreen(
     }
 }
 
+/**
+ * Один следующий шаг: подсказка словами и главная кнопка к нему. Вторая
+ * кнопка — магазин, чтобы покупки были в одном нажатии с главного (ТЗ 2.5.3);
+ * когда магазин и есть следующий шаг, вторая ведёт к плану.
+ */
+@Composable
+private fun NextStepBar(
+    state: MainState.Ready,
+    onPlan: () -> Unit,
+    onTask: (TaskId) -> Unit,
+    onShop: () -> Unit,
+    onSavings: () -> Unit,
+    onFinishDay: () -> Unit,
+) {
+    val step = state.step
+    val (hint, action) = when (step) {
+        NextStep.Plan -> stringResource(R.string.main_step_plan) to stringResource(R.string.budget_action_plan)
+        NextStep.Task -> stringResource(R.string.main_step_task) to stringResource(R.string.main_step_task_action)
+        is NextStep.Shop -> stringResource(R.string.main_step_shop, coinsText(step.left)) to
+            stringResource(R.string.shop_action)
+        is NextStep.Save -> stringResource(R.string.main_step_save, coinsText(step.left)) to
+            stringResource(R.string.main_step_save_action)
+        NextStep.Finish -> stringResource(R.string.main_step_finish) to stringResource(R.string.day_action_close)
+    }
+    val onAction: () -> Unit = when (step) {
+        NextStep.Plan -> onPlan
+        NextStep.Task -> { { state.task?.let { onTask(it.id) } } }
+        is NextStep.Shop -> onShop
+        is NextStep.Save -> onSavings
+        NextStep.Finish -> onFinishDay
+    }
+
+    ButtonColumn {
+        // Черта отделяет подсказку от прокрутки: без неё она читается как
+        // продолжение карточки, обрезанной краем панели.
+        HorizontalDivider()
+        Text(text = hint, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        FinnyButton(text = action, onClick = onAction)
+        if (step is NextStep.Shop) {
+            FinnySecondaryButton(text = stringResource(R.string.budget_action_show), onClick = onPlan)
+        } else {
+            FinnySecondaryButton(text = stringResource(R.string.shop_action), onClick = onShop)
+        }
+    }
+}
 
 /**
  * Дорога в раздел — строкой внизу, а не кнопкой: кнопок внизу уже две, а
@@ -231,12 +280,9 @@ private fun Link(text: String, onOpen: () -> Unit) {
 }
 
 /**
- * Строка игрового дня. Пока день идёт — ещё и дорога к его итогам.
- *
- * Третьей кнопки внизу нет намеренно: она вытеснила бы показатели питомца
- * с экрана, а ТЗ 2.5.3 требует показать всё сразу. При системном шрифте в
- * полтора раза три кнопки занимали больше половины экрана. Поэтому действие
- * живёт в самой строке — тем же приёмом, что и в карточке копилки.
+ * Строка игрового дня. Пока день идёт — ещё и дорога к его итогам: закончить
+ * день можно в любой момент, не дожидаясь, пока подсказка дойдёт до итогов.
+ * Когда итоги и есть следующий шаг, они уже на главной кнопке.
  */
 @Composable
 private fun DayLine(state: MainState.Ready, onFinishDay: () -> Unit) {
@@ -245,7 +291,7 @@ private fun DayLine(state: MainState.Ready, onFinishDay: () -> Unit) {
         state.periodNumber,
         stringResource(state.periodStatus.label),
     )
-    if (state.periodStatus == PeriodStatus.PLANNING) {
+    if (state.periodStatus == PeriodStatus.PLANNING || state.step == NextStep.Finish) {
         Text(
             text = line,
             style = MaterialTheme.typography.bodyMedium,
@@ -362,11 +408,12 @@ private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
 
 /**
  * Задание дня (ТЗ 2.5.3): тема, начало вступления и состояние награды.
- * Карточка целиком — кнопка в задание, подпись «Открыть» словом.
+ * Карточка целиком — кнопка в задание, подпись «Открыть» словом. Пока день
+ * не спланирован, задания закрыты — карточка так и говорит, а не зовёт внутрь.
  */
 @Composable
-private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
-    FinnyCard(onClick = onOpen) {
+private fun TaskCard(task: TaskOfDay, locked: Boolean, onOpen: () -> Unit) {
+    FinnyCard(onClick = onOpen.takeUnless { locked }) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -406,9 +453,9 @@ private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = stringResource(R.string.main_task_open),
+            text = stringResource(if (locked) R.string.main_task_locked else R.string.main_task_open),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = if (locked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
             modifier = Modifier.align(Alignment.End),
         )
     }

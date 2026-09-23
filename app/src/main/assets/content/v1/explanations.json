@@ -55,8 +55,8 @@
   "goal.board_game": "Настольная игра",
   "goal.bike": "Самокат",
   
-  "task.jar.mandatory": "Важное",
-  "task.jar.wants": "Желания",
+  "task.jar.mandatory": "Нужное",
+  "task.jar.wants": "Желаемое",
   "task.jar.savings": "Копилка",
   "task.jar.reserve": "Запас",
 

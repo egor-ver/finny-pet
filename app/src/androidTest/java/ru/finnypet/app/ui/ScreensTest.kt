@@ -68,6 +68,7 @@ import ru.finnypet.app.ui.screens.createpet.CreatePetContent
 import ru.finnypet.app.ui.screens.createpet.CreatePetState
 import ru.finnypet.app.ui.screens.main.MainContent
 import ru.finnypet.app.ui.screens.main.MainState
+import ru.finnypet.app.ui.screens.main.NextStep
 import ru.finnypet.app.ui.screens.main.SavingsView
 import ru.finnypet.app.ui.screens.main.TaskOfDay
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
@@ -293,7 +294,7 @@ class ScreensTest {
             rewardAvailable = true,
             allDone = false,
         )
-        showMain(readyState(task = task), onTask = { opened = it })
+        showMain(readyState(task = task, periodStatus = PeriodStatus.RUNNING), onTask = { opened = it })
 
         scrollToText(text(R.string.main_task))
         scrollToText("Сова нашла монеты. Что с ними делать?")
@@ -301,6 +302,79 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.main_task_open)).performClick()
 
         assertEquals(TaskId("story"), opened)
+    }
+
+    /** Пока плана нет, задания закрыты: карточка так и говорит, а не зовёт в стену. */
+    @Test
+    fun `до_плана_задание_дня_закрыто`() {
+        var opened: TaskId? = null
+        val task = TaskOfDay(
+            id = TaskId("story"),
+            topic = TaskTopic.SAVING,
+            intro = "Вступление",
+            rewardAvailable = true,
+            allDone = false,
+        )
+        showMain(readyState(task = task), onTask = { opened = it })
+
+        scrollToText(text(R.string.main_task_locked))
+        compose.onNodeWithText("Вступление").performClick()
+
+        compose.onAllNodesWithText(text(R.string.main_task_open)).assertCountEquals(0)
+        assertEquals(null, opened)
+    }
+
+    /** ТЗ 8.4: главная кнопка — следующий шаг цикла, подсказка над ней словами. */
+    @Test
+    fun `главная_кнопка_ведёт_к_заданию`() {
+        var opened: TaskId? = null
+        val task = TaskOfDay(TaskId("story"), TaskTopic.SAVING, "Вступление", rewardAvailable = true, allDone = false)
+        showMain(readyState(task = task, periodStatus = PeriodStatus.RUNNING, step = NextStep.Task), onTask = { opened = it })
+
+        compose.onNodeWithText(text(R.string.main_step_task)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.main_step_task_action)).performClick()
+
+        assertEquals(TaskId("story"), opened)
+    }
+
+    @Test
+    fun `на_шаге_покупки_вторая_кнопка_ведёт_к_плану`() {
+        var shop = false
+        var plan = false
+        showMain(
+            readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Shop(Coins(10))),
+            onShop = { shop = true },
+            onPlan = { plan = true },
+        )
+
+        compose.onNodeWithText(text(R.string.shop_action)).performClick()
+        compose.onNodeWithText(text(R.string.budget_action_show)).performClick()
+
+        assertTrue(shop)
+        assertTrue(plan)
+    }
+
+    @Test
+    fun `главная_кнопка_ведёт_в_копилку`() {
+        var opened = false
+        showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Save(Coins(5))), onSavings = { opened = true })
+
+        compose.onNodeWithText(text(R.string.main_step_save_action)).performClick()
+
+        assertTrue(opened)
+    }
+
+    /** Итоги на главной кнопке — строка дня их не дублирует. */
+    @Test
+    fun `когда_всё_по_плану_главная_кнопка_заканчивает_день`() {
+        var opened = false
+        showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Finish), onFinishDay = { opened = true })
+
+        compose.onNodeWithText(text(R.string.main_step_finish)).assertIsDisplayed()
+        compose.onAllNodesWithText(text(R.string.day_action_close)).assertCountEquals(1)
+        compose.onNodeWithText(text(R.string.day_action_close)).performClick()
+
+        assertTrue(opened)
     }
 
     @Test
@@ -1705,6 +1779,7 @@ class ScreensTest {
         ),
         task: TaskOfDay? = null,
         periodStatus: PeriodStatus = PeriodStatus.PLANNING,
+        step: NextStep = if (periodStatus == PeriodStatus.PLANNING) NextStep.Plan else NextStep.Shop(Coins(10)),
     ) = MainState.Ready(
         childName = "Егор",
         petName = "Пушок",
@@ -1716,6 +1791,7 @@ class ScreensTest {
         task = task,
         periodNumber = 1,
         periodStatus = periodStatus,
+        step = step,
     )
 
     private fun showCreatePet(

@@ -36,6 +36,7 @@ import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.OutcomeCondition
@@ -56,6 +57,7 @@ import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.ui.screens.main.MainState
 import ru.finnypet.app.ui.screens.main.MainViewModel
+import ru.finnypet.app.ui.screens.main.NextStep
 import ru.finnypet.app.ui.screens.tasks.TasksState
 import ru.finnypet.app.ui.screens.tasks.TasksViewModel
 import java.io.File
@@ -161,6 +163,19 @@ class TasksFlowTest {
         assertEquals(TaskId("jars"), allDone.task?.id)
     }
 
+    /** Подсказка на главном идёт за игрой: награда за задание получена — дальше нужное по плану. */
+    @Test
+    fun следующий_шаг_после_задания_ведёт_к_нужному() = runBlocking {
+        val plan = BudgetPlan(mandatory = Coins(10), optional = Coins.ZERO, savings = Coins.ZERO)
+        periods.savePlan(periods.current(profileId)!!.id, plan)
+        val main = mainViewModel()
+        main.await { it.step == NextStep.Task }
+
+        pass(planning, reward = Coins(15))
+
+        assertEquals(NextStep.Shop(Coins(10)), main.await { it.step is NextStep.Shop }.step)
+    }
+
     private suspend fun pass(task: LearningTask, reward: Coins) {
         val period = periods.current(profileId)!!
         recorder.record(
@@ -198,6 +213,7 @@ class TasksFlowTest {
         savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions()),
         taskProgress = progress,
         openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
+        periodEngine = periodEngine(),
         balance = balance,
         content = content(),
     ).also { viewModels += it }

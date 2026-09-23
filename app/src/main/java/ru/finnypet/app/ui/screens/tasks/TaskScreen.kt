@@ -175,6 +175,13 @@ private fun Intro(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         PetSpeech(text = state.intro, appearance = state.appearance)
+        // Баланс на главном другой, чем в истории: без этой строки ребёнок
+        // принимает монеты задания за свои.
+        Text(
+            text = stringResource(R.string.task_story_note),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         when {
             !state.canStart -> Note(text = stringResource(R.string.tasks_planning_hint))
             state.rewardAvailable -> Row(

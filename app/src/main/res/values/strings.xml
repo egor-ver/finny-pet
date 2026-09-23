@@ -212,6 +212,7 @@
     <string name="task_title">Задание</string>
     <string name="task_missing">Такого задания нет. Вернись к списку.</string>
     <string name="task_start">Начать</string>
+    <string name="task_story_note">Это история понарошку: монеты в ней не из твоего кошелька. Настоящие монеты — только награда.</string>
     <string name="task_start_training">Потренироваться</string>
     <string name="task_training_note">Монеты за сегодня уже получены — это задание без монет, для тренировки.</string>
     <string name="task_reward_upto">Награда — до</string>
@@ -231,9 +232,17 @@
     <string name="task_finish">Продолжить</string>
     <string name="main_task">Задание дня</string>
     <string name="main_task_all_done">Все задания пройдены — можно повторить любое.</string>
-    <string name="main_task_reward">Награда сегодня ещё не получена</string>
+    <string name="main_task_reward">За задание сегодня дадут монеты</string>
     <string name="main_task_reward_taken">Монеты за сегодня получены</string>
     <string name="main_task_open">Открыть</string>
+    <string name="main_task_locked">Откроется после плана</string>
+    <string name="main_step_plan">Раздели монеты: на нужное, на желаемое и в копилку.</string>
+    <string name="main_step_task">Выполни задание дня — за него дают монеты.</string>
+    <string name="main_step_task_action">Выполнить задание</string>
+    <string name="main_step_shop">Купи нужное: по плану ещё %1$s.</string>
+    <string name="main_step_save">Отложи в копилку: по плану ещё %1$s.</string>
+    <string name="main_step_save_action">В копилку</string>
+    <string name="main_step_finish">Всё по плану! Можно заканчивать день.</string>
 
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>

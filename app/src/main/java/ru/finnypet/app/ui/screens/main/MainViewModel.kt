@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
 import ru.finnypet.app.domain.model.GamePeriod
@@ -83,6 +84,7 @@ sealed interface MainState {
         val task: TaskOfDay?,
         val periodNumber: Int,
         val periodStatus: PeriodStatus,
+        val step: NextStep,
     ) : MainState
 }
 
@@ -101,6 +103,7 @@ class MainViewModel @Inject constructor(
     private val savings: SavingsRepository,
     private val taskProgress: TaskProgressRepository,
     private val openPeriod: OpenPeriodIfNeeded,
+    private val periodEngine: PeriodEngine,
     private val balance: GameBalance,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
@@ -145,13 +148,15 @@ class MainViewModel @Inject constructor(
             if (pet == null || period == null) {
                 flowOf(MainState.Loading)
             } else {
-                // Баланс и операции наблюдаются отдельно, потому что зависят
-                // от периода: баланс считается по операциям, а не хранится
-                // числом, и лимит наград за задания — по ним же.
+                // Баланс, операции и план наблюдаются отдельно, потому что
+                // зависят от периода: баланс считается по операциям, лимит
+                // наград за задания и следующий шаг — по ним же.
                 combine(
                     periods.observeBalance(period),
                     periods.observeTransactions(period.id),
-                ) { balance, transactions ->
+                    periods.observePlan(period.id),
+                ) { balance, transactions, plan ->
+                    val task = taskOf(completed, transactions)
                     MainState.Ready(
                         childName = profile.childName,
                         petName = profile.petName,
@@ -160,9 +165,15 @@ class MainViewModel @Inject constructor(
                         stats = pet.state,
                         balance = balance,
                         savings = savingsOf(progress),
-                        task = taskOf(completed, transactions),
+                        task = task,
                         periodNumber = period.number,
                         periodStatus = period.status,
+                        step = nextStep(
+                            status = period.status,
+                            plan = plan,
+                            fact = periodEngine.factOf(transactions),
+                            taskRewardAvailable = task?.rewardAvailable == true,
+                        ),
                     )
                 }
             }
