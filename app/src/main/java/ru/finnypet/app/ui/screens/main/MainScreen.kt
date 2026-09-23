@@ -1,6 +1,5 @@
 package ru.finnypet.app.ui.screens.main
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,11 +24,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
-import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.GoalProgressBar
@@ -317,15 +316,7 @@ private fun Pet(state: MainState.Ready) {
  */
 @Composable
 private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(role = Role.Button, onClick = onOpen)
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
-    ) {
+    FinnyCard(onClick = onOpen) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -369,15 +360,7 @@ private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
  */
 @Composable
 private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(role = Role.Button, onClick = onOpen)
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
-    ) {
+    FinnyCard(onClick = onOpen) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
