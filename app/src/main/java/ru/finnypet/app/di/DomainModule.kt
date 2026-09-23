@@ -131,7 +131,9 @@ object DomainModule {
         recorder = recorder,
     )
 
+    /** Один на приложение: его замок не даёт начислить доход дня дважды. */
     @Provides
+    @Singleton
     fun openPeriodIfNeeded(
         periods: PeriodRepository,
         wallet: WalletEngine,

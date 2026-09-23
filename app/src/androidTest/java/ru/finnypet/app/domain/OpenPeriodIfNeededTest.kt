@@ -7,6 +7,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -122,6 +126,29 @@ class OpenPeriodIfNeededTest {
 
         assertEquals(1, incomeCount(period.id))
         assertEquals(balance.startingBalance + balance.periodIncome, periods.balance(period))
+    }
+
+    /**
+     * Экраны открывают день каждый из своего init: главный ещё начисляет доход,
+     * а ребёнок уже открыл магазин. Доход обязан лечь один раз.
+     */
+    @Test
+    fun `одновременные_входы_начисляют_доход_один_раз`() = runBlocking {
+        val profile = newProfile()
+        val bare = periods.open(
+            GamePeriod(
+                id = 0L,
+                profileId = profile.id,
+                number = 1,
+                income = balance.periodIncome,
+                startBalance = balance.startingBalance,
+                status = PeriodStatus.PLANNING,
+            )
+        )
+
+        List(CONCURRENT_ENTRIES) { async(Dispatchers.IO) { openPeriod(profile.id) } }.awaitAll()
+
+        assertEquals(1, incomeCount(bare.id))
     }
 
     /**
@@ -257,5 +284,6 @@ class OpenPeriodIfNeededTest {
 
     private companion object {
         const val FIXED_TIME = 1_700_000_000_000L
+        const val CONCURRENT_ENTRIES = 10
     }
 }

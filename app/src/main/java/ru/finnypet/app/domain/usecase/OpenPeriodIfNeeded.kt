@@ -1,5 +1,7 @@
 package ru.finnypet.app.domain.usecase
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Coins
@@ -27,10 +29,17 @@ class OpenPeriodIfNeeded(
     private val balance: GameBalance,
 ) {
 
-    suspend operator fun invoke(profileId: ProfileId): GamePeriod {
+    /**
+     * Экраны зовут это каждый из своего init, и вызовы могут прийти разом.
+     * «Проверил, что дохода нет, — начислил» без замка начислило бы дважды.
+     * Замок работает, пока экземпляр один на приложение, — см. DomainModule.
+     */
+    private val opening = Mutex()
+
+    suspend operator fun invoke(profileId: ProfileId): GamePeriod = opening.withLock {
         val period = periods.current(profileId) ?: openFirst(profileId)
         creditIncome(period)
-        return period
+        period
     }
 
     private suspend fun openFirst(profileId: ProfileId): GamePeriod {
