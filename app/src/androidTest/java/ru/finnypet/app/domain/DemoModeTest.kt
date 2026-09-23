@@ -35,12 +35,14 @@ import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.SavingsEngine
+import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.ExitDemo
@@ -69,6 +71,7 @@ class DemoModeTest {
     private lateinit var periods: PeriodRepositoryImpl
     private lateinit var savings: SavingsRepositoryImpl
     private lateinit var settings: SettingsRepositoryImpl
+    private lateinit var tasks: TaskProgressRepositoryImpl
     private lateinit var startDemo: StartDemo
     private lateinit var exitDemo: ExitDemo
     private lateinit var playDay: PlayDemoDay
@@ -87,6 +90,7 @@ class DemoModeTest {
         )
         savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
         settings = SettingsRepositoryImpl(store)
+        tasks = TaskProgressRepositoryImpl(db.taskProgress(), clock)
 
         periodEngine = PeriodEngine(
             budget = BudgetEngine(),
@@ -101,16 +105,18 @@ class DemoModeTest {
             profiles = profiles,
             periods = periods,
             savings = savings,
+            tasks = tasks,
             content = content,
             openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
             closeDay = CloseDay(periods, profiles, periodEngine, DayRecorderImpl(db)),
             wallet = WalletEngine(clock),
             savingsEngine = SavingsEngine(clock),
+            taskEngine = TaskEngine(clock),
             periodEngine = periodEngine,
             recorder = OutcomeRecorderImpl(
                 database = db,
                 petState = PetStateEngine(balance),
-                taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock),
+                taskProgress = tasks,
             ),
         )
     }
@@ -219,18 +225,35 @@ class DemoModeTest {
         assertEquals(DEMO_DAYS, periods.lastClosed(demo.id)?.number)
         assertEquals(DEMO_DAYS + 1, periods.count(demo.id))
         assertEquals(GrowthStage.GROWN, profiles.pet(demo.id)?.growth?.stage)
+        // Каждый день — новое задание: в разделе взрослого темы не нулевые.
+        assertEquals(DEMO_DAYS, tasks.completedIds(demo.id).size)
     }
 
     @Test
-    fun прожитый_день_тратит_и_откладывает() = runBlocking {
+    fun прожитый_день_проходит_весь_цикл() = runBlocking {
         val demo = startDemo()
 
         playDay()
 
         val first = periods.lastClosed(demo.id)!!
-        val fact = periodEngine.factOf(periods.transactions(first.id))
+        val transactions = periods.transactions(first.id)
+        val fact = periodEngine.factOf(transactions)
+        assertTrue("задание не принесло монет", transactions.any { it.type == TransactionType.INCOME_TASK })
         assertTrue("обязательное не куплено", fact.amountFor(SpendCategory.MANDATORY) > Coins.ZERO)
+        assertTrue("желаемое не куплено", fact.amountFor(SpendCategory.OPTIONAL) > Coins.ZERO)
         assertTrue("в копилку не отложено", savings.activeProgress(demo.id)!!.saved > Coins.ZERO)
+    }
+
+    /** День уже идёт, а плана нет: демонстрация доигрывает его, а не падает. */
+    @Test
+    fun идущий_день_без_плана_проживается() = runBlocking {
+        val demo = startDemo()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        periods.save(periodEngine.confirmPlan(period))
+
+        playDay()
+
+        assertEquals(1, periods.lastClosed(demo.id)?.number)
     }
 
     /** Даже если активна игра ребёнка, день проживает только тестовый профиль. */

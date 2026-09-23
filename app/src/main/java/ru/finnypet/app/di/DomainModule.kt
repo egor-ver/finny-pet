@@ -20,6 +20,7 @@ import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.SettingsRepository
+import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.ExitDemo
@@ -93,22 +94,26 @@ object DomainModule {
         profiles: ProfileRepository,
         periods: PeriodRepository,
         savings: SavingsRepository,
+        tasks: TaskProgressRepository,
         content: ContentRepository,
         openPeriod: OpenPeriodIfNeeded,
         closeDay: CloseDay,
         wallet: WalletEngine,
         savingsEngine: SavingsEngine,
+        taskEngine: TaskEngine,
         periodEngine: PeriodEngine,
         recorder: OutcomeRecorder,
     ): PlayDemoDay = PlayDemoDay(
         profiles = profiles,
         periods = periods,
         savings = savings,
+        tasks = tasks,
         content = content,
         openPeriod = openPeriod,
         closeDay = closeDay,
         wallet = wallet,
         savingsEngine = savingsEngine,
+        taskEngine = taskEngine,
         periodEngine = periodEngine,
         recorder = recorder,
     )
