@@ -12,6 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -42,13 +45,18 @@ import ru.finnypet.app.ui.theme.Dimens
 fun AdultScreen(
     onBack: () -> Unit,
     onDemoStarted: () -> Unit,
+    onGameDeleted: () -> Unit,
     viewModel: AdultViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val demoStarted by viewModel.demoStarted.collectAsStateWithLifecycle()
+    val exit by viewModel.exit.collectAsStateWithLifecycle()
 
-    LaunchedEffect(demoStarted) {
-        if (demoStarted) onDemoStarted()
+    LaunchedEffect(exit) {
+        when (exit) {
+            AdultExit.DEMO_STARTED -> onDemoStarted()
+            AdultExit.GAME_DELETED -> onGameDeleted()
+            null -> Unit
+        }
     }
 
     AdultContent(
@@ -60,6 +68,7 @@ fun AdultScreen(
         onSound = viewModel::setSound,
         onAnimations = viewModel::setAnimations,
         onStartDemo = viewModel::startDemo,
+        onDeleteGame = viewModel::deleteGame,
     )
 }
 
@@ -73,6 +82,7 @@ fun AdultContent(
     onSound: (Boolean) -> Unit = {},
     onAnimations: (Boolean) -> Unit = {},
     onStartDemo: () -> Unit = {},
+    onDeleteGame: () -> Unit = {},
 ) {
     when (state) {
         AdultState.Loading -> Screen(onBack) {}
@@ -101,6 +111,7 @@ fun AdultContent(
             onSound = onSound,
             onAnimations = onAnimations,
             onStartDemo = onStartDemo,
+            onDeleteGame = onDeleteGame,
         )
     }
 }
@@ -114,7 +125,10 @@ private fun Ready(
     onSound: (Boolean) -> Unit,
     onAnimations: (Boolean) -> Unit,
     onStartDemo: () -> Unit,
+    onDeleteGame: () -> Unit,
 ) {
+    var askingDelete by rememberSaveable { mutableStateOf(false) }
+
     Screen(
         onBack = onBack,
         bottomBar = {
@@ -129,6 +143,32 @@ private fun Ready(
         Bonus(state, onAward)
         Settings(state, onSound, onAnimations)
         Demo(onStartDemo)
+        DeleteGame(onAsk = { askingDelete = true })
+    }
+
+    if (askingDelete) {
+        FinnyDialog(
+            title = stringResource(R.string.adult_delete_confirm_title),
+            onDismiss = { askingDelete = false },
+            buttons = {
+                FinnyButton(
+                    text = stringResource(R.string.adult_delete_confirm),
+                    onClick = {
+                        askingDelete = false
+                        onDeleteGame()
+                    },
+                )
+                FinnySecondaryButton(
+                    text = stringResource(R.string.action_back),
+                    onClick = { askingDelete = false },
+                )
+            },
+        ) {
+            Text(
+                text = stringResource(R.string.adult_delete_confirm_text),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
     }
 
     state.awarded?.let { text ->
@@ -202,6 +242,14 @@ private fun ColumnScope.Demo(onStart: () -> Unit) {
     Heading(stringResource(R.string.adult_demo))
     Explanation(stringResource(R.string.adult_demo_explain))
     FinnyButton(text = stringResource(R.string.adult_demo_action), onClick = onStart)
+}
+
+/** Удаление игры (ТЗ 3.5): последним разделом и с подтверждением (ТЗ 3.6). */
+@Composable
+private fun ColumnScope.DeleteGame(onAsk: () -> Unit) {
+    Heading(stringResource(R.string.adult_delete))
+    Explanation(stringResource(R.string.adult_delete_explain))
+    FinnySecondaryButton(text = stringResource(R.string.adult_delete_action), onClick = onAsk)
 }
 
 /** Звук и анимации отключаются (ТЗ 3.6), и делает это взрослый. */

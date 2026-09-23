@@ -42,6 +42,9 @@ interface ProfileRepository {
     /** Удаление профиля взрослым (ТЗ 3.5): каскад уносит всё его состояние. */
     suspend fun delete(id: ProfileId)
 
+    /** Удаление всей игры взрослым (ТЗ 3.5): каскад уносит все профили и их состояние. */
+    suspend fun deleteAll()
+
     fun observePet(id: ProfileId): Flow<Pet?>
 
     suspend fun pet(id: ProfileId): Pet?

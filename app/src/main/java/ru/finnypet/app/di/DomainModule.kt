@@ -23,6 +23,7 @@ import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.CloseDay
+import ru.finnypet.app.domain.usecase.DeleteGame
 import ru.finnypet.app.domain.usecase.ExitDemo
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.PlayDemoDay
@@ -82,6 +83,12 @@ object DomainModule {
         profiles: ProfileRepository,
         settings: SettingsRepository,
     ): StartDemo = StartDemo(profiles = profiles, settings = settings)
+
+    @Provides
+    fun deleteGame(
+        profiles: ProfileRepository,
+        settings: SettingsRepository,
+    ): DeleteGame = DeleteGame(profiles = profiles, settings = settings)
 
     @Provides
     fun exitDemo(

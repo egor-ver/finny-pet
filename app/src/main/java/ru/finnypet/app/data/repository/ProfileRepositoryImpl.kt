@@ -123,6 +123,11 @@ class ProfileRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteAll() {
+        profiles.deleteAll()
+        store.edit { it.remove(SettingsKeys.ACTIVE_PROFILE_ID) }
+    }
+
     override fun observePet(id: ProfileId): Flow<Pet?> =
         petStates.observe(id.value).map { entity ->
             entity?.let { Pet(state = it.toState(), growth = it.toGrowth()) }

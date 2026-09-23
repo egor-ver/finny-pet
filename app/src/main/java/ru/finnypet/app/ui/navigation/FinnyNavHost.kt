@@ -97,6 +97,9 @@ fun FinnyNavHost(
                 onDemoStarted = {
                     navController.navigate(Main) { popUpTo(Main) { inclusive = true } }
                 },
+                onGameDeleted = {
+                    navController.navigate(Onboarding) { popUpTo(navController.graph.id) { inclusive = true } }
+                },
             )
         }
 

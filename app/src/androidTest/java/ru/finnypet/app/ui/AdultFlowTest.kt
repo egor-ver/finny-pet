@@ -17,6 +17,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -46,7 +47,9 @@ import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.domain.usecase.DeleteGame
 import ru.finnypet.app.domain.usecase.StartDemo
+import ru.finnypet.app.ui.screens.adult.AdultExit
 import ru.finnypet.app.ui.screens.adult.AdultState
 import ru.finnypet.app.ui.screens.adult.AdultViewModel
 import ru.finnypet.app.ui.screens.adult.AwardState
@@ -197,8 +200,22 @@ class AdultFlowTest {
 
         model.startDemo()
 
-        withTimeout(TIMEOUT_MS) { model.demoStarted.first { it } }
+        withTimeout(TIMEOUT_MS) { model.exit.first { it == AdultExit.DEMO_STARTED } }
         assertTrue(profiles.active()!!.isTest)
+    }
+
+    /** ТЗ 3.5: взрослый стирает игру сам, без разработчика, и экран уводит на знакомство. */
+    @Test
+    fun удаление_стирает_игру_и_ставит_факт_для_перехода() = runBlocking {
+        openPeriod()
+        val model = viewModel()
+
+        model.deleteGame()
+
+        withTimeout(TIMEOUT_MS) { model.exit.first { it == AdultExit.GAME_DELETED } }
+        assertNull(profiles.active())
+        assertNull(profiles.byId(profileId))
+        assertEquals(0, periods.count(profileId))
     }
 
     private suspend fun openPeriod() = OpenPeriodIfNeeded(
@@ -219,6 +236,7 @@ class AdultFlowTest {
         settings = settings,
         awardBonus = AwardParentBonus(periods, WalletEngine(clock), balance),
         startDemo = StartDemo(profiles, settings),
+        deleteGame = DeleteGame(profiles, settings),
         gameBalance = balance,
         content = content(),
     ).also { viewModel = it }

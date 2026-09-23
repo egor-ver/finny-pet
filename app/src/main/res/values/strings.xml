@@ -100,6 +100,12 @@
     <string name="adult_demo">Демонстрационный режим</string>
     <string name="adult_demo_explain">Отдельный профиль для проверки: игра ребёнка не изменится. Запуск начинает демонстрацию с чистого листа.</string>
     <string name="adult_demo_action">Запустить демонстрацию</string>
+    <string name="adult_delete">Данные игры</string>
+    <string name="adult_delete_explain">Удаление стирает питомца, монеты, копилку и пройденные задания. Игра начнётся заново со знакомства.</string>
+    <string name="adult_delete_action">Удалить игру</string>
+    <string name="adult_delete_confirm_title">Удалить игру?</string>
+    <string name="adult_delete_confirm">Удалить навсегда</string>
+    <string name="adult_delete_confirm_text">Всё сотрётся с этого устройства, вернуть игру не получится.</string>
     <string name="demo_banner">Демонстрационный режим</string>
     <string name="demo_play_day">Прожить день</string>
     <string name="demo_exit">Выйти из демонстрации</string>

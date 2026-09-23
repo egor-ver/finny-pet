@@ -1415,6 +1415,7 @@ class ScreensTest {
         onAward: () -> Unit = {},
         onSound: (Boolean) -> Unit = {},
         onStartDemo: () -> Unit = {},
+        onDeleteGame: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
@@ -1425,6 +1426,7 @@ class ScreensTest {
                     onAward = onAward,
                     onSound = onSound,
                     onStartDemo = onStartDemo,
+                    onDeleteGame = onDeleteGame,
                 )
             }
         }
@@ -1464,6 +1466,21 @@ class ScreensTest {
 
         assertTrue(played)
         assertTrue(exited)
+    }
+
+    @Test
+    fun `удаление_игры_спрашивает_подтверждение`() {
+        var deleted = false
+        showAdult(adultState(), onDeleteGame = { deleted = true })
+
+        compose.onNode(hasScrollAction())
+            .performScrollToNode(hasText(text(R.string.adult_delete_action)))
+        compose.onNodeWithText(text(R.string.adult_delete_action)).performClick()
+        assertFalse("игра удалена без спроса", deleted)
+        compose.onNodeWithText(text(R.string.adult_delete_confirm_title)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.adult_delete_confirm)).performClick()
+
+        assertTrue(deleted)
     }
 
     @Test

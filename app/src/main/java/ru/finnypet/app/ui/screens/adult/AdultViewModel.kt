@@ -34,6 +34,7 @@ import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
+import ru.finnypet.app.domain.usecase.DeleteGame
 import ru.finnypet.app.domain.usecase.StartDemo
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
@@ -62,6 +63,9 @@ enum class AwardState {
     /** Игрового дня нет — начислять некуда, а не «уже начислено». */
     NO_DAY,
 }
+
+/** Куда уводит раздел после действия взрослого: переход делает экран. */
+enum class AdultExit { DEMO_STARTED, GAME_DELETED }
 
 /** Что видит взрослый. */
 sealed interface AdultState {
@@ -95,8 +99,8 @@ sealed interface AdultState {
  * прогресс ребёнка. Сюда же собраны переключатели звука и анимаций — ТЗ 3.6
  * требует их отключаемости, а на детских экранах настройкам не место.
  *
- * Раздел почти целиком читающий: единственное действие — начислить бонус, и
- * оно идёт через [AwardParentBonus] одной операцией.
+ * Действия взрослого: бонус через [AwardParentBonus] одной операцией, запуск
+ * демонстрации и удаление игры (ТЗ 3.5).
  */
 @HiltViewModel
 class AdultViewModel @Inject constructor(
@@ -107,6 +111,7 @@ class AdultViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val awardBonus: AwardParentBonus,
     private val startDemo: StartDemo,
+    private val deleteGame: DeleteGame,
     private val gameBalance: GameBalance,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
@@ -124,11 +129,11 @@ class AdultViewModel @Inject constructor(
     private val attempts = MutableStateFlow(0)
     private val awarded = MutableStateFlow<String?>(null)
     private val awarding = Mutex()
-    private val starting = Mutex()
-    private val started = MutableStateFlow(false)
+    private val leaving = Mutex()
+    private val left = MutableStateFlow<AdultExit?>(null)
 
-    /** Факт для экрана: демонстрация заведена, пора на главный. */
-    val demoStarted: StateFlow<Boolean> = started.asStateFlow()
+    /** Факт для экрана: профиль сменился, раздел пора закрыть. */
+    val exit: StateFlow<AdultExit?> = left.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<AdultState> = attempts
@@ -156,11 +161,16 @@ class AdultViewModel @Inject constructor(
         }
     }
 
-    /** Замок: два запуска вперемешку завели бы два тестовых профиля. */
-    fun startDemo() = guarded {
-        starting.withLock {
-            startDemo.invoke()
-            started.value = true
+    fun startDemo() = leave(AdultExit.DEMO_STARTED) { startDemo.invoke() }
+
+    fun deleteGame() = leave(AdultExit.GAME_DELETED) { deleteGame.invoke() }
+
+    /** Замок: два запуска демонстрации вперемешку завели бы два тестовых профиля. */
+    private fun leave(exit: AdultExit, action: suspend () -> Unit) = guarded {
+        leaving.withLock {
+            if (left.value != null) return@withLock
+            action()
+            left.value = exit
         }
     }
 
