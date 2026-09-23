@@ -110,6 +110,19 @@ class ContentParserTest {
         assertEquals("Нужны задания по всем трём темам", TaskTopic.entries.toSet(), pack.tasks.map { it.topic }.toSet())
     }
 
+    /** Пропавший текст ребёнок видит сырым ключом вроде «task.….intro» — ловим здесь. */
+    @Test
+    fun `у каждого ключа текста в контент-паке есть текст`() {
+        val texts = parser.parse(realContent()).texts
+        val missing = CONTENT_FILES.flatMap { file ->
+            TEXT_KEY.findAll(RealContent.asset(file)).map { it.groupValues[1] }
+                .filterNot(texts::containsKey)
+                .map { "$file: $it" }
+        }
+
+        assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
+    }
+
     // --- Сообщения об ошибках: по ним продакт должен найти место в своём файле ---
 
     @Test
@@ -365,6 +378,10 @@ class ContentParserTest {
 
         /** ТЗ 2.6: в демонстрационном режиме показываем пять периодов. */
         const val DEMO_PERIODS = 5
+
+        /** Файлы, где лежат ссылки на тексты: поля с именем на «Key». */
+        val CONTENT_FILES = listOf("tasks.json", "shop.json", "goals.json", "pets.json", "glossary.json")
+        val TEXT_KEY = Regex(""""\w*Key"\s*:\s*"([^"]+)"""")
 
         val TASK_WITH_ALL_STEPS = """
         {"tasks":[{
