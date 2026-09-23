@@ -259,5 +259,6 @@
     <string name="onboarding_choice_optional_body">Игрушки и лакомства. Приятно, но можно и подождать.</string>
     <string name="onboarding_choice_savings_title">Отложить</string>
     <string name="onboarding_choice_savings_body">Спрятать монеты в копилку, чтобы собрать на мечту.</string>
-    <string name="onboarding_hint">Эту подсказку можно открыть снова в любой момент.</string>
+    <string name="onboarding_hint">Эту подсказку можно открыть снова с главного экрана — строкой «Как играть».</string>
+    <string name="help_action">Как играть</string>
 </resources>

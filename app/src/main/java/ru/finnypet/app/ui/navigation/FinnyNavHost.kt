@@ -2,10 +2,12 @@ package ru.finnypet.app.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import ru.finnypet.app.R
 import ru.finnypet.app.ui.screens.adult.AdultGateScreen
 import ru.finnypet.app.ui.screens.adult.AdultScreen
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
@@ -46,6 +48,14 @@ fun FinnyNavHost(
             )
         }
 
+        composable<Help> {
+            OnboardingScreen(
+                onDone = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+                doneText = stringResource(R.string.action_ok),
+            )
+        }
+
         composable<CreatePet> {
             CreatePetScreen(
                 onBack = { navController.popBackStack() },
@@ -65,6 +75,7 @@ fun FinnyNavHost(
                 onTask = { taskId -> navController.navigate(Task(taskId.value)) },
                 onFinishDay = { navController.navigate(Day) },
                 onProgress = { navController.navigate(Progress) },
+                onHelp = { navController.navigate(Help) },
                 onAdult = { navController.navigate(AdultGate) },
                 banner = {
                     DemoBanner(onNeedsOnboarding = {

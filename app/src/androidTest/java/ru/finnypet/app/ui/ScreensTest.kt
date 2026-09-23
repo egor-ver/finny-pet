@@ -1244,6 +1244,18 @@ class ScreensTest {
         assertTrue(opened)
     }
 
+    /** ТЗ 2.5.1: к подсказке можно вернуться в любой момент. */
+    @Test
+    fun `с_главного_экрана_можно_открыть_подсказку`() {
+        var opened = false
+        showMain(readyState(), onHelp = { opened = true })
+
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.help_action)))
+        compose.onNodeWithText(text(R.string.help_action)).performClick()
+
+        assertTrue(opened)
+    }
+
     @Test
     fun `сбой_прогресса_предлагает_повтор`() {
         var retried = false
@@ -1633,6 +1645,7 @@ class ScreensTest {
         state: MainState,
         onRetry: () -> Unit = {},
         onProgress: () -> Unit = {},
+        onHelp: () -> Unit = {},
         onAdult: () -> Unit = {},
         onFinishDay: () -> Unit = {},
         onPlan: () -> Unit = {},
@@ -1651,6 +1664,7 @@ class ScreensTest {
                     onTask = onTask,
                     onFinishDay = onFinishDay,
                     onProgress = onProgress,
+                    onHelp = onHelp,
                     onAdult = onAdult,
                 )
             }

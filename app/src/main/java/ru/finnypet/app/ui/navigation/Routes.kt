@@ -22,6 +22,10 @@ sealed interface Route
 @Serializable
 data object Onboarding : Route
 
+/** То же знакомство, открытое снова с главного экрана (ТЗ 2.5.1). */
+@Serializable
+data object Help : Route
+
 /** Выбор внешности и имени питомца (ТЗ 2.5.2). */
 @Serializable
 data object CreatePet : Route

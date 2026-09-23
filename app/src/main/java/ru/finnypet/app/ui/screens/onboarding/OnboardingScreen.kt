@@ -34,13 +34,14 @@ fun OnboardingScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
+    doneText: String = stringResource(R.string.action_start),
 ) {
     FinnyScaffold(
         title = stringResource(R.string.onboarding_title),
         modifier = modifier,
         onBack = onBack,
         bottomBar = {
-            FinnyButton(text = stringResource(R.string.action_start), onClick = onDone)
+            FinnyButton(text = doneText, onClick = onDone)
         },
     ) {
         Text(

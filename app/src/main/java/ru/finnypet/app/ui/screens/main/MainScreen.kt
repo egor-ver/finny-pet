@@ -50,6 +50,7 @@ import ru.finnypet.app.ui.theme.Dimens
 fun MainScreen(
     onPlan: () -> Unit,
     onProgress: () -> Unit,
+    onHelp: () -> Unit,
     onAdult: () -> Unit,
     onShop: () -> Unit,
     onSavings: () -> Unit,
@@ -69,6 +70,7 @@ fun MainScreen(
         onTask = onTask,
         onFinishDay = onFinishDay,
         onProgress = onProgress,
+        onHelp = onHelp,
         onAdult = onAdult,
         banner = banner,
     )
@@ -88,6 +90,7 @@ fun MainContent(
     onTask: (TaskId) -> Unit = {},
     onFinishDay: () -> Unit = {},
     onProgress: () -> Unit = {},
+    onHelp: () -> Unit = {},
     onAdult: () -> Unit = {},
     banner: @Composable () -> Unit = {},
 ) {
@@ -102,6 +105,7 @@ fun MainContent(
             onTask = onTask,
             onFinishDay = onFinishDay,
             onProgress = onProgress,
+            onHelp = onHelp,
             onAdult = onAdult,
             banner = banner,
         )
@@ -144,6 +148,7 @@ private fun ReadyScreen(
     onTask: (TaskId) -> Unit,
     onFinishDay: () -> Unit,
     onProgress: () -> Unit,
+    onHelp: () -> Unit,
     onAdult: () -> Unit,
     banner: @Composable () -> Unit,
 ) {
@@ -197,6 +202,7 @@ private fun ReadyScreen(
         )
 
         Link(stringResource(R.string.progress_action), onProgress)
+        Link(stringResource(R.string.help_action), onHelp)
         Link(stringResource(R.string.adult_action), onAdult)
     }
 }
