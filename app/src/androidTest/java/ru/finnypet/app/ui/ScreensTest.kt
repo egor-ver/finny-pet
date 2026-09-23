@@ -1441,7 +1441,7 @@ class ScreensTest {
         compose.onAllNodesWithText(text(R.string.demo_play_day)).assertCountEquals(0)
     }
 
-    /** В демонстрации видно словом, что это она, и оба действия рядом. */
+    /** В демонстрации видно словом, что это она, и оба действия рядом. Выход — только с подтверждением. */
     @Test
     fun `полоса_демонстрации_называет_режим_и_даёт_оба_действия`() {
         var played = false
@@ -1459,6 +1459,8 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.demo_banner)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.demo_play_day)).performClick()
         compose.onNodeWithText(text(R.string.demo_exit)).performClick()
+        assertFalse("выход стирает демонстрацию без спроса", exited)
+        compose.onNodeWithText(text(R.string.demo_exit_confirm)).performClick()
 
         assertTrue(played)
         assertTrue(exited)

@@ -103,6 +103,9 @@
     <string name="demo_banner">Демонстрационный режим</string>
     <string name="demo_play_day">Прожить день</string>
     <string name="demo_exit">Выйти из демонстрации</string>
+    <string name="demo_exit_confirm_title">Выйти из демонстрации?</string>
+    <string name="demo_exit_confirm_text">Всё, что сделано в демонстрации, сотрётся. Игра ребёнка не изменится.</string>
+    <string name="demo_exit_confirm">Выйти и стереть</string>
 
     <string name="adult_settings">Звук и движение</string>
     <string name="adult_sound">Звук в игре</string>
