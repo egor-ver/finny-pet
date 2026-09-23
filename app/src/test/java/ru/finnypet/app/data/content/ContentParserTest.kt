@@ -8,6 +8,7 @@ import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskStep
+import ru.finnypet.app.domain.model.TaskTopic
 
 /**
  * Разбор проверяется на настоящих файлах из ассетов, а не на выдуманных
@@ -90,6 +91,23 @@ class ContentParserTest {
                 "подними очки за период или опусти последний порог в balance.json",
             reachable >= required,
         )
+    }
+
+    /** Минимумы ТЗ 2.6: напарник правит JSON через веб, и нарушение должно ловиться здесь. */
+    @Test
+    fun `настоящий контент-пак закрывает минимумы ТЗ 2_6`() {
+        val pack = parser.parse(realContent())
+
+        assertTrue("Внешностей меньше 9", pack.pets.combinationCount >= 9)
+        assertTrue("Товаров меньше 8", pack.shop.size >= 8)
+        assertEquals(
+            "Нужны товары обоих типов",
+            setOf(SpendCategory.MANDATORY, SpendCategory.OPTIONAL),
+            pack.shop.map { it.category }.toSet(),
+        )
+        assertTrue("Целей меньше 3", pack.goals.size >= 3)
+        assertTrue("Заданий меньше 6", pack.tasks.size >= 6)
+        assertEquals("Нужны задания по всем трём темам", TaskTopic.entries.toSet(), pack.tasks.map { it.topic }.toSet())
     }
 
     // --- Сообщения об ошибках: по ним продакт должен найти место в своём файле ---
