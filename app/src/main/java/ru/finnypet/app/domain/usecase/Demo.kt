@@ -5,46 +5,36 @@ import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SettingsRepository
 
-/**
- * Демонстрационный режим для экспертной проверки (ТЗ 2.5.13).
- *
- * Играется в отдельном профиле с пометкой `isTest`: игра ребёнка не должна
- * ни меняться, ни показываться проверяющему. Удаление такого профиля уносит
- * каскадом всё его состояние — это и есть «сброс к исходному».
- *
- * Внешность и имена заданы здесь, а не в контент-паке: это не игровой
- * контент, а декорации демонстрации, и напарнику их править незачем.
- */
+// Демонстрационный режим для экспертной проверки (ТЗ 2.5.13) играется в
+// отдельном профиле с пометкой `isTest`. Он же и признак режима: игра ребёнка
+// не меняется и проверяющему не показывается, а удаление профиля каскадом
+// уносит всё его состояние — это и есть сброс к исходному.
+
+// Декорации демонстрации, а не игровой контент: в контент-паке им не место.
 private val DEMO_APPEARANCE = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null)
 private const val DEMO_CHILD = "Гость"
 private const val DEMO_PET = "Финни"
 
-/**
- * Открывает демонстрацию заново: сносит прежний тестовый профиль и заводит
- * чистый. Повторный запуск — это и есть сброс к исходному состоянию.
- */
+/** Открывает демонстрацию заново: повторный запуск и есть сброс. */
 class StartDemo(
     private val profiles: ProfileRepository,
     private val settings: SettingsRepository,
 ) {
 
     suspend operator fun invoke(): Profile {
-        // Запоминаем, куда возвращаться, до всякой правки: если эксперт
-        // запустит демонстрацию второй раз, метка уже будет стоять, и
-        // перетирать её тестовым профилем нельзя.
+        // При повторном запуске активен уже тестовый профиль — метку
+        // возврата им перетирать нельзя.
         profiles.active()
             ?.takeUnless { it.isTest }
             ?.let { settings.rememberProfileBeforeDemo(it.id) }
 
         profiles.deleteTestProfile()
-        val profile = profiles.create(
+        return profiles.create(
             childName = DEMO_CHILD,
             petName = DEMO_PET,
             appearance = DEMO_APPEARANCE,
             isTest = true,
         )
-        settings.setDemoMode(true)
-        return profile
     }
 }
 
@@ -52,11 +42,8 @@ class StartDemo(
 enum class AfterDemo { OWN_GAME, ONBOARDING }
 
 /**
- * Закрывает демонстрацию и возвращает игру ребёнка.
- *
- * Профиля ребёнка может не быть вовсе: эксперт поставил приложение с нуля и
- * пошёл сразу в демонстрацию. Тогда возвращаться некуда, и экран обязан
- * увести на знакомство, а не показывать главный без профиля.
+ * Закрывает демонстрацию и возвращает игру ребёнка. Своей игры может не быть:
+ * эксперт поставил приложение с нуля и сразу пошёл в демонстрацию.
  */
 class ExitDemo(
     private val profiles: ProfileRepository,
@@ -65,7 +52,6 @@ class ExitDemo(
 
     suspend operator fun invoke(): AfterDemo {
         profiles.deleteTestProfile()
-        settings.setDemoMode(false)
 
         val own = settings.profileBeforeDemo()
         settings.forgetProfileBeforeDemo()
@@ -77,11 +63,8 @@ class ExitDemo(
 }
 
 /**
- * Удаляет тестовый профиль, если он есть.
- *
- * Это единственное место во всём приложении, где что-то удаляется без спроса
- * ребёнка. Гарантия, что под удаление не попадёт его игра, — в самом запросе
- * [ProfileRepository.testProfile]: он отбирает только `isTest`.
+ * Единственное удаление без спроса ребёнка. Его игру не заденет:
+ * [ProfileRepository.testProfile] отбирает только `isTest`.
  */
 private suspend fun ProfileRepository.deleteTestProfile() {
     testProfile()?.let { delete(it.id) }

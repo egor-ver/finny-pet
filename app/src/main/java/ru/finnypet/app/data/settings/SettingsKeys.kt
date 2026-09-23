@@ -12,8 +12,6 @@ object SettingsKeys {
     /** Какой профиль сейчас играет. Пусто — профиля ещё нет, нужен онбординг. */
     val ACTIVE_PROFILE_ID = stringPreferencesKey("active_profile_id")
 
-    val DEMO_MODE = booleanPreferencesKey("demo_mode")
-
     /**
      * Чей профиль играл до входа в демонстрационный режим. Переживает
      * закрытие приложения: эксперт может выйти из него как угодно, а ребёнок

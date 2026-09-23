@@ -90,6 +90,7 @@ object DomainModule {
 
     @Provides
     fun playDemoDay(
+        profiles: ProfileRepository,
         periods: PeriodRepository,
         savings: SavingsRepository,
         content: ContentRepository,
@@ -100,6 +101,7 @@ object DomainModule {
         periodEngine: PeriodEngine,
         recorder: OutcomeRecorder,
     ): PlayDemoDay = PlayDemoDay(
+        profiles = profiles,
         periods = periods,
         savings = savings,
         content = content,

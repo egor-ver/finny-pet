@@ -48,13 +48,8 @@ import ru.finnypet.app.domain.usecase.StartDemo
 import java.io.File
 
 /**
- * Проверяет демонстрационный режим (ТЗ 2.5.13) на живой базе и настоящем
- * контент-паке.
- *
- * Два обещания, которые нельзя проверить глазами: игра ребёнка не страдает
- * ни при входе, ни при сбросе, ни при выходе, — и пять дней подряд доводят
- * питомца до последней стадии. Второе заодно доказывает минимум ТЗ 2.6 про
- * пять игровых периодов и три стадии.
+ * Демонстрационный режим (ТЗ 2.5.13) на живой базе и настоящем контент-паке:
+ * игра ребёнка не страдает, а пять дней доводят питомца до последней стадии.
  */
 @RunWith(AndroidJUnit4::class)
 class DemoModeTest {
@@ -100,6 +95,7 @@ class DemoModeTest {
         startDemo = StartDemo(profiles, settings)
         exitDemo = ExitDemo(profiles, settings)
         playDay = PlayDemoDay(
+            profiles = profiles,
             periods = periods,
             savings = savings,
             content = content,
@@ -123,7 +119,7 @@ class DemoModeTest {
     }
 
     @Test
-    fun запуск_заводит_тестовый_профиль_и_поднимает_флаг() = runBlocking {
+    fun запуск_заводит_и_делает_активным_тестовый_профиль() = runBlocking {
         val own = createOwnGame()
 
         val demo = startDemo()
@@ -131,7 +127,6 @@ class DemoModeTest {
         assertTrue(demo.isTest)
         assertNotEquals(own.id, demo.id)
         assertEquals(demo.id, profiles.active()?.id)
-        assertTrue(settings.demoMode())
     }
 
     /** Сброс к исходному состоянию: повторный запуск начинает демонстрацию заново. */
@@ -139,8 +134,8 @@ class DemoModeTest {
     fun повторный_запуск_сбрасывает_демонстрацию() = runBlocking {
         createOwnGame()
         val first = startDemo()
-        playDay(first.id)
-        playDay(first.id)
+        playDay()
+        playDay()
         assertEquals(3, periods.count(first.id))
 
         val second = startDemo()
@@ -166,7 +161,7 @@ class DemoModeTest {
     }
 
     @Test
-    fun выход_сносит_тестовый_профиль_и_снимает_флаг() = runBlocking {
+    fun выход_сносит_тестовый_профиль() = runBlocking {
         createOwnGame()
         val demo = startDemo()
 
@@ -174,7 +169,6 @@ class DemoModeTest {
 
         assertNull(profiles.byId(demo.id))
         assertNull(profiles.testProfile())
-        assertTrue(!settings.demoMode())
     }
 
     /** Чистая установка: возвращаться некуда, экран обязан увести на знакомство. */
@@ -194,7 +188,7 @@ class DemoModeTest {
     fun пять_дней_подряд_доводят_питомца_до_последней_стадии() = runBlocking {
         val demo = startDemo()
 
-        repeat(DEMO_DAYS) { playDay(demo.id) }
+        repeat(DEMO_DAYS) { playDay() }
 
         // Закрытых дней пять, плюс шестой открыт под продолжение игры.
         assertEquals(DEMO_DAYS, periods.lastClosed(demo.id)?.number)
@@ -206,12 +200,28 @@ class DemoModeTest {
     fun прожитый_день_тратит_и_откладывает() = runBlocking {
         val demo = startDemo()
 
-        playDay(demo.id)
+        playDay()
 
         val first = periods.lastClosed(demo.id)!!
         val fact = periodEngine.factOf(periods.transactions(first.id))
         assertTrue("обязательное не куплено", fact.amountFor(SpendCategory.MANDATORY) > Coins.ZERO)
         assertTrue("в копилку не отложено", savings.activeProgress(demo.id)!!.saved > Coins.ZERO)
+    }
+
+    /** Даже если активна игра ребёнка, день проживает только тестовый профиль. */
+    @Test
+    fun прожить_день_не_трогает_игру_ребёнка() = runBlocking {
+        val own = createOwnGame()
+        val demo = startDemo()
+        profiles.setActive(own.id)
+        val ownPeriod = periods.current(own.id)!!
+        val ownBalance = periods.balance(ownPeriod)
+
+        playDay()
+
+        assertEquals(ownPeriod, periods.current(own.id))
+        assertEquals(ownBalance, periods.balance(ownPeriod))
+        assertEquals(1, periods.lastClosed(demo.id)?.number)
     }
 
     private suspend fun createOwnGame(): Profile {

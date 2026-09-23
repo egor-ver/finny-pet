@@ -11,13 +11,6 @@ import ru.finnypet.app.domain.model.ProfileId
  */
 interface SettingsRepository {
 
-    /** Демонстрационный режим для экспертной проверки (ТЗ 2.5.13). */
-    fun observeDemoMode(): Flow<Boolean>
-
-    suspend fun demoMode(): Boolean
-
-    suspend fun setDemoMode(enabled: Boolean)
-
     /** Профиль, в который надо вернуться после демонстрации. */
     suspend fun profileBeforeDemo(): ProfileId?
 

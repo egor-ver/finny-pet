@@ -339,17 +339,7 @@ class StorageTest {
         assertEquals(3, tasks.observeCompleted(profile.id).first().size)
     }
 
-    // --- Настройки: ТЗ 2.5.13 и 3.6 ---
-
-    @Test
-    fun `демонстрационный_режим_выключен_по_умолчанию_и_переключается`() = runTest {
-        assertEquals(false, settings.demoMode())
-
-        settings.setDemoMode(true)
-
-        assertEquals(true, settings.demoMode())
-        assertEquals(true, settings.observeDemoMode().first())
-    }
+    // --- Настройки: ТЗ 3.6 ---
 
     @Test
     fun `звук_и_анимации_включены_по_умолчанию`() = runTest {

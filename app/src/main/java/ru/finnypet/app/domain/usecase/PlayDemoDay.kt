@@ -15,22 +15,19 @@ import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
+import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
 
 /**
- * Проживает один игровой день целиком — для демонстрационного режима
- * (ТЗ 2.5.13: обязательные этапы цикла воспроизводятся подряд).
+ * Проживает день демонстрации целиком (ТЗ 2.5.13): эксперт видит пять
+ * периодов и три стадии роста за пять нажатий.
  *
- * Ничего не имитирует: план, покупка, копилка и закрытие идут через те же
- * движки и те же записи, что и действия ребёнка. Разница только в том, что
- * решения принимает не он, а правило ниже.
- *
- * Календарных сроков в игре нет и без демонстрации — день закрывается
- * действием, а не датой. Эта кнопка нужна не чтобы обойти ожидание, а чтобы
- * эксперт увидел пять периодов и три стадии роста за пять нажатий, а не за
- * четверть часа ручного прохождения.
+ * Ничего не имитирует — план, покупка, копилка и закрытие идут через те же
+ * движки и записи, что и действия ребёнка. Играет только тестовый профиль:
+ * без него это пустое действие, и день ребёнка сюда не попадёт.
  */
 class PlayDemoDay(
+    private val profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val savings: SavingsRepository,
     private val content: ContentRepository,
@@ -42,7 +39,8 @@ class PlayDemoDay(
     private val recorder: OutcomeRecorder,
 ) {
 
-    suspend operator fun invoke(profileId: ProfileId) {
+    suspend operator fun invoke() {
+        val profileId = profiles.testProfile()?.id ?: return
         val period = openPeriod(profileId)
         val need = cheapestMandatory(period.available)
         val plan = planOf(period, need)

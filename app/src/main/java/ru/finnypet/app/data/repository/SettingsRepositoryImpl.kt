@@ -29,15 +29,6 @@ class SettingsRepositoryImpl @Inject constructor(
         if (error is IOException) emit(emptyPreferences()) else throw error
     }
 
-    override fun observeDemoMode(): Flow<Boolean> =
-        preferences.map { it[SettingsKeys.DEMO_MODE] ?: false }
-
-    override suspend fun demoMode(): Boolean = observeDemoMode().first()
-
-    override suspend fun setDemoMode(enabled: Boolean) {
-        store.edit { it[SettingsKeys.DEMO_MODE] = enabled }
-    }
-
     override suspend fun profileBeforeDemo(): ProfileId? =
         preferences.first()[SettingsKeys.PROFILE_BEFORE_DEMO]?.let(::ProfileId)
 

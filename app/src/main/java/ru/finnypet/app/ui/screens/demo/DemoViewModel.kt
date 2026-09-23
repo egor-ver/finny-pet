@@ -4,11 +4,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.repository.ProfileRepository
-import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.domain.usecase.ExitDemo
 import ru.finnypet.app.domain.usecase.PlayDemoDay
@@ -24,25 +24,22 @@ import javax.inject.Inject
 @HiltViewModel
 class DemoViewModel @Inject constructor(
     profiles: ProfileRepository,
-    settings: SettingsRepository,
     private val playDemoDay: PlayDemoDay,
     private val exitDemo: ExitDemo,
 ) : ProfileViewModel(profiles) {
 
-    val active: StateFlow<Boolean> = settings.observeDemoMode()
+    val active: StateFlow<Boolean> = profiles.observeActive()
+        .map { it?.isTest == true }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
             initialValue = false,
         )
 
-    /** Замок от двойного нажатия: второй вызов начал бы следующий день,
-     *  пока первый не дописал свой. */
+    /** Против двойного нажатия: второй вызов начал бы день, пока первый не дописал свой. */
     private val playing = Mutex()
 
-    fun playDay() = act { profileId ->
-        playing.withLock { playDemoDay(profileId) }
-    }
+    fun playDay() = guarded { playing.withLock { playDemoDay() } }
 
     /** Куда идти после выхода, решает экран: своей игры могло и не быть. */
     fun exit(onEnded: (AfterDemo) -> Unit) = guarded { onEnded(exitDemo()) }
