@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,11 @@ fun AdultScreen(
     viewModel: AdultViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val demoStarted by viewModel.demoStarted.collectAsStateWithLifecycle()
+
+    LaunchedEffect(demoStarted) {
+        if (demoStarted) onDemoStarted()
+    }
 
     AdultContent(
         state = state,
@@ -53,7 +59,7 @@ fun AdultScreen(
         onDismissAward = viewModel::dismissAward,
         onSound = viewModel::setSound,
         onAnimations = viewModel::setAnimations,
-        onStartDemo = { viewModel.startDemo(onDemoStarted) },
+        onStartDemo = viewModel::startDemo,
     )
 }
 

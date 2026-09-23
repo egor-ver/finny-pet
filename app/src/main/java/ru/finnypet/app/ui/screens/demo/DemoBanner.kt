@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,27 +17,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
-import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
- * Полоса демонстрационного режима над главным экраном (ТЗ 2.5.13).
- *
- * Отдельной вьюмоделью, а не полем главного экрана: демонстрация — не часть
- * игры ребёнка, и тащить её сценарии в MainViewModel значило бы собирать их
- * в каждом тесте главного экрана, который до них не касается.
+ * Полоса демонстрационного режима над главным экраном (ТЗ 2.5.13). Своя
+ * вьюмодель: демонстрация — не часть игры ребёнка, MainViewModel о ней не знает.
  */
 @Composable
-fun DemoBanner(onEnded: (AfterDemo) -> Unit, viewModel: DemoViewModel = hiltViewModel()) {
+fun DemoBanner(onNeedsOnboarding: () -> Unit, viewModel: DemoViewModel = hiltViewModel()) {
     val active by viewModel.active.collectAsStateWithLifecycle()
+    val needsOnboarding by viewModel.needsOnboarding.collectAsStateWithLifecycle()
 
-    DemoBannerContent(
-        visible = active,
-        onPlayDay = viewModel::playDay,
-        onExit = { viewModel.exit(onEnded) },
-    )
+    LaunchedEffect(needsOnboarding) {
+        if (needsOnboarding) onNeedsOnboarding()
+    }
+
+    DemoBannerContent(visible = active, onPlayDay = viewModel::playDay, onExit = viewModel::exit)
 }
 
 @Composable

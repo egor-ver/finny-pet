@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -123,6 +124,11 @@ class AdultViewModel @Inject constructor(
     private val attempts = MutableStateFlow(0)
     private val awarded = MutableStateFlow<String?>(null)
     private val awarding = Mutex()
+    private val starting = Mutex()
+    private val started = MutableStateFlow(false)
+
+    /** Факт для экрана: демонстрация заведена, пора на главный. */
+    val demoStarted: StateFlow<Boolean> = started.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<AdultState> = attempts
@@ -150,10 +156,12 @@ class AdultViewModel @Inject constructor(
         }
     }
 
-    /** Запускает демонстрацию и отдаёт управление экрану: он уводит на главный. */
-    fun startDemo(onStarted: () -> Unit) = guarded {
-        startDemo.invoke()
-        onStarted()
+    /** Замок: два запуска вперемешку завели бы два тестовых профиля. */
+    fun startDemo() = guarded {
+        starting.withLock {
+            startDemo.invoke()
+            started.value = true
+        }
     }
 
     fun dismissAward() {

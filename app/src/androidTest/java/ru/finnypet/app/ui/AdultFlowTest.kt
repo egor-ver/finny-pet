@@ -190,6 +190,17 @@ class AdultFlowTest {
         assertFalse(settings.observeSoundEnabled().first())
     }
 
+    /** Переход делает экран, увидев факт: из корутины он потерялся бы при повороте. */
+    @Test
+    fun запуск_демонстрации_ставит_факт_для_перехода() = runBlocking {
+        val model = viewModel()
+
+        model.startDemo()
+
+        withTimeout(TIMEOUT_MS) { model.demoStarted.first { it } }
+        assertTrue(profiles.active()!!.isTest)
+    }
+
     private suspend fun openPeriod() = OpenPeriodIfNeeded(
         periods = periods,
         wallet = WalletEngine(clock),

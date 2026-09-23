@@ -6,7 +6,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.ui.screens.adult.AdultGateScreen
 import ru.finnypet.app.ui.screens.adult.AdultScreen
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
@@ -68,12 +67,8 @@ fun FinnyNavHost(
                 onProgress = { navController.navigate(Progress) },
                 onAdult = { navController.navigate(AdultGate) },
                 banner = {
-                    // После демонстрации возвращаться некуда, если своей игры
-                    // не было: тогда ведём на знакомство, а не на пустой главный.
-                    DemoBanner(onEnded = { after ->
-                        if (after == AfterDemo.ONBOARDING) {
-                            navController.navigate(Onboarding) { popUpTo(Main) { inclusive = true } }
-                        }
+                    DemoBanner(onNeedsOnboarding = {
+                        navController.navigate(Onboarding) { popUpTo(Main) { inclusive = true } }
                     })
                 },
             )

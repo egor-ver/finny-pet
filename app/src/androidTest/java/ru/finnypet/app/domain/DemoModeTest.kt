@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -45,6 +47,7 @@ import ru.finnypet.app.domain.usecase.ExitDemo
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.PlayDemoDay
 import ru.finnypet.app.domain.usecase.StartDemo
+import ru.finnypet.app.ui.screens.demo.DemoViewModel
 import java.io.File
 
 /**
@@ -171,6 +174,17 @@ class DemoModeTest {
         assertNull(profiles.testProfile())
     }
 
+    /** Двойное «Выйти»: второй вызов метки возврата не найдёт, но игру ребёнка не теряет. */
+    @Test
+    fun повторный_выход_оставляет_свою_игру() = runBlocking {
+        val own = createOwnGame()
+        startDemo()
+        exitDemo()
+
+        assertEquals(AfterDemo.OWN_GAME, exitDemo())
+        assertEquals(own.id, profiles.active()?.id)
+    }
+
     /** Чистая установка: возвращаться некуда, экран обязан увести на знакомство. */
     @Test
     fun без_своей_игры_выход_ведёт_на_знакомство() = runBlocking {
@@ -178,6 +192,17 @@ class DemoModeTest {
 
         assertEquals(AfterDemo.ONBOARDING, exitDemo())
         assertNull(profiles.active())
+    }
+
+    @Test
+    fun без_своей_игры_вьюмодель_ставит_факт_для_знакомства() = runBlocking {
+        startDemo()
+        val model = DemoViewModel(profiles, playDay, exitDemo)
+
+        model.exit()
+
+        withTimeout(TIMEOUT_MS) { model.needsOnboarding.first { it } }
+        assertNull(profiles.testProfile())
     }
 
     /**
@@ -237,5 +262,6 @@ class DemoModeTest {
     private companion object {
         const val FIXED_TIME = 1_700_000_000_000L
         const val DEMO_DAYS = 5
+        const val TIMEOUT_MS = 5_000L
     }
 }

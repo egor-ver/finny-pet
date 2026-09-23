@@ -44,6 +44,9 @@ enum class AfterDemo { OWN_GAME, ONBOARDING }
 /**
  * Закрывает демонстрацию и возвращает игру ребёнка. Своей игры может не быть:
  * эксперт поставил приложение с нуля и сразу пошёл в демонстрацию.
+ *
+ * Итог берётся из того, какой профиль остался активным, а не из метки
+ * возврата: повторный вызов метку уже не найдёт, но игру ребёнка терять не должен.
  */
 class ExitDemo(
     private val profiles: ProfileRepository,
@@ -52,13 +55,11 @@ class ExitDemo(
 
     suspend operator fun invoke(): AfterDemo {
         profiles.deleteTestProfile()
-
-        val own = settings.profileBeforeDemo()
-        settings.forgetProfileBeforeDemo()
-        if (own == null || profiles.byId(own) == null) return AfterDemo.ONBOARDING
-
-        profiles.setActive(own)
-        return AfterDemo.OWN_GAME
+        settings.profileBeforeDemo()?.let { own ->
+            settings.forgetProfileBeforeDemo()
+            if (profiles.byId(own) != null) profiles.setActive(own)
+        }
+        return if (profiles.active() == null) AfterDemo.ONBOARDING else AfterDemo.OWN_GAME
     }
 }
 
