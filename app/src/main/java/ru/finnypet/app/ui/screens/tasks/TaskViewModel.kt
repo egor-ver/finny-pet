@@ -123,12 +123,11 @@ sealed interface StepView {
     }
 }
 
-/** Итог: объяснение из контент-пака, что заплатили и что изменилось у питомца. */
+/** Итог: верно ли, объяснение из контент-пака, что заплатили и что изменилось у питомца. */
 data class TaskOutcomeView(
+    val correct: Boolean,
     val text: String,
     val reward: Coins,
-    /** Было ли право на монеты сегодня; при нуле награды в исходе это всё равно «с монетами». */
-    val rewardable: Boolean,
     val changes: List<Change.PetStat>,
 )
 
@@ -160,6 +159,8 @@ sealed interface TaskState {
         val intro: String,
         /** Кто просит совета: сова ребёнка, как на главном. */
         val owl: OwlLook,
+        /** Кошелёк в шапке: награда видна сразу, как только пришла. */
+        val balance: Coins,
         val maxReward: Coins,
         /**
          * Платят ли за это задание сегодня: лимит не выбран и попытка первая
@@ -251,6 +252,14 @@ class TaskViewModel @Inject constructor(
         }
     }
 
+    /** Тренировка после ошибки: то же задание с первого шага, монет за повтор нет (R8). */
+    fun tryAgain() {
+        val task = task ?: return
+        progress.update { current ->
+            if (current.outcome == null) current else Progress(started = true, draft = initialDraft(task.steps.first()))
+        }
+    }
+
     fun choose(optionId: String) {
         progress.update { current ->
             if (current.draft is Draft.Chosen) current.copy(draft = Draft.Chosen(optionId)) else current
@@ -337,9 +346,9 @@ class TaskViewModel @Inject constructor(
         progress.update {
             it.copy(
                 outcome = TaskOutcomeView(
+                    correct = result.value.outcome.correct,
                     text = texts.textOf(result.explanation),
                     reward = paid,
-                    rewardable = rewardable,
                     changes = changes,
                 ),
             )
@@ -384,11 +393,12 @@ class TaskViewModel @Inject constructor(
                 flowOf(TaskState.Loading)
             } else {
                 combine(
+                    periods.observeBalance(period),
                     periods.observeTransactions(period.id),
                     taskProgress.observeCompleted(profile.id),
                     progress,
-                ) { transactions, completed, current ->
-                    ready(profile, task, transactions, completed, current)
+                ) { wallet, transactions, completed, current ->
+                    ready(profile, task, wallet, transactions, completed, current)
                 }
             }
         }
@@ -396,25 +406,30 @@ class TaskViewModel @Inject constructor(
     private fun ready(
         profile: Profile,
         task: LearningTask,
+        wallet: Coins,
         transactions: List<Transaction>,
         completed: List<CompletedTask>,
         current: Progress,
-    ) = TaskState.Ready(
-        id = task.id,
-        topic = task.topic,
-        intro = texts.textOf(task.introKey),
-        owl = owlLook(
-            pets = pets,
-            appearance = profile.appearance,
-            stage = GrowthStage.CUB,
-            mood = PetMood.CALM,
-            description = owlDescription(texts, profile.petName, PetMood.CALM, sadAbout = null),
-        ),
-        maxReward = task.outcomes.filter { it.correct }.maxOf { it.reward },
-        rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
-        stage = stageOf(task, current),
-        submitting = current.submitting,
-    )
+    ): TaskState.Ready {
+        val mood = current.outcome?.let { taskMood(it.correct) } ?: PetMood.CALM
+        return TaskState.Ready(
+            id = task.id,
+            topic = task.topic,
+            intro = texts.textOf(task.introKey),
+            owl = owlLook(
+                pets = pets,
+                appearance = profile.appearance,
+                stage = GrowthStage.CUB,
+                mood = mood,
+                description = owlDescription(texts, profile.petName, mood, sadAbout = null),
+            ),
+            balance = wallet,
+            maxReward = task.outcomes.filter { it.correct }.maxOf { it.reward },
+            rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
+            stage = stageOf(task, current),
+            submitting = current.submitting,
+        )
+    }
 
     private fun stageOf(task: LearningTask, current: Progress): TaskStage {
         current.outcome?.let { return TaskStage.Done(it) }

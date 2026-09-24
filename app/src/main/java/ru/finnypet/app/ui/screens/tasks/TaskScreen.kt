@@ -3,6 +3,7 @@ package ru.finnypet.app.ui.screens.tasks
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -36,12 +37,14 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.CategoryLabel
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
+import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StatChangeLine
+import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -65,6 +68,7 @@ fun TaskScreen(
         onToggle = viewModel::toggle,
         onNext = viewModel::next,
         onRetry = viewModel::retry,
+        onTryAgain = viewModel::tryAgain,
     )
 }
 
@@ -78,6 +82,7 @@ fun TaskContent(
     onToggle: (String) -> Unit = {},
     onNext: () -> Unit = {},
     onRetry: () -> Unit = {},
+    onTryAgain: () -> Unit = {},
 ) {
     when (state) {
         TaskState.Loading -> Screen(onBack = onBack) {}
@@ -116,20 +121,25 @@ fun TaskContent(
                 onNext = onNext,
             )
 
-            is TaskStage.Done -> Done(outcome = stage.outcome, owl = state.owl, onBack = onBack)
+            is TaskStage.Done -> Done(state = state, outcome = stage.outcome, onBack = onBack, onTryAgain = onTryAgain)
         }
     }
 }
 
+/** [balance] — кошелёк в шапке; пока задание не загружено, его нет. */
 @Composable
 private fun Screen(
     onBack: () -> Unit,
+    balance: Coins? = null,
     bottomBar: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     FinnyScaffold(
         title = stringResource(R.string.task_title),
         onBack = onBack,
+        actions = {
+            balance?.let { Box(modifier = Modifier.padding(end = Dimens.Space)) { MoneyAmount(amount = it) } }
+        },
         bottomBar = bottomBar,
         spacing = Dimens.SpaceMedium,
         content = content,
@@ -149,6 +159,7 @@ private fun Intro(
 ) {
     Screen(
         onBack = onBack,
+        balance = state.balance,
         bottomBar = {
             ButtonColumn {
                 when {
@@ -237,6 +248,7 @@ private fun Step(
     val last = stage.index == stage.total - 1
     Screen(
         onBack = onBack,
+        balance = state.balance,
         bottomBar = {
             ButtonColumn {
                 FinnyButton(
@@ -298,7 +310,7 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(container)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .defaultMinSize(minHeight = OPTION_HEIGHT)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
         Text(
@@ -406,29 +418,50 @@ private fun ItemCard(
     }
 }
 
-/** Итог: объяснение независимо от результата (ТЗ 2.5.8), награда и питомец. */
+/**
+ * Итог: объяснение независимо от результата (ТЗ 2.5.8), награда и питомец.
+ * После ошибки главная кнопка — повтор, но и «Дальше» есть: неверный ответ
+ * не тратит лимит (R8), и монеты можно заработать на другом задании.
+ */
 @Composable
-private fun Done(outcome: TaskOutcomeView, owl: OwlLook, onBack: () -> Unit) {
+private fun Done(
+    state: TaskState.Ready,
+    outcome: TaskOutcomeView,
+    onBack: () -> Unit,
+    onTryAgain: () -> Unit,
+) {
     Screen(
         onBack = onBack,
-        bottomBar = { ButtonColumn { FinnyButton(text = stringResource(R.string.task_finish), onClick = onBack) } },
-    ) {
-        Text(text = stringResource(R.string.task_done_title), style = MaterialTheme.typography.titleLarge)
-        PetSpeech(text = outcome.text, owl = owl)
-        if (outcome.rewardable) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-                modifier = Modifier.semantics(mergeDescendants = true) {},
-            ) {
-                Text(text = stringResource(R.string.task_reward), style = MaterialTheme.typography.bodyLarge)
-                MoneyAmount(amount = outcome.reward)
+        balance = state.balance,
+        bottomBar = {
+            ButtonColumn {
+                if (outcome.correct) {
+                    FinnyButton(text = stringResource(R.string.task_next), onClick = onBack)
+                } else {
+                    FinnyButton(text = stringResource(R.string.task_try_again), onClick = onTryAgain)
+                    FinnySecondaryButton(text = stringResource(R.string.task_next), onClick = onBack)
+                }
             }
-        } else {
-            Text(text = stringResource(R.string.task_reward_none), style = MaterialTheme.typography.bodyLarge)
-        }
+        },
+    ) {
+        Text(
+            text = stringResource(if (outcome.correct) R.string.task_correct else R.string.task_wrong),
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        PetSpeech(text = outcome.text, owl = state.owl)
+        Text(
+            text = when (rewardLine(outcome.correct, outcome.reward)) {
+                RewardLine.PAID -> stringResource(R.string.task_reward_paid, coinsText(outcome.reward))
+                RewardLine.FIRST_TRY_RULE -> stringResource(R.string.task_reward_rule)
+                RewardLine.NO_COINS -> stringResource(R.string.task_reward_none)
+            },
+            style = MaterialTheme.typography.bodyLarge,
+        )
         outcome.changes.forEach { change ->
             StatChangeLine(change = change)
         }
     }
 }
+
+/** Варианты ответа выше общего минимума (раздел 8 плана): ребёнок не промахивается между соседними. */
+private val OPTION_HEIGHT = 52.dp

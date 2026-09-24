@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.Explanation
@@ -131,6 +132,7 @@ private fun Ready(
     Screen(
         onBack = onBack,
     ) {
+        Talk(state.talk)
         About(state.about)
         Topics(state.topics)
         Overview(state)
@@ -175,6 +177,15 @@ private fun Ready(
         ) {
             Text(text = text, style = MaterialTheme.typography.bodyLarge)
         }
+    }
+}
+
+/** Первой — подсказка для разговора: ради неё взрослый и открывает раздел. */
+@Composable
+private fun Talk(text: String) {
+    FinnyCard(color = MaterialTheme.colorScheme.secondaryContainer) {
+        Heading(stringResource(R.string.adult_talk))
+        Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

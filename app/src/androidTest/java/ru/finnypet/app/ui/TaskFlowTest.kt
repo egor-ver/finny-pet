@@ -214,7 +214,7 @@ class TaskFlowTest {
         val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
         assertEquals("Молодец, отложил! +15", done.outcome.text)
         assertEquals(Coins(15), done.outcome.reward)
-        assertTrue(done.outcome.rewardable)
+        assertTrue(done.outcome.correct)
         val initial = Stat(balance.initialStat)
         assertEquals(listOf(Change.PetStat(PetStatKind.MOOD, from = initial, to = initial + 5)), done.outcome.changes)
 
@@ -238,7 +238,7 @@ class TaskFlowTest {
 
         val done = pass(second) { it.choose("save") }
 
-        assertFalse(done.outcome.rewardable)
+        assertTrue("ответ верный, монет нет из-за лимита", done.outcome.correct)
         assertEquals(Coins.ZERO, done.outcome.reward)
         assertEquals("Молодец, отложил! +0", done.outcome.text)
         assertEquals(1, done.outcome.changes.size)

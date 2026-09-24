@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
 import ru.finnypet.app.domain.model.GamePeriod
@@ -78,6 +79,8 @@ sealed interface AdultState {
     data class Ready(
         val childName: String,
         val petName: String,
+        /** «О чём поговорить сегодня». */
+        val talk: String,
         /** Цели приложения из контент-пака. */
         val about: List<String>,
         val topics: List<TopicProgress>,
@@ -114,6 +117,7 @@ class AdultViewModel @Inject constructor(
     private val startDemo: StartDemo,
     private val deleteGame: DeleteGame,
     private val gameBalance: GameBalance,
+    private val petState: PetStateEngine,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
@@ -249,6 +253,7 @@ class AdultViewModel @Inject constructor(
         return AdultState.Ready(
             childName = profile.childName,
             petName = profile.petName,
+            talk = texts.textOf(talkHint(petState.needsOf(pet.state))),
             about = about,
             topics = topicsOf(progress.completed),
             days = days,

@@ -32,6 +32,7 @@ import ru.finnypet.app.domain.content.ContentOption
 import ru.finnypet.app.domain.content.ContentPack
 import ru.finnypet.app.domain.content.PetOptions
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Coins
@@ -238,6 +239,7 @@ class AdultFlowTest {
         startDemo = StartDemo(profiles, settings),
         deleteGame = DeleteGame(profiles, settings),
         gameBalance = balance,
+        petState = PetStateEngine(balance),
         content = content(),
     ).also { viewModel = it }
 

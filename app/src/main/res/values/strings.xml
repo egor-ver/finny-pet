@@ -111,6 +111,7 @@
     <string name="adult_gate_wrong">Ответ неверный. Посчитай ещё раз.</string>
     <string name="adult_title">Раздел для взрослого</string>
     <string name="adult_failed">Не получилось открыть раздел. Попробуйте ещё раз.</string>
+    <string name="adult_talk">О чём поговорить сегодня</string>
     <string name="adult_about">Чему учит игра</string>
     <string name="adult_topics">Пройденные темы</string>
     <string name="adult_topic_passed">пройдено %1$d из %2$d</string>
@@ -276,9 +277,12 @@
     <string name="task_picked">В корзине</string>
     <string name="task_pick_full">Не влезает</string>
     <string name="task_selected">Выбрано</string>
-    <string name="task_done_title">Готово!</string>
-    <string name="task_reward">Награда</string>
+    <string name="task_correct">Верно!</string>
+    <string name="task_wrong">Не совсем</string>
+    <string name="task_reward_paid">+%1$s в кошелёк</string>
+    <string name="task_reward_rule">Монеты — за верный ответ с первой попытки</string>
     <string name="task_reward_none">Сегодня без монет — но ты стал умнее!</string>
+    <string name="task_try_again">Попробовать ещё</string>
     <string name="task_finish">Продолжить</string>
     <string name="main_task">Задание дня</string>
     <string name="main_task_all_done">Все задания пройдены — можно повторить любое.</string>

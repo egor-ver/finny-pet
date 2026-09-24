@@ -163,6 +163,7 @@ class DesignSystemTest {
         topic = TaskTopic.PAYMENTS,
         intro = "Вступление",
         owl = testOwl(),
+        balance = Coins(40),
         maxReward = Coins(15),
         rewardAvailable = true,
         stage = TaskStage.Step(index = 0, total = 1, step = step),
