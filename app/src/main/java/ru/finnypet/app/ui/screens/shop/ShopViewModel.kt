@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.WalletEngine
@@ -22,6 +23,9 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.Pet
+import ru.finnypet.app.domain.model.PetState
+import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.RecoveryOption
@@ -32,14 +36,24 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
+import ru.finnypet.app.ui.components.wellbeing
 import ru.finnypet.app.ui.screens.ProfileViewModel
+import ru.finnypet.app.ui.screens.main.JarsLeft
+import ru.finnypet.app.ui.screens.main.jarsLeft
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
-/** Товар как его видит экран: готовое название, цена, направление, влияние на питомца. */
+/**
+ * Товар как его видит экран: готовое название, цена, направление, влияние на
+ * питомца. [mark] — метка на карточке; [warning] — фраза совы в окне покупки
+ * для нужного, которое ей пока не нужно (R12).
+ */
 data class ShopItemView(
     val id: ItemId,
     val title: String,
@@ -47,6 +61,8 @@ data class ShopItemView(
     val category: SpendCategory,
     val effects: List<PetEffect>,
     val icon: String,
+    val mark: ItemMark = ItemMark.NONE,
+    val warning: String? = null,
 )
 
 /** Вариант выхода при нехватке денег с подписью из контент-пака. */
@@ -73,6 +89,7 @@ sealed interface PurchaseOutcome {
     data class Done(
         val title: String,
         val text: String,
+        val price: Coins,
         val effects: List<PetEffect>,
         val changes: List<Change.PetStat>,
     ) : PurchaseOutcome
@@ -110,6 +127,15 @@ sealed interface ShopState {
          * сумму, которой уже нет (ТЗ 2.5.5).
          */
         val canBuy: Boolean,
+        /** Сова и её фраза: что ей нужно сейчас (раздел 8 плана). */
+        val owl: OwlLook,
+        val phrase: String,
+        /** Сколько по плану ещё осталось; `null` — план не подтверждён. */
+        val jars: JarsLeft? = null,
+        /**
+         * Покупка показывается в облачке совы, а не окном: ребёнок видит,
+         * что изменилось, и сразу выбирает дальше (ТЗ 2.5.9).
+         */
         val outcome: PurchaseOutcome? = null,
     ) : ShopState
 }
@@ -132,23 +158,13 @@ class ShopViewModel @Inject constructor(
     private val periodEngine: PeriodEngine,
     private val recorder: OutcomeRecorder,
     private val balance: GameBalance,
+    private val petState: PetStateEngine,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
     private val items: List<ShopItem> = content.pack().shop
+    private val pets = content.pack().pets
     private val texts: Map<String, String> = content.pack().texts
-
-    /** Витрина не зависит от баланса, собирается один раз. */
-    private val itemViews: List<ShopItemView> = items.map { item ->
-        ShopItemView(
-            id = item.id,
-            title = texts.textOf(item.titleKey),
-            price = item.price,
-            category = item.category,
-            effects = item.effects,
-            icon = item.icon,
-        )
-    }
 
     private val outcome = MutableStateFlow<PurchaseOutcome?>(null)
 
@@ -165,7 +181,7 @@ class ShopViewModel @Inject constructor(
                 when {
                     isFailed -> flowOf(ShopState.Failed)
                     profile == null -> flowOf(ShopState.Loading)
-                    else -> forProfile(profile.id)
+                    else -> forProfile(profile)
                 }
             }
             .stateIn(
@@ -223,6 +239,7 @@ class ShopViewModel @Inject constructor(
                 PurchaseOutcome.Done(
                     title = title,
                     text = texts.textOf(result.explanation),
+                    price = item.price,
                     effects = result.effects,
                     changes = changes,
                 )
@@ -245,23 +262,66 @@ class ShopViewModel @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun forProfile(profileId: ProfileId): Flow<ShopState> =
-        periods.observeCurrent(profileId).flatMapLatest { period ->
-            if (period == null) {
+    private fun forProfile(profile: Profile): Flow<ShopState> = combine(
+        periods.observeCurrent(profile.id),
+        profiles.observePet(profile.id),
+    ) { period, pet -> period to pet }
+        .flatMapLatest { (period, pet) ->
+            if (period == null || pet == null) {
                 flowOf(ShopState.Loading)
             } else {
-                combine(periods.observeBalance(period), outcome) { balance, outcome ->
-                    ready(period, balance, outcome)
+                // Операции и план — ради остатков по банкам и меток «не в плане».
+                combine(
+                    periods.observeBalance(period),
+                    periods.observeTransactions(period.id),
+                    periods.observePlan(period.id),
+                    outcome,
+                ) { wallet, transactions, plan, outcome ->
+                    ready(profile, pet, period, wallet, jarsLeft(period.status, plan, periodEngine.factOf(transactions)), outcome)
                 }
             }
         }
 
-    private fun ready(period: GamePeriod, balance: Coins, outcome: PurchaseOutcome?) = ShopState.Ready(
-        items = itemViews,
-        balance = balance,
-        canBuy = period.status == PeriodStatus.RUNNING,
-        outcome = outcome,
-    )
+    private fun ready(
+        profile: Profile,
+        pet: Pet,
+        period: GamePeriod,
+        wallet: Coins,
+        jars: JarsLeft?,
+        outcome: PurchaseOutcome?,
+    ): ShopState.Ready {
+        val mood = petState.moodOf(pet.state)
+        return ShopState.Ready(
+            items = items.map { viewOf(it, pet.state, jars) },
+            balance = wallet,
+            canBuy = period.status == PeriodStatus.RUNNING,
+            owl = owlLook(
+                pets = pets,
+                appearance = profile.appearance,
+                stage = pet.growth.stage,
+                mood = mood,
+                description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+                wellbeing = pet.state.wellbeing,
+            ),
+            phrase = texts.textOf(shopPhrase(petState.needsOf(pet.state))),
+            jars = jars,
+            outcome = outcome,
+        )
+    }
+
+    private fun viewOf(item: ShopItem, state: PetState, jars: JarsLeft?): ShopItemView {
+        val mark = markOf(item, petState.neededNow(state, item), jars?.optional)
+        return ShopItemView(
+            id = item.id,
+            title = texts.textOf(item.titleKey),
+            price = item.price,
+            category = item.category,
+            effects = item.effects,
+            icon = item.icon,
+            mark = mark,
+            warning = notNeededPhrase(item)?.takeIf { mark == ItemMark.NOT_NEEDED }?.let(texts::textOf),
+        )
+    }
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

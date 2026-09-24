@@ -123,6 +123,7 @@ fun FinnyListScaffold(
     title: String,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
     bottomBar: (@Composable () -> Unit)? = null,
     spacing: Dp = Dimens.SpaceMedium,
     content: LazyListScope.() -> Unit,
@@ -131,7 +132,7 @@ fun FinnyListScaffold(
         title = { TitleText(title) },
         modifier = modifier,
         onBack = onBack,
-        actions = {},
+        actions = actions,
         bottomBar = bottomBar,
     ) { insets ->
         LazyColumn(

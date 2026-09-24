@@ -42,6 +42,7 @@ import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.owlDescription
 import ru.finnypet.app.ui.components.owlLook
+import ru.finnypet.app.ui.components.wellbeing
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
@@ -222,7 +223,7 @@ class MainViewModel @Inject constructor(
             stage = pet.growth.stage,
             mood = mood,
             description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
-            wellbeing = pet.state.let { it.mood.value + it.satiety.value + it.care.value },
+            wellbeing = pet.state.wellbeing,
         )
     }
 

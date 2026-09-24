@@ -49,6 +49,17 @@ class PetStateEngine(private val balance: GameBalance) {
         NEEDS.filter { state.statFor(it) < Stat(balance.needThreshold) }
 
     /**
+     * «Нужно сейчас» (R12): нужное, которое поднимает показатель ниже порога.
+     * Остальное нужное сове пока не требуется — купить можно, но сова
+     * предупредит, а желаемое «нужно сейчас» не бывает никогда.
+     */
+    fun neededNow(state: PetState, item: ShopItem): Boolean {
+        if (item.category != SpendCategory.MANDATORY) return false
+        val needs = needsOf(state)
+        return item.effects.any { it.delta > 0 && it.stat in needs }
+    }
+
+    /**
      * Самый дешёвый набор нужного, который закрывает все потребности (R2).
      * Товар можно взять несколько раз: две воды бывают дешевле каши. Пустой
      * набор — потребностей нет; null — какую-то из них в магазине нечем закрыть.

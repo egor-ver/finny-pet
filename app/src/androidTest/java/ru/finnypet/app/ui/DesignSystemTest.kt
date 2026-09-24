@@ -187,6 +187,8 @@ class DesignSystemTest {
                         ),
                         balance = Coins(80),
                         canBuy = true,
+                        owl = testOwl(),
+                        phrase = "Мне бы поесть",
                     ),
                     onBack = {},
                 )

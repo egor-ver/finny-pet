@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.economy
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -225,6 +226,25 @@ class PetStateEngineTest {
     fun `цена по потребностям — null, если одну нечем закрыть`() {
         val noCare = shop.filter { it.effects.none { effect -> effect.stat == PetStatKind.CARE } }
         assertNull(engine.coverByNeed(pet(satiety = 30, care = 50), noCare))
+    }
+
+    /** R12: каша при еде 30 закрывает потребность — «нужно сейчас». */
+    @Test
+    fun `нужное, которое поднимает показатель ниже порога, нужно сейчас`() {
+        val porridge = shop.single { it.id.value == "porridge" }
+        assertTrue(engine.neededNow(pet(satiety = 30, care = 90), porridge))
+    }
+
+    @Test
+    fun `нужное для сытого показателя сейчас не нужно`() {
+        val vitamins = shop.single { it.id.value == "vitamins" }
+        assertFalse(engine.neededNow(pet(satiety = 30, care = 90), vitamins))
+    }
+
+    @Test
+    fun `желаемое нужно сейчас не бывает`() {
+        val candy = item("candy", 1, PetStatKind.SATIETY, 50, SpendCategory.OPTIONAL)
+        assertFalse(engine.neededNow(pet(satiety = 30, care = 30), candy))
     }
 
     @Test

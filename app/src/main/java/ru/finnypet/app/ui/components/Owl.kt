@@ -38,6 +38,7 @@ import ru.finnypet.app.domain.content.PetOptions
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.PetMood
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.ui.text.textOf
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
@@ -58,6 +59,9 @@ data class OwlLook(
     val description: String,
     val wellbeing: Int = 0,
 )
+
+/** Сумма показателей: выросла — сове стало лучше, и она подпрыгивает. */
+val PetState.wellbeing: Int get() = mood.value + satiety.value + care.value
 
 /** «Сова Пушок грустит: хочет есть» — слова из контент-пака, а не из кода (раздел 5 плана). */
 fun owlDescription(texts: Map<String, String>, name: String, mood: PetMood, sadAbout: PetStatKind?): String =

@@ -3,8 +3,10 @@ package ru.finnypet.app.ui.screens.shop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,30 +21,40 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.CategoryLabel
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.Owl
+import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.StatEffectLine
+import ru.finnypet.app.ui.components.color
+import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.screens.main.JarsLeft
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -130,11 +142,18 @@ private fun Ready(
     val pending = state.items.firstOrNull { it.id.value == pendingId }
 
     // Ключи с префиксами: идентификаторы товаров пишет напарник в shop.json,
-    // и товар с id «balance» иначе столкнулся бы с шапкой списка.
-    FinnyListScaffold(title = stringResource(R.string.shop_title), onBack = onBack) {
-        item(key = "header:balance") {
-            MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
+    // и товар с id «owl» иначе столкнулся бы с шапкой списка.
+    FinnyListScaffold(
+        title = stringResource(R.string.shop_title),
+        onBack = onBack,
+        actions = {
+            Box(modifier = Modifier.padding(end = Dimens.Space)) { MoneyAmount(amount = state.balance) }
+        },
+    ) {
+        item(key = "header:owl") {
+            OwlBubble(owl = state.owl, phrase = state.phrase, done = state.outcome as? PurchaseOutcome.Done)
         }
+        state.jars?.let { jars -> item(key = "header:jars") { JarChips(jars = jars) } }
         if (!state.canBuy) {
             item(key = "header:planning") { PlanningHint(text = stringResource(R.string.shop_planning_hint), onPlan = onPlan) }
         }
@@ -147,8 +166,30 @@ private fun Ready(
                 )
             }
         }
-        items(state.items, key = { "item:${it.id.value}" }) { item ->
-            ShopItemRow(item = item, onClick = { pendingId = item.id.value })
+        // Секции по направлениям (раздел 8 плана), по две карточки в ряд:
+        // при 16 sp в четверть ширины 360 dp не помещается ни название, ни метка.
+        SpendCategory.entries.forEach { category ->
+            val section = state.items.filter { it.category == category }
+            if (section.isEmpty()) return@forEach
+            item(key = "section:${category.name}") {
+                CategoryLabel(category = category)
+            }
+            items(section.chunked(2), key = { row -> "row:" + row.joinToString { it.id.value } }) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
+                    row.forEach { item ->
+                        ShopCard(
+                            item = item,
+                            // «Не в плане» — сразу объяснение, без окна покупки: купить
+                            // всё равно нельзя, а домен скажет почему (R4).
+                            onClick = {
+                                if (state.canBuy && item.mark == ItemMark.NOT_IN_PLAN) onBuy(item.id) else pendingId = item.id.value
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 
@@ -193,38 +234,105 @@ private fun PlanningDialog(onPlan: () -> Unit, onDismiss: () -> Unit) {
 }
 
 /**
- * Строка товара — вся целиком кнопка: по ней проще попасть, чем по маленькой
- * «Купить» справа, и озвучка читает её одной фразой — название, направление,
- * влияние, цена.
+ * Сова с облачком: что ей нужно сейчас, а после покупки — что купили, что
+ * изменилось и сколько ушло монет (ТЗ 2.5.9). Изменения — настоящие, а не
+ * обещанные: у верхней границы показатель не растёт, и так и сказано.
  */
 @Composable
-private fun ShopItemRow(
-    item: ShopItemView,
-    onClick: () -> Unit,
-) {
+private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Owl(look = owl, size = 88.dp)
+        Box(modifier = Modifier.weight(1f)) {
+            FinnyCard {
+                if (done != null) {
+                    Text(text = done.title, style = MaterialTheme.typography.titleMedium)
+                    Text(text = done.text, style = MaterialTheme.typography.bodyLarge)
+                    done.changes.forEach { change -> StatChangeLine(change = change) }
+                    if (done.effects.isNotEmpty() && done.changes.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.shop_no_change),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.shop_spent, done.price.amount),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                Text(text = phrase, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+}
+
+/** «🥣 Нужное: ещё 24» — сколько по плану ещё можно, как на главном. */
+@Composable
+private fun JarChips(jars: JarsLeft) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
+        JarChip(category = SpendCategory.MANDATORY, left = jars.mandatory)
+        JarChip(category = SpendCategory.OPTIONAL, left = jars.optional)
+    }
+}
+
+@Composable
+private fun JarChip(category: SpendCategory, left: Coins) {
+    Text(
+        text = category.icon + " " + stringResource(R.string.shop_jar_left, stringResource(category.label), left.amount),
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = category.color,
         modifier = Modifier
-            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(Dimens.Corner))
+            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
+    )
+}
+
+/**
+ * Карточка товара — вся целиком кнопка: картинка, название, цена, влияние
+ * и метка. Метка словами: цвет и приглушение не единственный признак (ТЗ 3.6).
+ * Товар «не в плане» приглушён, но без замка — нажать можно, сова объяснит.
+ */
+@Composable
+private fun ShopCard(item: ShopItemView, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        modifier = modifier
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(role = Role.Button, onClick = onClick)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+            .alpha(if (item.mark == ItemMark.NOT_IN_PLAN) DIMMED else 1f)
+            .padding(Dimens.SpaceMedium),
     ) {
         ItemIcon(icon = item.icon)
-        Column(
-            verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(text = item.title, style = MaterialTheme.typography.titleMedium)
-            CategoryLabel(category = item.category)
-            item.effects.forEach { effect -> StatEffectLine(effect = effect) }
-        }
+        Text(text = item.title, style = MaterialTheme.typography.titleMedium)
         MoneyAmount(amount = item.price)
+        item.effects.forEach { effect -> StatEffectLine(effect = effect) }
+        item.mark.label?.let { label ->
+            Text(
+                text = stringResource(label),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (item.mark == ItemMark.NEEDED_NOW) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
+
+private val ItemMark.label: Int?
+    get() = when (this) {
+        ItemMark.NEEDED_NOW -> R.string.shop_mark_needed
+        ItemMark.NOT_NEEDED -> R.string.shop_mark_not_needed
+        ItemMark.NOT_IN_PLAN -> R.string.shop_mark_not_in_plan
+        ItemMark.NONE -> null
+    }
+
+private const val DIMMED = 0.6f
 
 /** Подтверждение: что покупаем, за сколько и что от этого изменится. */
 @Composable
@@ -260,6 +368,8 @@ private fun ConfirmDialog(
             Text(text = stringResource(R.string.shop_pet_change), style = MaterialTheme.typography.titleMedium)
             item.effects.forEach { effect -> StatEffectLine(effect = effect) }
         }
+        // Нужное, которое сове пока не нужно: купить можно, но сова спрашивает (R12).
+        item.warning?.let { Text(text = it, style = MaterialTheme.typography.bodyLarge) }
     }
 }
 
@@ -271,26 +381,8 @@ private fun OutcomeDialog(
     onTasks: () -> Unit,
 ) {
     when (outcome) {
-        is PurchaseOutcome.Done -> FinnyDialog(
-            title = stringResource(R.string.shop_done_title),
-            onDismiss = onDismiss,
-            buttons = {
-                FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
-            },
-        ) {
-            Text(text = outcome.title, style = MaterialTheme.typography.titleMedium)
-            Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
-            // Показываем, что изменилось на самом деле. Если товар влияет,
-            // а показатель упёрся в границу — так и говорим, а не «+15».
-            outcome.changes.forEach { change -> StatChangeLine(change = change) }
-            if (outcome.effects.isNotEmpty() && outcome.changes.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.shop_no_change),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        // Покупка показывается в облачке совы, окно не нужно.
+        is PurchaseOutcome.Done -> Unit
 
         is PurchaseOutcome.Rejected -> RejectedDialog(
             outcome = outcome,

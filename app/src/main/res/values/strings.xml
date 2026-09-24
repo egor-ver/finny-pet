@@ -192,6 +192,14 @@
     <!-- Магазин (ТЗ 2.5.6) -->
     <string name="shop_title">Магазин</string>
     <string name="shop_action">В магазин</string>
+    <!-- Метки карточек (раздел 8 плана, R12, R4) -->
+    <string name="shop_mark_needed">нужно сейчас</string>
+    <string name="shop_mark_not_needed">пока не нужно</string>
+    <string name="shop_mark_not_in_plan">не в плане</string>
+    <!-- «Нужное: ещё 24» — остаток по плану -->
+    <string name="shop_jar_left">%1$s: ещё %2$d</string>
+    <!-- «−14 монет» в облачке после покупки -->
+    <string name="shop_spent">−%1$d монет</string>
     <string name="shop_planning_hint">Сначала спланируй день — потом можно покупать.</string>
     <string name="shop_empty">В магазине пока пусто.</string>
     <string name="shop_price">Цена</string>

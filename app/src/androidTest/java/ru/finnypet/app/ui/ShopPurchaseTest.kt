@@ -159,6 +159,7 @@ class ShopPurchaseTest {
             periodEngine = periodEngine(),
             recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock)),
             balance = balance,
+            petState = PetStateEngine(balance),
             content = content(),
         )
     }
