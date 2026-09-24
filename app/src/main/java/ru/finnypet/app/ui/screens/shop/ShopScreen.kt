@@ -304,6 +304,17 @@ private fun OutcomeDialog(
             onSavings = onSavings,
             onTasks = onTasks,
         )
+
+        is PurchaseOutcome.NotInPlan -> FinnyDialog(
+            title = stringResource(R.string.shop_not_in_plan_title),
+            onDismiss = onDismiss,
+            buttons = {
+                FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
+            },
+        ) {
+            Text(text = outcome.title, style = MaterialTheme.typography.titleMedium)
+            Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
+        }
     }
 }
 

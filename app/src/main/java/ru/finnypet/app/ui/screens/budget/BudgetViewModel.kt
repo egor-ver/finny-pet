@@ -25,6 +25,8 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.domain.repository.SavingsRepository
+import ru.finnypet.app.domain.usecase.ConfirmPlan
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
@@ -43,16 +45,22 @@ sealed interface BudgetState {
 
     data object Failed : BudgetState
 
+    /**
+     * [available] — весь кошелёк, а не остаток со вчера и доход: бонус
+     * взрослого и награда за задание тоже раскладываются по плану (R5).
+     * [needsGoal] — в копилку запланировано, а цели нет: отложить некуда.
+     */
     data class Planning(
         val available: Coins,
         val plan: BudgetPlan,
         val remainder: Coins,
         val overBy: Coins,
         val step: Int,
+        val needsGoal: Boolean,
     ) : BudgetState {
 
         /** Пустой план подтверждать нечего, а перебор сначала надо исправить. */
-        val canConfirm: Boolean get() = plan.total > Coins.ZERO && overBy == Coins.ZERO
+        val canConfirm: Boolean get() = plan.total > Coins.ZERO && overBy == Coins.ZERO && !needsGoal
 
         val isDistributed: Boolean get() = remainder == Coins.ZERO && overBy == Coins.ZERO
 
@@ -85,7 +93,9 @@ sealed interface BudgetState {
 class BudgetViewModel @Inject constructor(
     profiles: ProfileRepository,
     private val periods: PeriodRepository,
+    private val savings: SavingsRepository,
     private val openPeriod: OpenPeriodIfNeeded,
+    private val confirmPlan: ConfirmPlan,
     private val budget: BudgetEngine,
     private val periodEngine: PeriodEngine,
 ) : ProfileViewModel(profiles) {
@@ -126,18 +136,13 @@ class BudgetViewModel @Inject constructor(
     fun remove(category: SpendCategory) = change(category, -STEP)
 
     /**
-     * Подтверждение переводит день из планирования в работу. С этого момента
-     * план — то, с чем сравнивается факт, и менять его уже нельзя (ТЗ 2.5.5).
+     * Подтверждение переводит день из планирования в работу и сразу
+     * откладывает долю копилки. С этого момента план — то, с чем
+     * сравнивается факт, и менять его уже нельзя (ТЗ 2.5.5).
      */
     fun confirm() {
         act { profileId ->
-            editing.withLock {
-                val period = periods.current(profileId) ?: return@withLock
-                val plan = periods.plan(period.id) ?: return@withLock
-                if (period.status != PeriodStatus.PLANNING) return@withLock
-                if (plan.total == Coins.ZERO) return@withLock
-                periods.save(periodEngine.confirmPlan(period))
-            }
+            editing.withLock { confirmPlan(profileId) }
         }
     }
 
@@ -156,7 +161,7 @@ class BudgetViewModel @Inject constructor(
                 // экране: экран отстаёт от базы на время записи, и при быстрых
                 // нажатиях он вернул бы устаревшую сумму.
                 val stored = periods.plan(period.id) ?: BudgetPlan.EMPTY
-                val amount = budget.stepped(stored, category, delta, period.available) ?: return@withLock
+                val amount = budget.stepped(stored, category, delta, periods.balance(period)) ?: return@withLock
                 periods.savePlan(period.id, stored.with(category, amount))
             }
         }
@@ -171,8 +176,10 @@ class BudgetViewModel @Inject constructor(
                 combine(
                     periods.observePlan(period.id),
                     periods.observeTransactions(period.id),
-                ) { plan, transactions ->
-                    stateOf(period, plan ?: BudgetPlan.EMPTY, transactions)
+                    periods.observeBalance(period),
+                    savings.observeActive(profileId),
+                ) { plan, transactions, wallet, goal ->
+                    stateOf(period, plan ?: BudgetPlan.EMPTY, transactions, wallet, hasGoal = goal != null)
                 }
             }
         }
@@ -181,19 +188,22 @@ class BudgetViewModel @Inject constructor(
         period: GamePeriod,
         plan: BudgetPlan,
         transactions: List<Transaction>,
+        wallet: Coins,
+        hasGoal: Boolean,
     ): BudgetState = when (period.status) {
-        PeriodStatus.PLANNING -> planning(period, plan)
+        PeriodStatus.PLANNING -> planning(plan, wallet, hasGoal)
         else -> started(plan, transactions)
     }
 
-    private fun planning(period: GamePeriod, plan: BudgetPlan): BudgetState.Planning {
-        val check = budget.check(plan, period.available)
+    private fun planning(plan: BudgetPlan, wallet: Coins, hasGoal: Boolean): BudgetState.Planning {
+        val check = budget.check(plan, wallet)
         return BudgetState.Planning(
-            available = period.available,
+            available = wallet,
             plan = plan,
             remainder = (check as? PlanCheck.Fits)?.remainder ?: Coins.ZERO,
             overBy = (check as? PlanCheck.Exceeds)?.overBy ?: Coins.ZERO,
             step = STEP,
+            needsGoal = plan.savings > Coins.ZERO && !hasGoal,
         )
     }
 

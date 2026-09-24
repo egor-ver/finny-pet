@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.repository
 
 import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.ProfileId
@@ -9,14 +10,15 @@ import ru.finnypet.app.domain.model.Transaction
 
 /**
  * Последствия одного действия ребёнка, которые надо записать вместе:
- * операция, влияние на питомца, прогресс копилки, пройденное задание.
- * Чего нет — того не пишется.
+ * операция, влияние на питомца, прогресс копилки, пройденное задание,
+ * новый статус дня. Чего нет — того не пишется.
  */
 data class ActionOutcome(
     val transaction: Transaction? = null,
     val effects: List<PetEffect> = emptyList(),
     val savings: GoalProgress? = null,
     val taskCompletion: TaskCompletion? = null,
+    val period: GamePeriod? = null,
 )
 
 /**

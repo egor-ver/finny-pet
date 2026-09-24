@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Change
@@ -85,6 +86,12 @@ sealed interface PurchaseOutcome {
         val options: List<RecoveryChoice>,
         val recommended: RecoveryOption?,
     ) : PurchaseOutcome
+
+    /** Желаемое сверх плана (R4): объяснение и одна кнопка, без вариантов выхода. */
+    data class NotInPlan(
+        val title: String,
+        val text: String,
+    ) : PurchaseOutcome
 }
 
 sealed interface ShopState {
@@ -121,6 +128,7 @@ class ShopViewModel @Inject constructor(
     private val savings: SavingsRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val wallet: WalletEngine,
+    private val periodEngine: PeriodEngine,
     private val recorder: OutcomeRecorder,
     private val balance: GameBalance,
     content: ContentRepository,
@@ -192,13 +200,16 @@ class ShopViewModel @Inject constructor(
         if (period.status != PeriodStatus.RUNNING) return
 
         val saved = savings.activeProgress(profileId)?.saved ?: Coins.ZERO
+        val transactions = periods.transactions(period.id)
+        val optionalPlan = periods.plan(period.id)?.optional ?: Coins.ZERO
         val result = wallet.purchase(
             item = item,
             currentBalance = periods.balance(period),
             periodId = period.id,
+            optionalLeft = periodEngine.factOf(transactions).amountFor(SpendCategory.OPTIONAL).shortfallTo(optionalPlan),
             savings = saved,
             // «Выполнить задание» обещает монеты — только пока лимит дня не выбран.
-            taskRewardAvailable = TaskSchedule.rewardAvailable(periods.transactions(period.id), balance),
+            taskRewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
         )
         val title = texts.textOf(item.titleKey)
         outcome.value = when (result) {
@@ -222,6 +233,11 @@ class ShopViewModel @Inject constructor(
                     RecoveryChoice(option = option, label = texts.textOf("recovery.${option.name}"))
                 },
                 recommended = result.explanation.nextStep,
+            )
+
+            is PurchaseResult.NotInPlan -> PurchaseOutcome.NotInPlan(
+                title = title,
+                text = texts.textOf(result.explanation),
             )
         }
     }

@@ -19,21 +19,28 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import ru.finnypet.app.data.content.AssetContentRepository
+import ru.finnypet.app.data.content.ContentParser
 import ru.finnypet.app.data.local.FinnyDatabase
+import ru.finnypet.app.data.repository.OutcomeRecorderImpl
 import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
+import ru.finnypet.app.data.repository.SavingsRepositoryImpl
+import ru.finnypet.app.data.repository.TaskProgressRepositoryImpl
 import ru.finnypet.app.domain.economy.BudgetEngine
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.usecase.ConfirmPlan
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.ui.screens.budget.BudgetState
 import ru.finnypet.app.ui.screens.budget.BudgetViewModel
@@ -92,6 +99,8 @@ class BudgetPlanningTest {
                 wallet = WalletEngine(clock),
                 balance = balance,
             ),
+            savings = savings(),
+            confirmPlan = confirmPlan(),
             budget = BudgetEngine(),
             periodEngine = periodEngine(),
         )
@@ -198,6 +207,8 @@ class BudgetPlanningTest {
                 wallet = WalletEngine(clock),
                 balance = odd,
             ),
+            savings = savings(),
+            confirmPlan = confirmPlan(),
             budget = BudgetEngine(),
             periodEngine = periodEngine(),
         )
@@ -266,6 +277,22 @@ class BudgetPlanningTest {
     ): BudgetState.Planning = withTimeout(TIMEOUT_MS) {
         viewModel.state.first { it is BudgetState.Planning && condition(it) }
     } as BudgetState.Planning
+
+    private fun savings() = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
+
+    private fun confirmPlan() = ConfirmPlan(
+        periods = periods,
+        savings = savings(),
+        content = AssetContentRepository(context, ContentParser()),
+        budget = BudgetEngine(),
+        periodEngine = periodEngine(),
+        savingsEngine = SavingsEngine(clock),
+        recorder = OutcomeRecorderImpl(
+            database = db,
+            petState = PetStateEngine(balance),
+            taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock),
+        ),
+    )
 
     private fun periodEngine() = PeriodEngine(
         budget = BudgetEngine(),

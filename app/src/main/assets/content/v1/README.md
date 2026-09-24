@@ -281,6 +281,7 @@
 |---|---|
 | `purchase.done` | `{price}`, `{balance}` |
 | `purchase.rejected` | `{shortfall}`, `{price}` |
+| `purchase.not_in_plan` | `{left}` |
 | `balance.credited` | `{amount}`, `{source}` |
 | `savings.deposited`, `savings.goal_reached`, `savings.withdrawn` | `{amount}`, `{saved}`, `{remaining}` |
 | `growth.points_added`, `growth.stage_up` | `{earned}`, `{points}` |

@@ -1,10 +1,8 @@
 package ru.finnypet.app.domain.usecase
 
 import kotlinx.coroutines.flow.first
-import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
-import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.BudgetPlan
@@ -31,7 +29,7 @@ import ru.finnypet.app.domain.repository.TaskProgressRepository
 
 /**
  * Проживает день демонстрации целиком (ТЗ 2.5.13, шаги 5–10 Приложения А):
- * план, задание, обязательная и необязательная покупки, копилка, закрытие.
+ * план с копилкой, задание, обязательная и необязательная покупки, закрытие.
  * Эксперт видит пять периодов и три стадии роста за пять нажатий.
  *
  * Ничего не имитирует — всё идёт через те же движки и записи, что и действия
@@ -46,10 +44,9 @@ class PlayDemoDay(
     private val content: ContentRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val closeDay: CloseDay,
+    private val confirmPlan: ConfirmPlan,
     private val wallet: WalletEngine,
-    private val savingsEngine: SavingsEngine,
     private val taskEngine: TaskEngine,
-    private val periodEngine: PeriodEngine,
     private val pet: PetStateEngine,
     private val recorder: OutcomeRecorder,
 ) {
@@ -62,21 +59,35 @@ class PlayDemoDay(
         val needs = profiles.pet(profileId)
             ?.let { pet.cheapestCover(it.state, content.pack().shop) }
             .orEmpty()
-        val plan = planOf(period, minOf(needs.totalPrice(), period.available))
+        val plan = planOf(profileId, period, needs.totalPrice())
 
         passTask(profileId, period)
-        needs.forEach { buy(profileId, period, it) }
-        cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it) }
-        deposit(profileId, period, plan.savings)
+        // Желаемое покупается одно и после нужного: весь план на него ещё свободен.
+        needs.forEach { buy(profileId, period, it, plan.optional) }
+        cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it, plan.optional) }
         closeDay(profileId)
     }
 
-    /** Эксперт мог распределить монеты руками до нажатия — его план и берём. */
-    private suspend fun planOf(period: GamePeriod, mandatory: Coins): BudgetPlan {
+    /**
+     * Эксперт мог распределить монеты руками до нажатия — его план и берём.
+     * Доля копилки уходит на цель при подтверждении (R6), поэтому без цели
+     * демонстрация берёт первую: ребёнок выбирает сам, а жюри важен весь цикл.
+     */
+    private suspend fun planOf(profileId: ProfileId, period: GamePeriod, needs: Coins): BudgetPlan {
+        val wallet = periods.balance(period)
         val plan = periods.plan(period.id)
-            ?: newPlan(period.available, mandatory).also { periods.savePlan(period.id, it) }
-        if (period.status == PeriodStatus.PLANNING) periods.save(periodEngine.confirmPlan(period))
+            ?: newPlan(wallet, minOf(needs, wallet)).also { periods.savePlan(period.id, it) }
+        if (period.status == PeriodStatus.PLANNING) {
+            chooseGoalIfNone(profileId)
+            confirmPlan(profileId)
+        }
         return plan
+    }
+
+    private suspend fun chooseGoalIfNone(profileId: ProfileId) {
+        if (savings.activeProgress(profileId) != null) return
+        val goal = content.pack().goals.firstOrNull() ?: return
+        savings.setActive(profileId, savings.progress(profileId, goal.id).copy(isActive = true))
     }
 
     /**
@@ -155,38 +166,17 @@ class PlayDemoDay(
             else -> emptyList()
         }
 
-    private suspend fun buy(profileId: ProfileId, period: GamePeriod, item: ShopItem) {
+    private suspend fun buy(profileId: ProfileId, period: GamePeriod, item: ShopItem, optionalLeft: Coins) {
         val result = wallet.purchase(
             item = item,
             currentBalance = periods.balance(period),
             periodId = period.id,
+            optionalLeft = optionalLeft,
         )
         if (result !is PurchaseResult.Success) return
         recorder.record(
             profileId = profileId,
             outcome = ActionOutcome(transaction = result.transaction, effects = result.effects),
-        )
-    }
-
-    /** Откладывает запланированное: очки роста дают и за накопления. */
-    private suspend fun deposit(profileId: ProfileId, period: GamePeriod, amount: Coins) {
-        val goal = content.pack().goals.firstOrNull() ?: return
-        val balance = periods.balance(period)
-        if (amount == Coins.ZERO || !balance.covers(amount)) return
-
-        val outcome = savingsEngine.deposit(
-            amount = amount,
-            currentBalance = balance,
-            progress = savings.progress(profileId, goal.id),
-            goal = goal,
-            periodId = period.id,
-        ).value
-        recorder.record(
-            profileId = profileId,
-            outcome = ActionOutcome(
-                transaction = outcome.transaction,
-                savings = outcome.progress.copy(isActive = true),
-            ),
         )
     }
 }

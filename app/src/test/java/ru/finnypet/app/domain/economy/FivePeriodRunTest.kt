@@ -165,13 +165,13 @@ class FivePeriodRunTest {
             transactions += credited.value.transaction
 
             needs.forEach { item ->
-                val bought = walletEngine.purchase(item, cash, period.id) as PurchaseResult.Success
+                val bought = walletEngine.purchase(item, cash, period.id, optionalLeft = plan.optional) as PurchaseResult.Success
                 cash = bought.newBalance
                 transactions += bought.transaction
                 state = petEngine.apply(state, bought.effects).value
             }
 
-            val boughtToy = walletEngine.purchase(toy, cash, period.id) as PurchaseResult.Success
+            val boughtToy = walletEngine.purchase(toy, cash, period.id, optionalLeft = plan.optional) as PurchaseResult.Success
             cash = boughtToy.newBalance
             transactions += boughtToy.transaction
             state = petEngine.apply(state, boughtToy.effects).value

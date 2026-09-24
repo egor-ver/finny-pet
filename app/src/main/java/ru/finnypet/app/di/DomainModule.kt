@@ -23,6 +23,7 @@ import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.CloseDay
+import ru.finnypet.app.domain.usecase.ConfirmPlan
 import ru.finnypet.app.domain.usecase.DeleteGame
 import ru.finnypet.app.domain.usecase.ExitDemo
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
@@ -79,6 +80,25 @@ object DomainModule {
     )
 
     @Provides
+    fun confirmPlan(
+        periods: PeriodRepository,
+        savings: SavingsRepository,
+        content: ContentRepository,
+        budget: BudgetEngine,
+        periodEngine: PeriodEngine,
+        savingsEngine: SavingsEngine,
+        recorder: OutcomeRecorder,
+    ): ConfirmPlan = ConfirmPlan(
+        periods = periods,
+        savings = savings,
+        content = content,
+        budget = budget,
+        periodEngine = periodEngine,
+        savingsEngine = savingsEngine,
+        recorder = recorder,
+    )
+
+    @Provides
     fun startDemo(
         profiles: ProfileRepository,
         settings: SettingsRepository,
@@ -105,10 +125,9 @@ object DomainModule {
         content: ContentRepository,
         openPeriod: OpenPeriodIfNeeded,
         closeDay: CloseDay,
+        confirmPlan: ConfirmPlan,
         wallet: WalletEngine,
-        savingsEngine: SavingsEngine,
         taskEngine: TaskEngine,
-        periodEngine: PeriodEngine,
         pet: PetStateEngine,
         recorder: OutcomeRecorder,
     ): PlayDemoDay = PlayDemoDay(
@@ -119,10 +138,9 @@ object DomainModule {
         content = content,
         openPeriod = openPeriod,
         closeDay = closeDay,
+        confirmPlan = confirmPlan,
         wallet = wallet,
-        savingsEngine = savingsEngine,
         taskEngine = taskEngine,
-        periodEngine = periodEngine,
         pet = pet,
         recorder = recorder,
     )

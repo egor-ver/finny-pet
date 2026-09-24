@@ -145,6 +145,7 @@
     <string name="budget_remove">Убрать из «%1$s»</string>
     <string name="budget_amount">%1$s: %2$d</string>
     <string name="budget_confirm">Подтвердить план</string>
+    <string name="budget_needs_goal">Чтобы откладывать, выбери цель в копилке.</string>
     <string name="budget_started">План подтверждён. Смотри, как он сходится.</string>
     <string name="budget_planned">План</string>
     <string name="budget_fact">Потрачено</string>
@@ -162,6 +163,7 @@
     <string name="shop_done_title">Готово!</string>
     <string name="shop_no_change">Питомцу и так хорошо — показатели не изменились.</string>
     <string name="shop_rejected_title">Монет не хватает</string>
+    <string name="shop_not_in_plan_title">Сегодня не в плане</string>
     <string name="shop_options">Что можно сделать</string>
     <string name="shop_option_hint">• %1$s</string>
     <string name="shop_failed">Не получилось открыть магазин. Попробуй ещё раз.</string>

@@ -37,6 +37,7 @@ import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
@@ -155,6 +156,7 @@ class ShopPurchaseTest {
                 balance = balance,
             ),
             wallet = WalletEngine(clock),
+            periodEngine = periodEngine(),
             recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock)),
             balance = balance,
             content = content(),
@@ -325,10 +327,15 @@ class ShopPurchaseTest {
         assertNull(await { it.outcome == null }.outcome)
     }
 
+    /**
+     * План без предела на желаемое: здесь проверяются деньги и запись покупки,
+     * а лимит плана (R4) — в WalletEngineTest.
+     */
     private suspend fun startDay() {
         val period = withTimeout(TIMEOUT_MS) {
             periods.observeCurrent(profileId).first { it != null }!!
         }
+        periods.savePlan(period.id, BudgetPlan(mandatory = Coins.ZERO, optional = Coins(1_000), savings = Coins.ZERO))
         periods.save(periodEngine().confirmPlan(period))
     }
 

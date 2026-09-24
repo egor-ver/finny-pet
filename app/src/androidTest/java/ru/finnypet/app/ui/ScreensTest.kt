@@ -1190,6 +1190,7 @@ class ScreensTest {
                 remainder = Coins.ZERO,
                 overBy = Coins(10),
                 step = 5,
+                needsGoal = false,
             )
         )
 
@@ -1713,6 +1714,7 @@ class ScreensTest {
         remainder = Coins(80) - plan.total,
         overBy = Coins.ZERO,
         step = 5,
+        needsGoal = false,
     )
 
     private fun showMain(

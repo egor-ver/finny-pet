@@ -45,6 +45,7 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.domain.usecase.CloseDay
+import ru.finnypet.app.domain.usecase.ConfirmPlan
 import ru.finnypet.app.domain.usecase.ExitDemo
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.PlayDemoDay
@@ -101,6 +102,11 @@ class DemoModeTest {
         )
         startDemo = StartDemo(profiles, settings)
         exitDemo = ExitDemo(profiles, settings)
+        val recorder = OutcomeRecorderImpl(
+            database = db,
+            petState = PetStateEngine(balance),
+            taskProgress = tasks,
+        )
         playDay = PlayDemoDay(
             profiles = profiles,
             periods = periods,
@@ -109,16 +115,19 @@ class DemoModeTest {
             content = content,
             openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
             closeDay = CloseDay(periods, profiles, periodEngine, DayRecorderImpl(db)),
-            wallet = WalletEngine(clock),
-            savingsEngine = SavingsEngine(clock),
-            taskEngine = TaskEngine(clock),
-            periodEngine = periodEngine,
-            pet = PetStateEngine(balance),
-            recorder = OutcomeRecorderImpl(
-                database = db,
-                petState = PetStateEngine(balance),
-                taskProgress = tasks,
+            confirmPlan = ConfirmPlan(
+                periods = periods,
+                savings = savings,
+                content = content,
+                budget = BudgetEngine(),
+                periodEngine = periodEngine,
+                savingsEngine = SavingsEngine(clock),
+                recorder = recorder,
             ),
+            wallet = WalletEngine(clock),
+            taskEngine = TaskEngine(clock),
+            pet = PetStateEngine(balance),
+            recorder = recorder,
         )
     }
 

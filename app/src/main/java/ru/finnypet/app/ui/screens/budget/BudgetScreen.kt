@@ -131,6 +131,12 @@ private fun Planning(
         onBack = onBack,
         bottomBar = {
             ButtonColumn {
+                if (state.needsGoal) {
+                    Text(
+                        text = stringResource(R.string.budget_needs_goal),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
                 FinnyButton(
                     text = stringResource(R.string.budget_confirm),
                     onClick = onConfirm,

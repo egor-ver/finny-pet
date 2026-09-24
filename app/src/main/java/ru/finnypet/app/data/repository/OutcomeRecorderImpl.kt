@@ -43,6 +43,8 @@ class OutcomeRecorderImpl @Inject constructor(
             outcome.taskCompletion?.let { completion ->
                 taskProgress.complete(profileId, completion.taskId, completion.outcomeId, completion.reward)
             }
+            // Подтверждение плана пишет день вместе с пополнением копилки (AD-5).
+            outcome.period?.let { database.periods().update(it.toEntity()) }
             outcome.transaction?.let { database.transactions().insert(it.toEntity()) }
             changes
         }
