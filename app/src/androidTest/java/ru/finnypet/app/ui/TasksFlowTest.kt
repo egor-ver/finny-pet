@@ -214,6 +214,7 @@ class TasksFlowTest {
         savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions()),
         taskProgress = progress,
         openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
+        periodEngine = periodEngine(),
         petState = PetStateEngine(balance),
         balance = balance,
         content = content(),

@@ -82,6 +82,7 @@ fun FinnyNavHost(
                 onShop = { navController.navigate(Shop) },
                 onSavings = { navController.navigate(Savings) },
                 onTask = { taskId -> navController.navigate(Task(taskId.value)) },
+                onTasks = { navController.navigate(Tasks) },
                 onFinishDay = { navController.navigate(Day) },
                 onProgress = { navController.navigate(Progress) },
                 onHelp = { navController.navigate(Help) },

@@ -1,7 +1,9 @@
 package ru.finnypet.app.ui.screens.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -14,6 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,18 +35,23 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
+import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
-import ru.finnypet.app.ui.components.GoalProgressBar
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
@@ -62,6 +72,7 @@ fun MainScreen(
     onShop: () -> Unit,
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
+    onTasks: () -> Unit,
     onFinishDay: () -> Unit,
     banner: @Composable () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel(),
@@ -75,6 +86,7 @@ fun MainScreen(
         onShop = onShop,
         onSavings = onSavings,
         onTask = onTask,
+        onTasks = onTasks,
         onFinishDay = onFinishDay,
         onProgress = onProgress,
         onHelp = onHelp,
@@ -95,6 +107,7 @@ fun MainContent(
     onShop: () -> Unit = {},
     onSavings: () -> Unit = {},
     onTask: (TaskId) -> Unit = {},
+    onTasks: () -> Unit = {},
     onFinishDay: () -> Unit = {},
     onProgress: () -> Unit = {},
     onHelp: () -> Unit = {},
@@ -110,6 +123,7 @@ fun MainContent(
             onShop = onShop,
             onSavings = onSavings,
             onTask = onTask,
+            onTasks = onTasks,
             onFinishDay = onFinishDay,
             onProgress = onProgress,
             onHelp = onHelp,
@@ -153,18 +167,24 @@ private fun ReadyScreen(
     onShop: () -> Unit,
     onSavings: () -> Unit,
     onTask: (TaskId) -> Unit,
+    onTasks: () -> Unit,
     onFinishDay: () -> Unit,
     onProgress: () -> Unit,
     onHelp: () -> Unit,
     onAdult: () -> Unit,
     banner: @Composable () -> Unit,
 ) {
+    var walletOpen by rememberSaveable { mutableStateOf(false) }
+    if (walletOpen) {
+        WalletDialog(balance = state.balance, lines = state.wallet, onDismiss = { walletOpen = false })
+    }
+
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
     FinnyScaffold(
         // Вместо заголовка — кошелёк: сколько монет есть, ребёнок видит
         // первым делом, без инструкции (ТЗ 8.4).
-        title = { MoneyAmount(amount = state.balance) },
+        title = { WalletChip(balance = state.balance, onOpen = { walletOpen = true }) },
         actions = {
             TopIcon(symbol = "?", label = stringResource(R.string.help_action), onClick = onHelp)
             TopIcon(symbol = "🔒", label = stringResource(R.string.adult_action), onClick = onAdult)
@@ -176,15 +196,18 @@ private fun ReadyScreen(
 
         Bubble(text = state.phrase)
         Pet(state = state)
+        GrowthRow(growth = state.growth, onOpen = onProgress)
         PetStats(state = state)
+        CoinsRow(jars = state.jars, savings = state.savings, onPlan = onPlan, onSavings = onSavings)
 
-        SavingsCard(savings = state.savings, onOpen = onSavings)
-        state.task?.let { task -> TaskCard(task = task, onOpen = { onTask(task.id) }) }
-
-        // После подтверждения главная кнопка к плану больше не ведёт, а
-        // сравнить план с фактом ребёнок должен иметь возможность (ТЗ 2.5.5).
-        if (state.step != NextStep.Plan) Link(stringResource(R.string.budget_action_show), onPlan)
-        Link(stringResource(R.string.progress_action), onProgress)
+        state.task?.let { task ->
+            TaskRow(task = task, onOpen = { onTask(task.id) })
+            // ТЗ 2.5.3: с главного доступны задания, а не только задание дня.
+            Link(
+                text = stringResource(if (task.allDone) R.string.main_task_all_done else R.string.main_tasks_all),
+                onOpen = onTasks,
+            )
+        }
     }
 }
 
@@ -368,110 +391,247 @@ private fun Link(text: String, onOpen: () -> Unit) {
 }
 
 /**
- * Накопления и цель.
- *
- * Цели может не быть — ребёнок ещё не выбрал. Тогда сумма всё равно
- * показывается: отложенные монеты не должны пропадать с экрана из-за того,
- * что цель не назначена.
- *
- * Карточка целиком — кнопка в копилку: третья кнопка внизу вытеснила бы
- * показатели питомца с экрана, а ТЗ 2.5.3 требует показать всё сразу.
- * Подпись «Открыть копилку» говорит, что карточка нажимается, — цветом это
- * не передашь (ТЗ 3.6).
+ * Кошелёк в шапке — кнопка в «Кошелёк сегодня». Подложка показывает, что
+ * это кнопка, не только цветом, а формой (ТЗ 3.6).
  */
 @Composable
-private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
-    FinnyCard(onClick = onOpen) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) {},
-        ) {
-            Text(
-                text = stringResource(R.string.main_savings),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            MoneyAmount(amount = savings.saved)
-        }
-
-        val title = savings.goalTitle
-        val price = savings.price
-        if (title == null || price == null) {
-            Text(
-                text = stringResource(R.string.main_goal_none),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            GoalProgressBar(title = title, saved = savings.saved, price = price)
-        }
-
-        Text(
-            text = stringResource(R.string.savings_open),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.align(Alignment.End),
-        )
+private fun WalletChip(balance: Coins, onOpen: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.wallet_open), onClick = onOpen)
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .padding(horizontal = Dimens.SpaceMedium),
+    ) {
+        MoneyAmount(amount = balance)
     }
 }
 
 /**
- * Задание дня (ТЗ 2.5.3): тема, начало вступления и состояние награды.
- * Карточка целиком — кнопка в задание, подпись «Открыть» словом. Замка до
- * плана нет: сначала заработай, потом распредели (R7).
+ * «Кошелёк сегодня»: у каждого начисления и списания источник и сумма
+ * (ТЗ 2.5.4). Окно, а не выезжающая панель: у окна нет анимации, которую
+ * пришлось бы отдельно выключать настройкой движения (ТЗ 3.6, AD-8).
  */
 @Composable
-private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
+private fun WalletDialog(balance: Coins, lines: List<WalletLine>, onDismiss: () -> Unit) {
+    FinnyDialog(
+        title = stringResource(R.string.wallet_title, balance.amount),
+        onDismiss = onDismiss,
+        buttons = { FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss) },
+    ) {
+        lines.forEach { line ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics(mergeDescendants = true) {},
+            ) {
+                Text(text = walletLabel(line), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(
+                    text = if (line.delta >= 0) "+${line.delta}" else "−${-line.delta}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+/** Покупка называется товаром — «Каша»; остальное — источником, с целью, если она есть. */
+@Composable
+private fun walletLabel(line: WalletLine): String {
+    val source = stringResource(
+        when (line.type) {
+            null -> R.string.wallet_carry_over
+            TransactionType.INCOME_PERIOD -> R.string.wallet_income
+            TransactionType.INCOME_TASK -> R.string.wallet_task
+            TransactionType.INCOME_PARENT -> R.string.wallet_parent
+            TransactionType.PURCHASE_MANDATORY, TransactionType.PURCHASE_OPTIONAL -> R.string.wallet_purchase
+            TransactionType.SAVINGS_DEPOSIT -> R.string.wallet_to_savings
+            TransactionType.SAVINGS_WITHDRAW -> R.string.wallet_from_savings
+            TransactionType.UNEXPECTED_EXPENSE -> R.string.wallet_unexpected
+        },
+    )
+    val name = line.name ?: return source
+    return when (line.type) {
+        TransactionType.PURCHASE_MANDATORY, TransactionType.PURCHASE_OPTIONAL -> name
+        else -> stringResource(R.string.wallet_named, source, name)
+    }
+}
+
+/**
+ * Строка роста — дорога в «Мой прогресс» (ТЗ 2.5.10): сколько очков и до
+ * какой стадии. Полоса нейтрального цвета, как у показателей.
+ */
+@Composable
+private fun GrowthRow(growth: GrowthView?, onOpen: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .clickable(role = Role.Button, onClick = onOpen)
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .semantics(mergeDescendants = true) {},
+    ) {
+        Text(text = "⭐", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics {})
+        if (growth == null) {
+            Text(
+                text = stringResource(R.string.main_growth_done),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Text(
+                text = stringResource(
+                    if (growth.next == GrowthStage.GROWN) R.string.main_growth_to_grown else R.string.main_growth_to_young,
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            ProgressLine(
+                fraction = growth.points.toFloat() / growth.target,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(R.string.main_growth_points, growth.points, growth.target),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        Chevron()
+    }
+}
+
+/**
+ * Строка «Монеты»: сколько по плану осталось в банках нужного и желаемого,
+ * и копилка с целью (ТЗ 2.5.3). Строка — дорога в план, банка копилки — в
+ * копилку. Копилка отдельной строкой: три банки в ряд при 16 sp на 360 dp
+ * не помещаются.
+ */
+@Composable
+private fun CoinsRow(jars: JarsLeft?, savings: SavingsView, onPlan: () -> Unit, onSavings: () -> Unit) {
+    Text(text = stringResource(R.string.main_coins), style = MaterialTheme.typography.titleMedium)
+    FinnyCard(onClick = onPlan) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (jars == null) {
+                Text(
+                    text = stringResource(R.string.main_coins_unplanned),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                JarLeft(category = SpendCategory.MANDATORY, left = jars.mandatory)
+                JarLeft(category = SpendCategory.OPTIONAL, left = jars.optional, modifier = Modifier.weight(1f))
+            }
+            Chevron()
+        }
+        SavingsJar(savings = savings, onOpen = onSavings)
+    }
+}
+
+/** «🥣 ещё 38»: направление иконкой и цветом, для TalkBack — словом (ТЗ 3.6). */
+@Composable
+private fun JarLeft(category: SpendCategory, left: Coins, modifier: Modifier = Modifier) {
+    val spoken = stringResource(R.string.main_jar_left_description, stringResource(category.label), left.amount)
+    Text(
+        text = category.icon + " " + stringResource(R.string.main_jar_left, left.amount),
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = category.color,
+        modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
+    )
+}
+
+/**
+ * Копилка и цель. Цели может не быть — ребёнок ещё не выбрал; отложенные
+ * монеты всё равно видны, а строка зовёт выбрать цель.
+ */
+@Composable
+private fun SavingsJar(savings: SavingsView, onOpen: () -> Unit) {
+    val title = savings.goalTitle
+    val price = savings.price
+    val saved = savings.saved.amount
+    val (shown, spoken) = if (title != null && price != null) {
+        stringResource(R.string.main_jar_goal, title, saved, price.amount) to
+            stringResource(R.string.main_jar_goal_description, title, saved, price.amount)
+    } else {
+        stringResource(R.string.main_jar_no_goal, saved) to stringResource(R.string.main_jar_no_goal_description, saved)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .clickable(role = Role.Button, onClick = onOpen)
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .clearAndSetSemantics { contentDescription = spoken },
+    ) {
+        Text(
+            text = SpendCategory.SAVINGS.icon + " " + shown,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = SpendCategory.SAVINGS.color,
+            modifier = Modifier.weight(1f),
+        )
+        Chevron()
+    }
+}
+
+/**
+ * Задание дня (ТЗ 2.5.3): тема, начало вступления и награда. Награду уже
+ * получили — вместо «+10» галочка, TalkBack читает её словами.
+ */
+@Composable
+private fun TaskRow(task: TaskOfDay, onOpen: () -> Unit) {
+    val reward = stringResource(if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken)
     FinnyCard(onClick = onOpen) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
+            Text(text = "🎯", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics {})
             Text(
                 text = stringResource(R.string.main_task),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = stringResource(task.topic.label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = if (task.rewardAvailable) "+${task.reward.amount}" else "✓",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clearAndSetSemantics { contentDescription = reward },
             )
+            Chevron()
         }
         Text(
-            text = task.intro,
+            text = stringResource(R.string.main_task_intro, stringResource(task.topic.label), task.intro),
             style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        // Обе подписи независимы: «всё пройдено» не должно прятать, что
-        // награда за сегодня ещё ждёт — иначе повторять незачем.
-        if (task.allDone) {
-            Text(
-                text = stringResource(R.string.main_task_all_done),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            text = stringResource(
-                if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringResource(R.string.main_task_open),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.align(Alignment.End),
-        )
     }
+}
+
+/** «›» — строка нажимается; озвучке он не нужен, у строки роль кнопки. */
+@Composable
+private fun Chevron() {
+    Text(
+        text = "›",
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.clearAndSetSemantics {},
+    )
 }
 
 /** Порядок как на макете: еда первой — о ней сова просит чаще всего. */

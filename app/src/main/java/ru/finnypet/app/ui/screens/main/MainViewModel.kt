@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
@@ -20,10 +21,12 @@ import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.Pet
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.Profile
+import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
@@ -59,10 +62,12 @@ data class TaskOfDay(
     val id: TaskId,
     val topic: TaskTopic,
     val intro: String,
-    /** Остался ли на сегодня лимит наград: подпись «награда не получена» или «получена». */
+    /** Остался ли на сегодня лимит наград: «+10» или галочка «получено». */
     val rewardAvailable: Boolean,
     /** Все задания уже пройдены — предлагается повторить давнее всех. */
     val allDone: Boolean,
+    /** Сколько дадут за первую верную попытку дня (R8). */
+    val reward: Coins,
 )
 
 /**
@@ -86,7 +91,13 @@ sealed interface MainState {
         val needs: List<PetStatKind>,
         /** Фраза совы в облачке — уже готовый текст из контент-пака. */
         val phrase: String,
+        /** `null` — сова взрослая. */
+        val growth: GrowthView?,
         val balance: Coins,
+        /** Откуда пришли и куда ушли монеты за день — для «Кошелька сегодня». */
+        val wallet: List<WalletLine>,
+        /** `null` — план ещё не подтверждён, монеты не разложены. */
+        val jars: JarsLeft?,
         val savings: SavingsView,
         val task: TaskOfDay?,
         val step: NextStep,
@@ -108,6 +119,7 @@ class MainViewModel @Inject constructor(
     private val savings: SavingsRepository,
     private val taskProgress: TaskProgressRepository,
     private val openPeriod: OpenPeriodIfNeeded,
+    private val periodEngine: PeriodEngine,
     private val petState: PetStateEngine,
     private val balance: GameBalance,
     content: ContentRepository,
@@ -116,6 +128,7 @@ class MainViewModel @Inject constructor(
     private val goals: Map<GoalId, Goal> = content.pack().goals.associateBy { it.id }
     private val tasks = content.pack().tasks
     private val shop = content.pack().shop
+    private val shopItems: Map<ItemId, ShopItem> = shop.associateBy { it.id }
     private val pets = content.pack().pets
     private val cheapestMandatory: Coins? = shop
         .filter { it.category == SpendCategory.MANDATORY }
@@ -158,13 +171,14 @@ class MainViewModel @Inject constructor(
             if (pet == null || period == null) {
                 flowOf(MainState.Loading)
             } else {
-                // Баланс и операции наблюдаются отдельно, потому что зависят
-                // от периода: баланс считается по операциям, лимит наград за
-                // задания — по ним же.
+                // Баланс, операции и план наблюдаются отдельно, потому что
+                // зависят от периода: баланс считается по операциям, лимит
+                // наград за задания и остатки по банкам — по ним же.
                 combine(
                     periods.observeBalance(period),
                     periods.observeTransactions(period.id),
-                ) { wallet, transactions ->
+                    periods.observePlan(period.id),
+                ) { wallet, transactions, plan ->
                     val task = taskOf(completed, transactions, pet.state)
                     val needs = petState.needsOf(pet.state)
                     val step = nextStep(period.status, needs.isNotEmpty(), wallet, cheapestMandatory)
@@ -184,7 +198,10 @@ class MainViewModel @Inject constructor(
                         stats = pet.state,
                         needs = needs,
                         phrase = texts.textOf(phrase),
+                        growth = growthOf(pet.growth, balance.growthThresholds),
                         balance = wallet,
+                        wallet = walletLines(period.startBalance, transactions, ::nameOf),
+                        jars = jarsLeft(period.status, plan, periodEngine.factOf(transactions)),
                         savings = savingsOf(progress),
                         task = task,
                         step = step,
@@ -226,7 +243,15 @@ class MainViewModel @Inject constructor(
             intro = texts.textOf(task.introKey),
             rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
             allDone = TaskSchedule.listed(tasks).all { it.id in done },
+            reward = balance.taskReward,
         )
+    }
+
+    /** Товар или цель операции словами; пропавшие из контент-пака — без имени, но с суммой. */
+    private fun nameOf(transaction: Transaction): String? {
+        val key = transaction.itemId?.let { shopItems[it]?.titleKey }
+            ?: transaction.goalId?.let { goals[it]?.titleKey }
+        return key?.let(texts::textOf)
     }
 
     /**
