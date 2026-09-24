@@ -197,7 +197,7 @@ class ContentParserTest {
     @Test
     fun `неизвестная категория товара перечисляет допустимые`() {
         val error = parseFailure(
-            shop = """{"items":[{"id":"x","titleKey":"t","price":10,"category":"FOOD"}]}"""
+            shop = """{"items":[{"id":"x","titleKey":"t","icon":"🧪","price":10,"category":"FOOD"}]}"""
         )
 
         val message = error.message.orEmpty()
@@ -209,7 +209,7 @@ class ContentParserTest {
     @Test
     fun `товар с ценой меньше нуля называет товар`() {
         val error = parseFailure(
-            shop = """{"items":[{"id":"cheap","titleKey":"t","price":-5,"category":"OPTIONAL"}]}"""
+            shop = """{"items":[{"id":"cheap","titleKey":"t","icon":"🧪","price":-5,"category":"OPTIONAL"}]}"""
         )
 
         assertTrue("Не назван товар: ${error.message}", error.message!!.contains("cheap"))
@@ -218,10 +218,28 @@ class ContentParserTest {
     @Test
     fun `товар в накоплениях отвергается`() {
         val error = parseFailure(
-            shop = """{"items":[{"id":"x","titleKey":"t","price":10,"category":"SAVINGS"}]}"""
+            shop = """{"items":[{"id":"x","titleKey":"t","icon":"🧪","price":10,"category":"SAVINGS"}]}"""
         )
 
         assertTrue("Не назван файл: ${error.message}", error.message!!.contains("shop.json"))
+    }
+
+    /** AD-11: у каждого товара и цели картинка-эмодзи из контента. */
+    @Test
+    fun `у каждого товара и цели есть картинка`() {
+        val pack = parser.parse(realContent())
+
+        assertTrue(pack.shop.all { it.icon.isNotBlank() })
+        assertTrue(pack.goals.all { it.icon.isNotBlank() })
+    }
+
+    @Test
+    fun `товар с пустой картинкой называет товар`() {
+        val error = parseFailure(
+            shop = """{"items":[{"id":"blank","titleKey":"t","icon":" ","price":10,"category":"OPTIONAL"}]}"""
+        )
+
+        assertTrue("Не назван товар: ${error.message}", error.message!!.contains("blank"))
     }
 
     @Test
@@ -229,8 +247,8 @@ class ContentParserTest {
         val error = parseFailure(
             shop = """
             {"items":[
-              {"id":"same","titleKey":"a","price":10,"category":"MANDATORY"},
-              {"id":"same","titleKey":"b","price":20,"category":"OPTIONAL"}
+              {"id":"same","titleKey":"a","icon":"🧪","price":10,"category":"MANDATORY"},
+              {"id":"same","titleKey":"b","icon":"🧪","price":20,"category":"OPTIONAL"}
             ]}
             """
         )

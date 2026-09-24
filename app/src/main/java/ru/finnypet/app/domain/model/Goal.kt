@@ -4,6 +4,8 @@ data class Goal(
     val id: GoalId,
     val titleKey: String,
     val price: Coins,
+    /** Картинка — эмодзи из контента (AD-11). */
+    val icon: String = "",
 ) {
 
     init {

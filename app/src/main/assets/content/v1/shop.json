@@ -2,6 +2,7 @@
   "items": [
     {
       "id": "food-porridge",
+      "icon": "🥣",
       "titleKey": "shop.food_porridge",
       "price": 14,
       "category": "MANDATORY",
@@ -14,6 +15,7 @@
     },
     {
       "id": "water-fresh",
+      "icon": "💧",
       "titleKey": "shop.water_fresh",
       "price": 8,
       "category": "MANDATORY",
@@ -26,6 +28,7 @@
     },
     {
       "id": "care-brush",
+      "icon": "🪥",
       "titleKey": "shop.care_brush",
       "price": 18,
       "category": "MANDATORY",
@@ -38,6 +41,7 @@
     },
     {
       "id": "care-vitamins",
+      "icon": "💊",
       "titleKey": "shop.care_vitamins",
       "price": 15,
       "category": "MANDATORY",
@@ -50,6 +54,7 @@
     },
     {
       "id": "treat-berry",
+      "icon": "🫐",
       "titleKey": "shop.treat_berry",
       "price": 12,
       "category": "OPTIONAL",
@@ -62,6 +67,7 @@
     },
     {
       "id": "sticker-star",
+      "icon": "⭐",
       "titleKey": "shop.sticker_star",
       "price": 10,
       "category": "OPTIONAL",
@@ -74,6 +80,7 @@
     },
     {
       "id": "toy-ball",
+      "icon": "⚽",
       "titleKey": "shop.toy_ball",
       "price": 24,
       "category": "OPTIONAL",
@@ -86,6 +93,7 @@
     },
     {
       "id": "toy-book",
+      "icon": "📘",
       "titleKey": "shop.toy_book",
       "price": 32,
       "category": "OPTIONAL",

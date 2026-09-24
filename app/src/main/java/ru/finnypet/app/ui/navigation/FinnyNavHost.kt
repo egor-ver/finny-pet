@@ -1,5 +1,10 @@
 package ru.finnypet.app.ui.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -21,6 +26,7 @@ import ru.finnypet.app.ui.screens.savings.SavingsScreen
 import ru.finnypet.app.ui.screens.shop.ShopScreen
 import ru.finnypet.app.ui.screens.tasks.TaskScreen
 import ru.finnypet.app.ui.screens.tasks.TasksScreen
+import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 
 /**
  * Граф переходов.
@@ -37,10 +43,13 @@ fun FinnyNavHost(
     navController: NavHostController = rememberNavController(),
     startDestination: Route = Onboarding,
 ) {
+    val motion = LocalAnimationsEnabled.current
     NavHost(
         navController = navController,
         startDestination = startDestination,
         modifier = modifier,
+        enterTransition = { screenEnter(motion) },
+        exitTransition = { screenExit(motion) },
     ) {
         composable<Onboarding> {
             OnboardingScreen(
@@ -170,3 +179,16 @@ fun FinnyNavHost(
         }
     }
 }
+
+/**
+ * Смена экранов слушает настройку движения (ТЗ 3.6, AD-8): по умолчанию
+ * навигация плавно проявляет экран, а с выключенным движением он меняется
+ * сразу. Длительность — как у навигации по умолчанию.
+ */
+internal fun screenEnter(motion: Boolean): EnterTransition =
+    if (motion) fadeIn(tween(SCREEN_FADE_MS)) else EnterTransition.None
+
+internal fun screenExit(motion: Boolean): ExitTransition =
+    if (motion) fadeOut(tween(SCREEN_FADE_MS)) else ExitTransition.None
+
+private const val SCREEN_FADE_MS = 700

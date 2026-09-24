@@ -42,6 +42,7 @@ data class GoalView(
     val price: Coins,
     val saved: Coins,
     val isActive: Boolean,
+    val icon: String,
 ) {
 
     val remaining: Coins get() = saved.shortfallTo(price)
@@ -344,6 +345,7 @@ class SavingsViewModel @Inject constructor(
                 price = goal.price,
                 saved = progress?.saved ?: Coins.ZERO,
                 isActive = progress?.isActive == true,
+                icon = goal.icon,
             )
         }
         val progress = progresses.firstOrNull { it.isActive }

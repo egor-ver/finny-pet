@@ -33,6 +33,7 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyListScaffold
+import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
@@ -212,6 +213,7 @@ private fun ShopItemRow(
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
+        ItemIcon(icon = item.icon)
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
             modifier = Modifier.weight(1f),

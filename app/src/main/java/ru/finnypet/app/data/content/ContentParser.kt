@@ -130,6 +130,7 @@ class ContentParser @Inject constructor() {
                     price = Coins(item.price),
                     category = enum<SpendCategory>(item.category, "category"),
                     effects = item.effects.map(::effect),
+                    icon = icon(item.icon),
                 )
             }
         }.also { items -> items.map { it.id.value }.requireUnique(SHOP, "товар") }
@@ -139,7 +140,7 @@ class ContentParser @Inject constructor() {
         val dto = decode<GoalsDto>(GOALS, raw)
         return dto.goals.map { goal ->
             at(GOALS, "цель ${goal.id}") {
-                Goal(id = GoalId(goal.id), titleKey = goal.titleKey, price = Coins(goal.price))
+                Goal(id = GoalId(goal.id), titleKey = goal.titleKey, price = Coins(goal.price), icon = icon(goal.icon))
             }
         }.also { goals -> goals.map { it.id.value }.requireUnique(GOALS, "цель") }
     }
@@ -336,6 +337,12 @@ class ContentParser @Inject constructor() {
     private fun sadAbout(dto: ShowWhenDto): PetStatKind {
         require(dto.type == "PET_SAD") { "условие показа \"${dto.type}\": допустимо только PET_SAD" }
         return enum<PetStatKind>(dto.stat, "stat")
+    }
+
+    /** Без картинки карточка в магазине и копилке выглядела бы сломанной. */
+    private fun icon(value: String): String {
+        require(value.isNotBlank()) { "поле icon пустое: нужен эмодзи" }
+        return value
     }
 
     private fun effect(dto: EffectDto) = PetEffect(

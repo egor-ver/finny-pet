@@ -635,6 +635,7 @@ class ScreensTest {
         price = Coins(12),
         category = SpendCategory.MANDATORY,
         effects = listOf(PetEffect(PetStatKind.SATIETY, 20)),
+        icon = "🥣",
     )
 
     private val toy = ShopItemView(
@@ -643,6 +644,7 @@ class ScreensTest {
         price = Coins(18),
         category = SpendCategory.OPTIONAL,
         effects = listOf(PetEffect(PetStatKind.MOOD, 15)),
+        icon = "⚽",
     )
 
     private fun ready(
@@ -1098,6 +1100,7 @@ class ScreensTest {
         price = Coins(30),
         saved = Coins(10),
         isActive = true,
+        icon = "🛴",
     )
 
     private val book = GoalView(
@@ -1106,6 +1109,7 @@ class ScreensTest {
         price = Coins(15),
         saved = Coins.ZERO,
         isActive = false,
+        icon = "📚",
     )
 
     private fun savingsReady(

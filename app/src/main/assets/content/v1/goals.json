@@ -2,16 +2,19 @@
   "goals": [
     {
       "id": "goal-book",
+      "icon": "📚",
       "titleKey": "goal.book",
       "price": 40
     },
     {
       "id": "goal-board-game",
+      "icon": "🎲",
       "titleKey": "goal.board_game",
       "price": 70
     },
     {
       "id": "goal-bike",
+      "icon": "🛴",
       "titleKey": "goal.bike",
       "price": 120
     }

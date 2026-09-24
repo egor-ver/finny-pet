@@ -66,6 +66,7 @@ data class ShopItemDto(
     val price: Int,
     val category: String,
     val effects: List<EffectDto> = emptyList(),
+    val icon: String,
 )
 
 @Serializable
@@ -76,6 +77,7 @@ data class GoalDto(
     val id: String,
     val titleKey: String,
     val price: Int,
+    val icon: String,
 )
 
 @Serializable

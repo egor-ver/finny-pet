@@ -31,6 +31,7 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
@@ -292,6 +293,7 @@ private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
+        ItemIcon(icon = goal.icon)
         Column(
             verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
             modifier = Modifier.weight(1f),

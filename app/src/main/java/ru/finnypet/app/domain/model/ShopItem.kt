@@ -6,6 +6,8 @@ data class ShopItem(
     val price: Coins,
     val category: SpendCategory,
     val effects: List<PetEffect> = emptyList(),
+    /** Картинка — эмодзи из контента (AD-11): новый товар с картинкой — правка JSON. */
+    val icon: String = "",
 ) {
 
     init {

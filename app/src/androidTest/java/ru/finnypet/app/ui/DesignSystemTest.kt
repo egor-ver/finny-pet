@@ -182,6 +182,7 @@ class DesignSystemTest {
                                 price = Coins(12),
                                 category = SpendCategory.MANDATORY,
                                 effects = emptyList(),
+                                icon = "🥣",
                             )
                         ),
                         balance = Coins(80),

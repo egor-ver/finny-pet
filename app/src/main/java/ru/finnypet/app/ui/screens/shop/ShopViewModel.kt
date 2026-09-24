@@ -46,6 +46,7 @@ data class ShopItemView(
     val price: Coins,
     val category: SpendCategory,
     val effects: List<PetEffect>,
+    val icon: String,
 )
 
 /** Вариант выхода при нехватке денег с подписью из контент-пака. */
@@ -145,6 +146,7 @@ class ShopViewModel @Inject constructor(
             price = item.price,
             category = item.category,
             effects = item.effects,
+            icon = item.icon,
         )
     }
 
