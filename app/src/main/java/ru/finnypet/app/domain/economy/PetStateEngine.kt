@@ -7,6 +7,7 @@ import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.domain.model.Stat
 
 class PetStateEngine(private val balance: GameBalance) {
 
@@ -22,16 +23,16 @@ class PetStateEngine(private val balance: GameBalance) {
         )
     }
 
+    /**
+     * Сначала итоги дня, потом ночь (AD-2): бонус за план не отменяет
+     * завтрашних потребностей, а упирается в тот же потолок шкалы.
+     */
     fun onPeriodClosed(state: PetState, report: PlanFactReport): GameResult<PetState> {
         var next = state
-        if (!report.mandatoryCovered) {
-            next = next
-                .with(PetStatKind.SATIETY, next.satiety - balance.statPenaltyMissedMandatory)
-                .with(PetStatKind.CARE, next.care - balance.statPenaltyMissedMandatory)
-        }
         if (report.planFollowed) {
             next = next.with(PetStatKind.MOOD, next.mood + balance.moodBonusPlanFollowed)
         }
+        next = night(next)
         return GameResult(
             value = next,
             explanation = explanationFor(report),
@@ -48,6 +49,20 @@ class PetStateEngine(private val balance: GameBalance) {
         report.planFollowed -> Explanation(key = KEY_PLAN_FOLLOWED)
 
         else -> Explanation(key = KEY_PERIOD_CLOSED)
+    }
+
+    private fun night(state: PetState): PetState =
+        PetStatKind.entries.fold(state) { next, kind ->
+            val stat = next.statFor(kind)
+            // Показатель ниже предела ночь не трогает: иначе она подняла бы его до предела.
+            val floor = minOf(stat, Stat(balance.statFloor))
+            next.with(kind, maxOf(stat - nightDropOf(kind), floor))
+        }
+
+    private fun nightDropOf(kind: PetStatKind): Int = when (kind) {
+        PetStatKind.SATIETY -> balance.nightDropSatiety
+        PetStatKind.CARE -> balance.nightDropCare
+        PetStatKind.MOOD -> balance.nightDropMood
     }
 
     private fun changesBetween(from: PetState, to: PetState): List<Change> =

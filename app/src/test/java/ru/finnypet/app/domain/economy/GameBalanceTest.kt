@@ -14,12 +14,17 @@ class GameBalanceTest {
         growthForMandatoryCovered: Int = 2,
         unexpectedExpenseChance: Int = 15,
         initialStat: Int = 70,
+        nightDropSatiety: Int = 25,
+        statFloor: Int = 30,
     ) = GameBalance(
         startingBalance = Coins(100),
         periodIncome = Coins(60),
         taskReward = Coins(15),
         initialStat = initialStat,
-        statPenaltyMissedMandatory = 15,
+        nightDropSatiety = nightDropSatiety,
+        nightDropCare = 15,
+        nightDropMood = 10,
+        statFloor = statFloor,
         moodBonusPlanFollowed = 10,
         growthForMandatoryCovered = growthForMandatoryCovered,
         growthForPlanFollowed = 2,
@@ -73,6 +78,21 @@ class GameBalanceTest {
     @Test
     fun `стартовый показатель ниже шкалы не допускается`() {
         assertThrows(IllegalArgumentException::class.java) { balance(initialStat = -1) }
+    }
+
+    @Test
+    fun `отрицательное падение за ночь не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(nightDropSatiety = -1) }
+    }
+
+    @Test
+    fun `нижний предел выше шкалы не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(statFloor = 101) }
+    }
+
+    @Test
+    fun `нижний предел ниже шкалы не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(statFloor = -1) }
     }
 
     @Test

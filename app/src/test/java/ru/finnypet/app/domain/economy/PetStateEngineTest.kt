@@ -85,29 +85,72 @@ class PetStateEngineTest {
         assertTrue(engine.apply(full, listOf(PetEffect(PetStatKind.MOOD, 10))).changes.isEmpty())
     }
 
+    /** Сытая сова: ночь не упирается в предел, видно чистое падение. */
+    private val fed = PetState(mood = Stat(90), satiety = Stat(90), care = Stat(90))
+
     @Test
-    fun `незакрытые обязательные расходы снижают сытость и уход`() {
-        val result = engine.onPeriodClosed(state, report(mandatoryOk = false))
-        assertEquals(Stat(50 - balance.statPenaltyMissedMandatory), result.value.satiety)
-        assertEquals(Stat(50 - balance.statPenaltyMissedMandatory), result.value.care)
+    fun `ночь снижает сытость уход и настроение на свои величины`() {
+        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+        assertEquals(Stat(90 - balance.nightDropSatiety), result.value.satiety)
+        assertEquals(Stat(90 - balance.nightDropCare), result.value.care)
+        assertEquals(Stat(90 - balance.nightDropMood), result.value.mood)
+    }
+
+    /** Штраф заменён ночью: сверх неё за незакрытое нужное ничего не снимается. */
+    @Test
+    fun `незакрытые обязательные расходы не снижают показатели сверх ночи`() {
+        val missed = engine.onPeriodClosed(fed, report(mandatoryOk = false, optionalOk = false))
+        val ordinary = engine.onPeriodClosed(fed, report(optionalOk = false))
+        assertEquals(ordinary.value, missed.value)
+    }
+
+    /** Раздел 4 плана, ночь после дня 2: еда 55 → 30, уход 70 → 55. */
+    @Test
+    fun `ночь не опускает показатель ниже предела`() {
+        val evening = PetState(mood = Stat(90), satiety = Stat(55), care = Stat(70))
+        val result = engine.onPeriodClosed(evening, report(optionalOk = false))
+        assertEquals(Stat(balance.statFloor), result.value.satiety)
+        assertEquals(Stat(55), result.value.care)
     }
 
     @Test
-    fun `незакрытые обязательные расходы не снижают настроение`() {
-        val result = engine.onPeriodClosed(state, report(mandatoryOk = false))
-        assertEquals(Stat(50), result.value.mood)
+    fun `показатель уже ниже предела ночь не трогает`() {
+        val low = PetState(mood = Stat(90), satiety = Stat(20), care = Stat(90))
+        val result = engine.onPeriodClosed(low, report(optionalOk = false))
+        assertEquals(Stat(20), result.value.satiety)
     }
 
     @Test
-    fun `выполненный план поднимает настроение`() {
+    fun `выполненный план поднимает настроение до ночи`() {
         val result = engine.onPeriodClosed(state, report())
-        assertEquals(Stat(50 + balance.moodBonusPlanFollowed), result.value.mood)
+        assertEquals(Stat(50 + balance.moodBonusPlanFollowed - balance.nightDropMood), result.value.mood)
+    }
+
+    /** Бонус упирается в потолок раньше ночи, иначе сова с полной радостью её бы не теряла. */
+    @Test
+    fun `бонус за план упирается в потолок до ночи`() {
+        val happy = fed.copy(mood = Stat.MAX)
+        val result = engine.onPeriodClosed(happy, report())
+        assertEquals(Stat(Stat.MAX.value - balance.nightDropMood), result.value.mood)
     }
 
     @Test
-    fun `превышение необязательных не меняет показатели`() {
-        val result = engine.onPeriodClosed(state, report(optionalOk = false))
-        assertEquals(state, result.value)
+    fun `превышение необязательных меняет показатели только ночью`() {
+        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+        assertEquals(
+            PetState(
+                mood = Stat(90 - balance.nightDropMood),
+                satiety = Stat(90 - balance.nightDropSatiety),
+                care = Stat(90 - balance.nightDropCare),
+            ),
+            result.value,
+        )
+    }
+
+    @Test
+    fun `ночь сообщает изменения показателей`() {
+        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+        assertEquals(PetStatKind.entries.toSet(), result.changes.map { (it as Change.PetStat).kind }.toSet())
     }
 
     @Test

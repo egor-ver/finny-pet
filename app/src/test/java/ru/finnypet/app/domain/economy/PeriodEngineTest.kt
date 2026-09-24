@@ -129,9 +129,9 @@ class PeriodEngineTest {
     }
 
     @Test
-    fun `закрытие меняет состояние питомца по отчёту`() {
+    fun `закрытие меняет состояние питомца по отчёту и ночи`() {
         val outcome = engine().close(period, plan, onPlan, state, PetGrowth.INITIAL).value
-        assertEquals(Stat(50 + balance.moodBonusPlanFollowed), outcome.state.mood)
+        assertEquals(Stat(50 + balance.moodBonusPlanFollowed - balance.nightDropMood), outcome.state.mood)
     }
 
     @Test

@@ -9,7 +9,16 @@ data class GameBalance(
     val periodIncome: Coins,
     val taskReward: Coins,
     val initialStat: Int,
-    val statPenaltyMissedMandatory: Int,
+    /**
+     * На сколько падают показатели за ночь при закрытии игрового дня. Ночь
+     * создаёт потребности на завтра: без неё сытая сова оставалась бы сытой
+     * навсегда и нужное теряло бы смысл (AD-2).
+     */
+    val nightDropSatiety: Int,
+    val nightDropCare: Int,
+    val nightDropMood: Int,
+    /** Ниже этого ночь показатель не опускает: без «голодания» (ТЗ 3.5). */
+    val statFloor: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
@@ -49,8 +58,11 @@ data class GameBalance(
         require(initialStat in Stat.RANGE) {
             "Стартовый показатель питомца задаётся в пределах ${Stat.RANGE}, задан: $initialStat"
         }
-        require(statPenaltyMissedMandatory >= 0 && moodBonusPlanFollowed >= 0) {
+        require(nightDropSatiety >= 0 && nightDropCare >= 0 && nightDropMood >= 0 && moodBonusPlanFollowed >= 0) {
             "Изменения показателей задаются неотрицательными величинами"
+        }
+        require(statFloor in Stat.RANGE) {
+            "Нижний предел показателя задаётся в пределах ${Stat.RANGE}, задан: $statFloor"
         }
         require(growthForMandatoryCovered >= 0 && growthForPlanFollowed >= 0 && growthForSavingsKept >= 0) {
             "Очки роста не могут быть отрицательными"
@@ -76,7 +88,10 @@ data class GameBalance(
             periodIncome = Coins(60),
             taskReward = Coins(15),
             initialStat = 70,
-            statPenaltyMissedMandatory = 15,
+            nightDropSatiety = 25,
+            nightDropCare = 15,
+            nightDropMood = 10,
+            statFloor = 30,
             moodBonusPlanFollowed = 10,
             growthForMandatoryCovered = 2,
             growthForPlanFollowed = 2,
