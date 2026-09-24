@@ -1,6 +1,8 @@
 package ru.finnypet.app.domain.economy
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -44,7 +46,8 @@ class PeriodEngineTest {
         status = PeriodStatus.RUNNING,
     )
 
-    private val state = PetState.uniform(Stat(50))
+    /** Сытая сова: потребностей нет, итог дня решают план и копилка. */
+    private val state = PetState.uniform(Stat(90))
 
     private var nextId = 0L
 
@@ -131,7 +134,7 @@ class PeriodEngineTest {
     @Test
     fun `закрытие меняет состояние питомца по отчёту и ночи`() {
         val outcome = engine().close(period, plan, onPlan, state, PetGrowth.INITIAL).value
-        assertEquals(Stat(50 + balance.moodBonusPlanFollowed - balance.nightDropMood), outcome.state.mood)
+        assertEquals(Stat(90 + balance.moodBonusPlanFollowed - balance.nightDropMood), outcome.state.mood)
     }
 
     @Test
@@ -164,14 +167,25 @@ class PeriodEngineTest {
     }
 
     @Test
-    fun `промах по обязательным ведёт объяснение и предлагает поправить план`() {
-        val underspent = listOf(
-            transaction(TransactionType.INCOME_PERIOD, Coins(60)),
-            transaction(TransactionType.PURCHASE_MANDATORY, Coins(30)),
-        )
-        val result = engine().close(period, plan, underspent, state, PetGrowth.INITIAL)
+    fun `незакрытые потребности ведут объяснение и предлагают поправить план`() {
+        val hungry = state.copy(satiety = Stat(balance.needThreshold - 1))
+        val result = engine().close(period, plan, onPlan, hungry, PetGrowth.INITIAL)
         assertEquals("period.missed_mandatory", result.explanation.key)
         assertEquals(RecoveryOption.ADJUST_NEXT_PLAN, result.explanation.nextStep)
+        assertFalse(result.value.needsMet)
+        assertEquals(0, result.value.growth.points)
+    }
+
+    /** Находка на vivo: каша дешевле плана не должна считаться промахом. */
+    @Test
+    fun `нужное дешевле плана при сытой сове не промах`() {
+        val underspent = listOf(
+            transaction(TransactionType.INCOME_PERIOD, Coins(60)),
+            transaction(TransactionType.PURCHASE_MANDATORY, Coins(14)),
+        )
+        val result = engine().close(period, plan, underspent, state, PetGrowth.INITIAL)
+        assertTrue(result.value.needsMet)
+        assertNotEquals("period.missed_mandatory", result.explanation.key)
     }
 
     @Test

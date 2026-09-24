@@ -23,6 +23,7 @@ data class BalanceDto(
     val nightDropCare: Int,
     val nightDropMood: Int,
     val statFloor: Int,
+    val needThreshold: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,

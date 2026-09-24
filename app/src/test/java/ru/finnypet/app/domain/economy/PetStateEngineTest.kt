@@ -6,12 +6,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.domain.model.totalPrice
 
 class PetStateEngineTest {
 
@@ -26,7 +29,7 @@ class PetStateEngineTest {
         savingsOk: Boolean = true,
     ): PlanFactReport {
         val lines = listOf(
-            PlanFactLine(SpendCategory.MANDATORY, Coins(40), if (mandatoryOk) Coins(40) else Coins(30)),
+            PlanFactLine(SpendCategory.MANDATORY, Coins(40), if (mandatoryOk) Coins(40) else Coins(50)),
             PlanFactLine(SpendCategory.OPTIONAL, Coins(20), if (optionalOk) Coins(20) else Coins(30)),
             PlanFactLine(SpendCategory.SAVINGS, Coins(10), if (savingsOk) Coins(10) else Coins(5)),
         )
@@ -153,22 +156,82 @@ class PetStateEngineTest {
         assertEquals(PetStatKind.entries.toSet(), result.changes.map { (it as Change.PetStat).kind }.toSet())
     }
 
+    /** Итог дня решают потребности, а не план: план выполнен, а сова голодна. */
     @Test
-    fun `промах по обязательным объясняется и предлагает поправить план`() {
-        val result = engine.onPeriodClosed(state, report(mandatoryOk = false))
+    fun `незакрытые потребности объясняются и предлагают поправить план`() {
+        val hungry = fed.copy(satiety = Stat(balance.needThreshold - 1))
+        val result = engine.onPeriodClosed(hungry, report())
         assertEquals("pet.missed_mandatory", result.explanation.key)
         assertEquals(RecoveryOption.ADJUST_NEXT_PLAN, result.explanation.nextStep)
     }
 
     @Test
     fun `выполненный план объясняется своим ключом`() {
-        assertEquals("pet.plan_followed", engine.onPeriodClosed(state, report()).explanation.key)
+        assertEquals("pet.plan_followed", engine.onPeriodClosed(fed, report()).explanation.key)
     }
 
     @Test
     fun `обычный период объясняется нейтрально и без подсказки`() {
-        val result = engine.onPeriodClosed(state, report(optionalOk = false))
+        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
         assertEquals("pet.period_closed", result.explanation.key)
         assertNull(result.explanation.nextStep)
+    }
+
+    private fun item(id: String, price: Int, stat: PetStatKind, delta: Int, category: SpendCategory = SpendCategory.MANDATORY) =
+        ShopItem(ItemId(id), "shop.$id", Coins(price), category, listOf(PetEffect(stat, delta)))
+
+    /** Нужное из shop.json: цены и влияние те же, что в разделе 4 плана. */
+    private val shop = listOf(
+        item("porridge", 14, PetStatKind.SATIETY, 25),
+        item("water", 8, PetStatKind.SATIETY, 15),
+        item("brush", 18, PetStatKind.CARE, 25),
+        item("vitamins", 15, PetStatKind.CARE, 20),
+        item("ball", 24, PetStatKind.MOOD, 25, SpendCategory.OPTIONAL),
+    )
+
+    private fun pet(satiety: Int, care: Int, mood: Int = 90) =
+        PetState(mood = Stat(mood), satiety = Stat(satiety), care = Stat(care))
+
+    @Test
+    fun `потребность — сытость или уход ниже порога`() {
+        val threshold = balance.needThreshold
+        assertEquals(listOf(PetStatKind.SATIETY), engine.needsOf(pet(satiety = threshold - 1, care = threshold)))
+    }
+
+    @Test
+    fun `грустная сова без голода потребностей не имеет`() {
+        assertTrue(engine.needsOf(pet(satiety = 90, care = 90, mood = 10)).isEmpty())
+    }
+
+    /** Раздел 4 плана, утро дня 3: еда 30 → каша и вода 22, уход 55 → витамины 15. */
+    @Test
+    fun `цена закрытия потребностей из эталонного сценария — 37`() {
+        val cover = engine.cheapestCover(pet(satiety = 30, care = 55), shop)!!
+        assertEquals(Coins(37), cover.totalPrice())
+        assertEquals(listOf("porridge", "vitamins", "water"), cover.map { it.id.value }.sorted())
+    }
+
+    @Test
+    fun `две воды дешевле каши с водой`() {
+        val cover = engine.cheapestCover(pet(satiety = 40, care = 90), shop)!!
+        assertEquals(listOf("water", "water"), cover.map { it.id.value })
+    }
+
+    @Test
+    fun `без потребностей набор пустой`() {
+        assertEquals(emptyList<ShopItem>(), engine.cheapestCover(pet(satiety = 90, care = 90), shop))
+    }
+
+    @Test
+    fun `желаемое потребности не закрывает`() {
+        val cheapFood = item("candy", 1, PetStatKind.SATIETY, 50, SpendCategory.OPTIONAL)
+        val cover = engine.cheapestCover(pet(satiety = 60, care = 90), shop + cheapFood)!!
+        assertEquals(listOf("water"), cover.map { it.id.value })
+    }
+
+    @Test
+    fun `если потребность нечем закрыть — набора нет`() {
+        val noCare = shop.filter { it.effects.none { effect -> effect.stat == PetStatKind.CARE } }
+        assertNull(engine.cheapestCover(pet(satiety = 90, care = 50), noCare))
     }
 }

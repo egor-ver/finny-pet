@@ -8,7 +8,10 @@ import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.SpendCategory
 
-/** Следующий шаг идёт по циклу Приложения А: план, задание, нужное, копилка, итоги. */
+/**
+ * Следующий шаг идёт по циклу Приложения А: план, задание, нужное, копилка, итоги.
+ * В магазин зовут потребности совы, а не недотраченный план (R3).
+ */
 class NextStepTest {
 
     private val plan = BudgetPlan(mandatory = Coins(20), optional = Coins(10), savings = Coins(15))
@@ -24,8 +27,14 @@ class NextStepTest {
     }
 
     @Test
-    fun `после задания — нужное на остаток по плану`() {
-        assertEquals(NextStep.Shop(Coins(12)), step(fact = fact(mandatory = 8)))
+    fun `после задания — магазин на цену закрытия потребностей`() {
+        assertEquals(NextStep.Shop(Coins(37)), step(needs = 37))
+    }
+
+    /** Находка на vivo: сова сыта, а кнопка звала потратить остаток плана на нужное. */
+    @Test
+    fun `сова сыта, а план на нужное не потрачен — не магазин`() {
+        assertEquals(NextStep.Save(Coins(15)), step(fact = fact(mandatory = 8)))
     }
 
     @Test
@@ -36,12 +45,12 @@ class NextStepTest {
     /** Все монеты потрачены — звать в магазин и копилку незачем, это тупик. */
     @Test
     fun `без монет — итоги не по плану, а не магазин и копилка`() {
-        assertEquals(NextStep.Finish(onPlan = false), step(fact = fact(mandatory = 8), balance = 0))
+        assertEquals(NextStep.Finish(onPlan = false), step(fact = fact(mandatory = 8), balance = 0, needs = 22))
     }
 
     @Test
     fun `на нужное не хватает даже на самое дешёвое — сразу копилка`() {
-        assertEquals(NextStep.Save(Coins(5)), step(fact = fact(mandatory = 8), balance = 5))
+        assertEquals(NextStep.Save(Coins(5)), step(fact = fact(mandatory = 8), balance = 5, needs = 22))
     }
 
     @Test
@@ -57,19 +66,31 @@ class NextStepTest {
     /** Желаемое не шаг: отказ от него ТЗ не считает ошибкой. */
     @Test
     fun `нужное и копилка по плану — итоги, даже без желаемого`() {
-        assertEquals(NextStep.Finish(onPlan = true), step(fact = fact(mandatory = 25, savings = 15)))
+        assertEquals(NextStep.Finish(onPlan = true), step(fact = fact(mandatory = 20, savings = 15)))
+    }
+
+    @Test
+    fun `сэкономил на нужном — всё равно по плану`() {
+        assertEquals(NextStep.Finish(onPlan = true), step(fact = fact(mandatory = 14, savings = 15)))
+    }
+
+    @Test
+    fun `нужное сверх плана — итоги не по плану`() {
+        assertEquals(NextStep.Finish(onPlan = false), step(fact = fact(mandatory = 25, savings = 15)))
     }
 
     private fun step(
         status: PeriodStatus = PeriodStatus.RUNNING,
         fact: PeriodFact = fact(),
         balance: Int = 50,
+        needs: Int = 0,
         taskReward: Boolean = false,
     ) = nextStep(
         status = status,
         plan = plan,
         fact = fact,
         balance = Coins(balance),
+        needs = Coins(needs),
         cheapestMandatory = CHEAPEST_MANDATORY,
         taskRewardAvailable = taskReward,
     )

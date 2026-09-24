@@ -10,18 +10,24 @@ import ru.finnypet.app.domain.model.SpendCategory
 
 class GrowthEngine(private val balance: GameBalance) {
 
-    fun pointsFor(report: PlanFactReport): Int =
-        (if (report.earnsGrowth(SpendCategory.MANDATORY)) balance.growthForMandatoryCovered else 0) +
+    /**
+     * В день, когда потребности не закрыты, очков нет совсем (AD-3): сова не
+     * растёт, если её не кормят, а прогресс при этом не отнимается (ТЗ 2.2).
+     */
+    fun pointsFor(report: PlanFactReport, needsMet: Boolean): Int {
+        if (!needsMet) return 0
+        return balance.growthForMandatoryCovered +
             (if (report.planFollowed) balance.growthForPlanFollowed else 0) +
-            (if (report.earnsGrowth(SpendCategory.SAVINGS)) balance.growthForSavingsKept else 0)
+            (if (report.savingsEarnGrowth()) balance.growthForSavingsKept else 0)
+    }
 
     /**
-     * Направление приносит очки, только если по нему было что распределять.
-     * Нулевой план выполняется тривиально (0 >= 0), и награждать за него значит
+     * Копилка приносит очки, только если в неё было что откладывать. Нулевой
+     * план выполняется тривиально (0 >= 0), и награждать за него значит
      * платить ребёнку за направление, которого он не касался.
      */
-    private fun PlanFactReport.earnsGrowth(category: SpendCategory): Boolean =
-        line(category).let { it.planned > Coins.ZERO && it.followed }
+    private fun PlanFactReport.savingsEarnGrowth(): Boolean =
+        line(SpendCategory.SAVINGS).let { it.planned > Coins.ZERO && it.followed }
 
     fun stageFor(points: Int): GrowthStage {
         require(points >= 0) { "Очки роста не могут быть отрицательными: $points" }
@@ -32,8 +38,8 @@ class GrowthEngine(private val balance: GameBalance) {
      * Стадия берётся как максимум из текущей и посчитанной по очкам: она не падает
      * даже если пороги изменились после того, как прогресс был сохранён (ТЗ 2.2).
      */
-    fun apply(current: PetGrowth, report: PlanFactReport): GameResult<PetGrowth> {
-        val earned = pointsFor(report)
+    fun apply(current: PetGrowth, report: PlanFactReport, needsMet: Boolean): GameResult<PetGrowth> {
+        val earned = pointsFor(report, needsMet)
         val points = current.points + earned
         val stage = maxOf(current.stage, stageFor(points))
         val grew = stage != current.stage

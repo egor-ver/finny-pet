@@ -19,6 +19,12 @@ data class GameBalance(
     val nightDropMood: Int,
     /** Ниже этого ночь показатель не опускает: без «голодания» (ТЗ 3.5). */
     val statFloor: Int,
+    /**
+     * Сытость или уход ниже порога — потребность дня (R2). Нужное считается
+     * выполненным, когда потребностей нет, а не когда потрачен план: иначе
+     * игра учила бы «потрать всё, что запланировал» (AD-3).
+     */
+    val needThreshold: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
@@ -64,6 +70,9 @@ data class GameBalance(
         require(statFloor in Stat.RANGE) {
             "Нижний предел показателя задаётся в пределах ${Stat.RANGE}, задан: $statFloor"
         }
+        require(needThreshold in Stat.RANGE) {
+            "Порог потребности задаётся в пределах ${Stat.RANGE}, задан: $needThreshold"
+        }
         require(growthForMandatoryCovered >= 0 && growthForPlanFollowed >= 0 && growthForSavingsKept >= 0) {
             "Очки роста не могут быть отрицательными"
         }
@@ -92,6 +101,7 @@ data class GameBalance(
             nightDropCare = 15,
             nightDropMood = 10,
             statFloor = 30,
+            needThreshold = 70,
             moodBonusPlanFollowed = 10,
             growthForMandatoryCovered = 2,
             growthForPlanFollowed = 2,

@@ -7,7 +7,10 @@ import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.domain.model.ShopItem
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.domain.model.totalPrice
 
 class PetStateEngine(private val balance: GameBalance) {
 
@@ -23,6 +26,39 @@ class PetStateEngine(private val balance: GameBalance) {
         )
     }
 
+    /** Чего сове не хватает прямо сейчас (R2): сытость или уход ниже порога. */
+    fun needsOf(state: PetState): List<PetStatKind> =
+        NEEDS.filter { state.statFor(it) < Stat(balance.needThreshold) }
+
+    /**
+     * Самый дешёвый набор нужного, который закрывает все потребности (R2).
+     * Товар можно взять несколько раз: две воды бывают дешевле каши. Пустой
+     * набор — потребностей нет; null — какую-то из них в магазине нечем закрыть.
+     */
+    fun cheapestCover(state: PetState, shop: List<ShopItem>): List<ShopItem>? =
+        needsOf(state).flatMap { kind ->
+            cheapestFor(kind, balance.needThreshold - state.statFor(kind).value, shop) ?: return null
+        }
+
+    /**
+     * Каждая потребность считается отдельно: нужное в магазине поднимает один
+     * показатель. best[d] — самый дешёвый набор, дающий не меньше d.
+     */
+    private fun cheapestFor(kind: PetStatKind, deficit: Int, shop: List<ShopItem>): List<ShopItem>? {
+        val gains = shop
+            .filter { it.category == SpendCategory.MANDATORY }
+            .map { item -> item to item.effects.filter { it.stat == kind }.sumOf { it.delta } }
+            .filter { (_, gain) -> gain > 0 }
+        val best = arrayOfNulls<List<ShopItem>>(deficit + 1)
+        best[0] = emptyList()
+        for (d in 1..deficit) {
+            best[d] = gains
+                .mapNotNull { (item, gain) -> best[maxOf(0, d - gain)]?.plus(item) }
+                .minByOrNull { it.totalPrice().amount }
+        }
+        return best[deficit]
+    }
+
     /**
      * Сначала итоги дня, потом ночь (AD-2): бонус за план не отменяет
      * завтрашних потребностей, а упирается в тот же потолок шкалы.
@@ -35,13 +71,13 @@ class PetStateEngine(private val balance: GameBalance) {
         next = night(next)
         return GameResult(
             value = next,
-            explanation = explanationFor(report),
+            explanation = explanationFor(needsMet = needsOf(state).isEmpty(), report = report),
             changes = changesBetween(state, next),
         )
     }
 
-    private fun explanationFor(report: PlanFactReport): Explanation = when {
-        !report.mandatoryCovered -> Explanation(
+    private fun explanationFor(needsMet: Boolean, report: PlanFactReport): Explanation = when {
+        !needsMet -> Explanation(
             key = KEY_MISSED_MANDATORY,
             nextStep = RecoveryOption.ADJUST_NEXT_PLAN,
         )
@@ -73,6 +109,9 @@ class PetStateEngine(private val balance: GameBalance) {
         }
 
     private companion object {
+        /** Радость не потребность: её растит желаемое, а желаемое необязательно. */
+        val NEEDS = listOf(PetStatKind.SATIETY, PetStatKind.CARE)
+
         const val KEY_CHANGED = "pet.state_changed"
         const val KEY_MISSED_MANDATORY = "pet.missed_mandatory"
         const val KEY_PLAN_FOLLOWED = "pet.plan_followed"

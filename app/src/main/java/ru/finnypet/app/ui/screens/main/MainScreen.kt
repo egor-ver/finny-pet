@@ -229,7 +229,7 @@ private fun NextStepBar(
     val (hint, action) = when (step) {
         NextStep.Plan -> stringResource(R.string.main_step_plan) to stringResource(R.string.budget_action_plan)
         NextStep.Task -> stringResource(R.string.main_step_task) to stringResource(R.string.main_step_task_action)
-        is NextStep.Shop -> stringResource(R.string.main_step_shop, coinsText(step.left)) to
+        is NextStep.Shop -> stringResource(R.string.main_step_shop, coinsText(step.needs)) to
             stringResource(R.string.shop_action)
         is NextStep.Save -> stringResource(R.string.main_step_save, coinsText(step.left)) to
             stringResource(R.string.main_step_save_action)

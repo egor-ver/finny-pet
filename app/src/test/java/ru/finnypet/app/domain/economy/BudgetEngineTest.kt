@@ -107,19 +107,20 @@ class BudgetEngineTest {
     @Test
     fun `обязательные засчитаны когда потрачено ровно по плану`() {
         val fact = PeriodFact.of(mandatory = Coins(40))
-        assertTrue(engine.compare(plan, fact).mandatoryCovered)
+        assertTrue(engine.compare(plan, fact).line(SpendCategory.MANDATORY).followed)
     }
 
     @Test
-    fun `обязательные засчитаны когда потрачено больше плана`() {
+    fun `обязательные не засчитаны когда потрачено больше плана`() {
         val fact = PeriodFact.of(mandatory = Coins(45))
-        assertTrue(engine.compare(plan, fact).mandatoryCovered)
+        assertFalse(engine.compare(plan, fact).line(SpendCategory.MANDATORY).followed)
     }
 
+    /** R3: сэкономил на нужном — не ошибка, остаток переходит на завтра. */
     @Test
-    fun `обязательные не засчитаны когда потрачено меньше плана`() {
+    fun `обязательные засчитаны когда потрачено меньше плана`() {
         val fact = PeriodFact.of(mandatory = Coins(39))
-        assertFalse(engine.compare(plan, fact).mandatoryCovered)
+        assertTrue(engine.compare(plan, fact).line(SpendCategory.MANDATORY).followed)
     }
 
     @Test
@@ -165,9 +166,16 @@ class BudgetEngineTest {
     }
 
     @Test
-    fun `план не исполнен когда не закрыты обязательные`() {
-        val fact = PeriodFact.of(mandatory = Coins(30), optional = Coins(20), savings = Coins(10))
+    fun `план не исполнен когда обязательные сверх плана`() {
+        val fact = PeriodFact.of(mandatory = Coins(45), optional = Coins(20), savings = Coins(10))
         assertFalse(engine.compare(plan, fact).planFollowed)
+    }
+
+    /** Находка на vivo: каша за 14 при плане 40 не должна ломать план. */
+    @Test
+    fun `экономия на обязательных не ломает исполнение плана`() {
+        val fact = PeriodFact.of(mandatory = Coins(14), optional = Coins(20), savings = Coins(10))
+        assertTrue(engine.compare(plan, fact).planFollowed)
     }
 
     @Test
@@ -177,9 +185,9 @@ class BudgetEngineTest {
     }
 
     @Test
-    fun `период без единой траты не засчитывает обязательные и накопления`() {
+    fun `период без единой траты соблюдает траты но не накопления`() {
         val report = engine.compare(plan, PeriodFact.EMPTY)
-        assertFalse(report.mandatoryCovered)
+        assertTrue(report.line(SpendCategory.MANDATORY).followed)
         assertFalse(report.savingsKept)
         assertTrue(report.line(SpendCategory.OPTIONAL).followed)
     }

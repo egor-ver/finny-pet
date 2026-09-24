@@ -2,6 +2,7 @@ package ru.finnypet.app.domain.usecase
 
 import kotlinx.coroutines.flow.first
 import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.TaskEngine
@@ -19,6 +20,7 @@ import ru.finnypet.app.domain.model.StepAnswer
 import ru.finnypet.app.domain.model.TaskAttempt
 import ru.finnypet.app.domain.model.TaskCompletion
 import ru.finnypet.app.domain.model.TaskStep
+import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
@@ -48,34 +50,39 @@ class PlayDemoDay(
     private val savingsEngine: SavingsEngine,
     private val taskEngine: TaskEngine,
     private val periodEngine: PeriodEngine,
+    private val pet: PetStateEngine,
     private val recorder: OutcomeRecorder,
 ) {
 
     suspend operator fun invoke() {
         val profileId = profiles.testProfile()?.id ?: return
         val period = openPeriod(profileId)
-        val need = cheapest(SpendCategory.MANDATORY, period.available)
-        val plan = planOf(period, need)
+        // Тот же расчёт, что подсказывает ребёнку главный экран: самый дешёвый
+        // набор, закрывающий потребности. Иначе сова в демо не росла бы (AD-3).
+        val needs = profiles.pet(profileId)
+            ?.let { pet.cheapestCover(it.state, content.pack().shop) }
+            .orEmpty()
+        val plan = planOf(period, minOf(needs.totalPrice(), period.available))
 
         passTask(profileId, period)
-        need?.let { buy(profileId, period, it) }
+        needs.forEach { buy(profileId, period, it) }
         cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it) }
         deposit(profileId, period, plan.savings)
         closeDay(profileId)
     }
 
     /** Эксперт мог распределить монеты руками до нажатия — его план и берём. */
-    private suspend fun planOf(period: GamePeriod, need: ShopItem?): BudgetPlan {
+    private suspend fun planOf(period: GamePeriod, mandatory: Coins): BudgetPlan {
         val plan = periods.plan(period.id)
-            ?: newPlan(period.available, need?.price ?: Coins.ZERO).also { periods.savePlan(period.id, it) }
+            ?: newPlan(period.available, mandatory).also { periods.savePlan(period.id, it) }
         if (period.status == PeriodStatus.PLANNING) periods.save(periodEngine.confirmPlan(period))
         return plan
     }
 
     /**
      * Разумная игра: сначала ровно столько, сколько стоит нужное, остальное
-     * пополам между желаемым и копилкой. План строится под покупку: очко роста
-     * за обязательные даётся, когда потрачено не меньше запланированного.
+     * пополам между желаемым и копилкой. План строится под покупку: нужное
+     * соблюдено, когда потрачено не больше запланированного (R3).
      */
     private fun newPlan(available: Coins, mandatory: Coins): BudgetPlan {
         val rest = available - mandatory

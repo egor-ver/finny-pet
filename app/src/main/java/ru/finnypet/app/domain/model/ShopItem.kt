@@ -15,3 +15,5 @@ data class ShopItem(
         }
     }
 }
+
+fun List<ShopItem>.totalPrice(): Coins = fold(Coins.ZERO) { total, item -> total + item.price }

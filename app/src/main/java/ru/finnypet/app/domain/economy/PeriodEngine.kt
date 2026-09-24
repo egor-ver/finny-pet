@@ -16,6 +16,8 @@ import ru.finnypet.app.domain.model.Transaction
 data class PeriodOutcome(
     val closedPeriod: GamePeriod,
     val report: PlanFactReport,
+    /** Закрыты ли потребности совы к вечеру, до ночи: от этого зависит рост (AD-3). */
+    val needsMet: Boolean,
     val state: PetState,
     val growth: PetGrowth,
     val carryOver: Coins,
@@ -54,8 +56,9 @@ class PeriodEngine(
         }
 
         val report = budget.compare(plan, factOf(transactions))
+        val needsMet = pet.needsOf(state).isEmpty()
         val petResult = pet.onPeriodClosed(state, report)
-        val growthResult = growth.apply(currentGrowth, report)
+        val growthResult = growth.apply(currentGrowth, report, needsMet)
         val carryOver = carryOverOf(period, transactions)
         val stageChanged = growthResult.changes.any { it is Change.Stage }
 
@@ -63,11 +66,12 @@ class PeriodEngine(
             value = PeriodOutcome(
                 closedPeriod = period.copy(status = PeriodStatus.CLOSED, closedAt = clock.now()),
                 report = report,
+                needsMet = needsMet,
                 state = petResult.value,
                 growth = growthResult.value,
                 carryOver = carryOver,
             ),
-            explanation = headline(report, stageChanged),
+            explanation = headline(needsMet, report, stageChanged),
             changes = petResult.changes + growthResult.changes,
         )
     }
@@ -101,8 +105,8 @@ class PeriodEngine(
         return if (balance.carryOverUnspent) Coins(left) else Coins.ZERO
     }
 
-    private fun headline(report: PlanFactReport, stageChanged: Boolean): Explanation = when {
-        !report.mandatoryCovered -> Explanation(
+    private fun headline(needsMet: Boolean, report: PlanFactReport, stageChanged: Boolean): Explanation = when {
+        !needsMet -> Explanation(
             key = KEY_MISSED_MANDATORY,
             nextStep = RecoveryOption.ADJUST_NEXT_PLAN,
         )

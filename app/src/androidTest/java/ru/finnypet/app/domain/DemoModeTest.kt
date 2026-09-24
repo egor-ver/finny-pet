@@ -113,6 +113,7 @@ class DemoModeTest {
             savingsEngine = SavingsEngine(clock),
             taskEngine = TaskEngine(clock),
             periodEngine = periodEngine,
+            pet = PetStateEngine(balance),
             recorder = OutcomeRecorderImpl(
                 database = db,
                 petState = PetStateEngine(balance),
@@ -233,10 +234,13 @@ class DemoModeTest {
     fun прожитый_день_проходит_весь_цикл() = runBlocking {
         val demo = startDemo()
 
+        // Нужное покупается по потребностям совы (R3), а они появляются после
+        // первой ночи: весь цикл виден на втором дне.
+        playDay()
         playDay()
 
-        val first = periods.lastClosed(demo.id)!!
-        val transactions = periods.transactions(first.id)
+        val second = periods.lastClosed(demo.id)!!
+        val transactions = periods.transactions(second.id)
         val fact = periodEngine.factOf(transactions)
         assertTrue("задание не принесло монет", transactions.any { it.type == TransactionType.INCOME_TASK })
         assertTrue("обязательное не куплено", fact.amountFor(SpendCategory.MANDATORY) > Coins.ZERO)

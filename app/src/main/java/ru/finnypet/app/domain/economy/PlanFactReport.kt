@@ -11,10 +11,15 @@ data class PlanFactLine(
 
     val deviation: Int get() = actual.amount - planned.amount
 
+    /**
+     * Траты соблюдены, если потрачено не больше плана: сэкономил на нужном —
+     * остаток переходит на завтра без наказания (R3). Сыта ли сова, план не
+     * знает — это потребности (AD-3). Копилку, наоборот, надо пополнить.
+     */
     val followed: Boolean
         get() = when (category) {
-            SpendCategory.MANDATORY, SpendCategory.SAVINGS -> actual >= planned
-            SpendCategory.OPTIONAL -> actual <= planned
+            SpendCategory.MANDATORY, SpendCategory.OPTIONAL -> actual <= planned
+            SpendCategory.SAVINGS -> actual >= planned
         }
 }
 
@@ -32,8 +37,6 @@ data class PlanFactReport(
     }
 
     fun line(category: SpendCategory): PlanFactLine = lines.first { it.category == category }
-
-    val mandatoryCovered: Boolean get() = line(SpendCategory.MANDATORY).followed
 
     val savingsKept: Boolean get() = line(SpendCategory.SAVINGS).followed
 

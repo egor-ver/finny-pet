@@ -20,8 +20,8 @@ sealed interface NextStep {
 
     data object Task : NextStep
 
-    /** Сколько по плану осталось потратить на нужное. */
-    data class Shop(val left: Coins) : NextStep
+    /** Во сколько обойдётся закрыть потребности совы самым дешёвым набором. */
+    data class Shop(val needs: Coins) : NextStep
 
     /** Сколько по плану осталось отложить. */
     data class Save(val left: Coins) : NextStep
@@ -33,25 +33,30 @@ sealed interface NextStep {
 /**
  * Шаг предлагается, только если его можно сделать: без монет звать в магазин
  * или в копилку — значит отправить в тупик (ТЗ 3.4).
+ *
+ * В магазин зовут потребности совы, а не недотраченный план: иначе кнопка
+ * учила бы «потрать всё, что запланировал на нужное» (R3). [needs] — цена
+ * закрытия потребностей, ноль — их нет.
  */
 fun nextStep(
     status: PeriodStatus,
     plan: BudgetPlan?,
     fact: PeriodFact,
     balance: Coins,
+    needs: Coins,
     cheapestMandatory: Coins?,
     taskRewardAvailable: Boolean,
 ): NextStep {
     if (status == PeriodStatus.PLANNING || plan == null) return NextStep.Plan
     if (taskRewardAvailable) return NextStep.Task
 
-    val mandatory = fact.amountFor(SpendCategory.MANDATORY).shortfallTo(plan.mandatory)
     val canBuy = cheapestMandatory != null && balance.covers(cheapestMandatory)
-    if (mandatory > Coins.ZERO && canBuy) return NextStep.Shop(mandatory)
+    if (needs > Coins.ZERO && canBuy) return NextStep.Shop(needs)
 
     val savings = fact.amountFor(SpendCategory.SAVINGS).shortfallTo(plan.savings)
     if (savings > Coins.ZERO && balance > Coins.ZERO) return NextStep.Save(minOf(savings, balance))
 
-    val optionalKept = fact.amountFor(SpendCategory.OPTIONAL) <= plan.optional
-    return NextStep.Finish(onPlan = mandatory == Coins.ZERO && savings == Coins.ZERO && optionalKept)
+    val spentKept = fact.amountFor(SpendCategory.MANDATORY) <= plan.mandatory &&
+        fact.amountFor(SpendCategory.OPTIONAL) <= plan.optional
+    return NextStep.Finish(onPlan = needs == Coins.ZERO && savings == Coins.ZERO && spentKept)
 }

@@ -239,7 +239,7 @@
     <string name="main_step_plan">Раздели монеты: на нужное, на желаемое и в копилку.</string>
     <string name="main_step_task">Выполни задание дня — за него дают монеты.</string>
     <string name="main_step_task_action">Выполнить задание</string>
-    <string name="main_step_shop">Купи нужное: по плану ещё %1$s.</string>
+    <string name="main_step_shop">Купи нужное: Финни нужно ещё на %1$s.</string>
     <string name="main_step_save">Отложи в копилку: по плану ещё %1$s.</string>
     <string name="main_step_save_action">В копилку</string>
     <string name="main_step_finish">Всё по плану! Можно заканчивать день.</string>

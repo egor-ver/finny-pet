@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
 import ru.finnypet.app.domain.model.GamePeriod
@@ -29,6 +30,7 @@ import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
+import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
@@ -105,13 +107,15 @@ class MainViewModel @Inject constructor(
     private val taskProgress: TaskProgressRepository,
     private val openPeriod: OpenPeriodIfNeeded,
     private val periodEngine: PeriodEngine,
+    private val petState: PetStateEngine,
     private val balance: GameBalance,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
     private val goals: Map<GoalId, Goal> = content.pack().goals.associateBy { it.id }
     private val tasks = content.pack().tasks
-    private val cheapestMandatory: Coins? = content.pack().shop
+    private val shop = content.pack().shop
+    private val cheapestMandatory: Coins? = shop
         .filter { it.category == SpendCategory.MANDATORY }
         .minOfOrNull { it.price }
     private val texts: Map<String, String> = content.pack().texts
@@ -177,6 +181,7 @@ class MainViewModel @Inject constructor(
                             plan = plan,
                             fact = periodEngine.factOf(transactions),
                             balance = balance,
+                            needs = petState.cheapestCover(pet.state, shop)?.totalPrice() ?: Coins.ZERO,
                             cheapestMandatory = cheapestMandatory,
                             taskRewardAvailable = task?.rewardAvailable == true,
                         ),

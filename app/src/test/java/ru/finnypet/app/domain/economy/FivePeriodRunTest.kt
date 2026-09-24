@@ -31,6 +31,7 @@ import ru.finnypet.app.domain.model.TaskStep
 import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.domain.model.totalPrice
 
 /**
  * Сквозной прогон пяти игровых периодов на одном наборе чисел.
@@ -74,7 +75,7 @@ class FivePeriodRunTest {
         food, toy,
         food.copy(id = ItemId("grain"), price = Coins(20)),
         food.copy(id = ItemId("water"), price = Coins(10)),
-        food.copy(id = ItemId("brush"), price = Coins(30)),
+        food.copy(id = ItemId("brush"), price = Coins(15), effects = listOf(PetEffect(PetStatKind.CARE, 20))),
         toy.copy(id = ItemId("bow"), price = Coins(15)),
         toy.copy(id = ItemId("book"), price = Coins(35)),
         toy.copy(id = ItemId("lamp"), price = Coins(45)),
@@ -114,7 +115,7 @@ class FivePeriodRunTest {
         val number: Int,
         val available: Coins,
         val planFollowed: Boolean,
-        val mandatoryCovered: Boolean,
+        val needsMet: Boolean,
         val savedTotal: Coins,
         val growth: PetGrowth,
         val state: PetState,
@@ -138,8 +139,11 @@ class FivePeriodRunTest {
 
         repeat(PERIODS) {
             val available = period.available
+            // Ребёнок, который держится плана, закладывает на нужное ровно
+            // цену закрытия потребностей совы (R3).
+            val needs = petEngine.cheapestCover(state, catalogue)!!
             val plan = BudgetPlan(
-                mandatory = food.price,
+                mandatory = needs.totalPrice(),
                 optional = toy.price,
                 savings = plannedSavings,
             )
@@ -160,10 +164,12 @@ class FivePeriodRunTest {
             var cash = credited.value.balance
             transactions += credited.value.transaction
 
-            val boughtFood = walletEngine.purchase(food, cash, period.id) as PurchaseResult.Success
-            cash = boughtFood.newBalance
-            transactions += boughtFood.transaction
-            state = petEngine.apply(state, boughtFood.effects).value
+            needs.forEach { item ->
+                val bought = walletEngine.purchase(item, cash, period.id) as PurchaseResult.Success
+                cash = bought.newBalance
+                transactions += bought.transaction
+                state = petEngine.apply(state, bought.effects).value
+            }
 
             val boughtToy = walletEngine.purchase(toy, cash, period.id) as PurchaseResult.Success
             cash = boughtToy.newBalance
@@ -188,7 +194,7 @@ class FivePeriodRunTest {
                 number = period.number,
                 available = available,
                 planFollowed = closed.value.report.planFollowed,
-                mandatoryCovered = closed.value.report.mandatoryCovered,
+                needsMet = closed.value.needsMet,
                 savedTotal = progress.saved,
                 growth = growth,
                 state = state,
@@ -217,9 +223,9 @@ class FivePeriodRunTest {
     }
 
     @Test
-    fun `обязательные расходы закрываются каждый период`() {
+    fun `потребности совы закрываются каждый период`() {
         play().forEach { snapshot ->
-            assertTrue("Период ${snapshot.number}: обязательные не закрыты", snapshot.mandatoryCovered)
+            assertTrue("Период ${snapshot.number}: потребности совы не закрыты", snapshot.needsMet)
         }
     }
 

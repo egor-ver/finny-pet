@@ -109,6 +109,7 @@ object DomainModule {
         savingsEngine: SavingsEngine,
         taskEngine: TaskEngine,
         periodEngine: PeriodEngine,
+        pet: PetStateEngine,
         recorder: OutcomeRecorder,
     ): PlayDemoDay = PlayDemoDay(
         profiles = profiles,
@@ -122,6 +123,7 @@ object DomainModule {
         savingsEngine = savingsEngine,
         taskEngine = taskEngine,
         periodEngine = periodEngine,
+        pet = pet,
         recorder = recorder,
     )
 

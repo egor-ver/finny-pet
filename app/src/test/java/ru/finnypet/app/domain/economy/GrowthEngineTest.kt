@@ -21,7 +21,7 @@ class GrowthEngineTest {
         savingsOk: Boolean = true,
     ): PlanFactReport {
         val lines = listOf(
-            PlanFactLine(SpendCategory.MANDATORY, Coins(40), if (mandatoryOk) Coins(40) else Coins(30)),
+            PlanFactLine(SpendCategory.MANDATORY, Coins(40), if (mandatoryOk) Coins(40) else Coins(50)),
             PlanFactLine(SpendCategory.OPTIONAL, Coins(20), if (optionalOk) Coins(20) else Coins(30)),
             PlanFactLine(SpendCategory.SAVINGS, Coins(10), if (savingsOk) Coins(10) else Coins(5)),
         )
@@ -32,27 +32,53 @@ class GrowthEngineTest {
         )
     }
 
+    private val bad = report(mandatoryOk = false, optionalOk = false, savingsOk = false)
+
     @Test
     fun `безупречный период даёт максимум очков`() {
-        assertEquals(balance.maxGrowthPerPeriod, engine.pointsFor(report()))
+        assertEquals(balance.maxGrowthPerPeriod, engine.pointsFor(report(), needsMet = true))
     }
 
     @Test
     fun `промах по всем направлениям не даёт очков`() {
-        val bad = report(mandatoryOk = false, optionalOk = false, savingsOk = false)
-        assertEquals(0, engine.pointsFor(bad))
+        assertEquals(0, engine.pointsFor(bad, needsMet = false))
     }
 
     @Test
-    fun `закрытые обязательные дают свои очки`() {
-        val onlyMandatory = report(mandatoryOk = true, optionalOk = false, savingsOk = false)
-        assertEquals(balance.growthForMandatoryCovered, engine.pointsFor(onlyMandatory))
+    fun `закрытые потребности дают свои очки`() {
+        assertEquals(balance.growthForMandatoryCovered, engine.pointsFor(bad, needsMet = true))
     }
 
     @Test
     fun `сохранённые накопления дают свои очки`() {
-        val noMandatory = report(mandatoryOk = false, optionalOk = false, savingsOk = true)
-        assertEquals(balance.growthForSavingsKept, engine.pointsFor(noMandatory))
+        val onlySavings = report(mandatoryOk = false, optionalOk = false, savingsOk = true)
+        assertEquals(
+            balance.growthForMandatoryCovered + balance.growthForSavingsKept,
+            engine.pointsFor(onlySavings, needsMet = true),
+        )
+    }
+
+    /** AD-3: сова не растёт, если её не кормят, как бы ни был выполнен план. */
+    @Test
+    fun `в голодный день очков нет даже при выполненном плане и копилке`() {
+        assertEquals(0, engine.pointsFor(report(), needsMet = false))
+    }
+
+    /** Раздел 4 плана, день 2: мячик куплен, копилка пополнена, каша — нет. */
+    @Test
+    fun `день с ошибкой из эталонного сценария не приносит очков`() {
+        val dayTwo = PlanFactReport(
+            lines = listOf(
+                PlanFactLine(SpendCategory.MANDATORY, Coins(3), Coins.ZERO),
+                PlanFactLine(SpendCategory.OPTIONAL, Coins(24), Coins(24)),
+                PlanFactLine(SpendCategory.SAVINGS, Coins(8), Coins(8)),
+            ),
+            planTotal = Coins(35),
+            factTotal = Coins(32),
+        )
+        val result = engine.apply(PetGrowth(points = 6, stage = GrowthStage.CUB), dayTwo, needsMet = false)
+        assertEquals(6, result.value.points)
+        assertEquals("growth.no_points", result.explanation.key)
     }
 
     @Test
@@ -77,14 +103,14 @@ class GrowthEngineTest {
 
     @Test
     fun `очки накапливаются между периодами`() {
-        val after = engine.apply(PetGrowth(points = 3, stage = GrowthStage.CUB), report())
+        val after = engine.apply(PetGrowth(points = 3, stage = GrowthStage.CUB), report(), needsMet = true)
         assertEquals(3 + balance.maxGrowthPerPeriod, after.value.points)
     }
 
     @Test
     fun `переход порога меняет стадию`() {
         val nearly = PetGrowth(points = balance.growthThresholds[1] - 1, stage = GrowthStage.CUB)
-        assertEquals(GrowthStage.YOUNG, engine.apply(nearly, report()).value.stage)
+        assertEquals(GrowthStage.YOUNG, engine.apply(nearly, report(), needsMet = true).value.stage)
     }
 
     @Test
@@ -92,20 +118,19 @@ class GrowthEngineTest {
         val nearly = PetGrowth(points = balance.growthThresholds[1] - 1, stage = GrowthStage.CUB)
         assertEquals(
             listOf(Change.Stage(from = GrowthStage.CUB, to = GrowthStage.YOUNG)),
-            engine.apply(nearly, report()).changes,
+            engine.apply(nearly, report(), needsMet = true).changes,
         )
     }
 
     @Test
     fun `без смены стадии изменений нет`() {
-        assertTrue(engine.apply(PetGrowth.INITIAL, report()).changes.isEmpty())
+        assertTrue(engine.apply(PetGrowth.INITIAL, report(), needsMet = true).changes.isEmpty())
     }
 
     @Test
     fun `стадия не падает после неудачного периода`() {
         val grown = PetGrowth(points = balance.growthThresholds.last(), stage = GrowthStage.GROWN)
-        val bad = report(mandatoryOk = false, optionalOk = false, savingsOk = false)
-        val after = engine.apply(grown, bad)
+        val after = engine.apply(grown, bad, needsMet = false)
         assertEquals(GrowthStage.GROWN, after.value.stage)
         assertEquals(grown.points, after.value.points)
     }
@@ -113,23 +138,22 @@ class GrowthEngineTest {
     @Test
     fun `повышение стадии объясняется своим ключом`() {
         val nearly = PetGrowth(points = balance.growthThresholds[1] - 1, stage = GrowthStage.CUB)
-        assertEquals("growth.stage_up", engine.apply(nearly, report()).explanation.key)
+        assertEquals("growth.stage_up", engine.apply(nearly, report(), needsMet = true).explanation.key)
     }
 
     @Test
     fun `набранные очки без повышения объясняются своим ключом`() {
-        assertEquals("growth.points_added", engine.apply(PetGrowth.INITIAL, report()).explanation.key)
+        assertEquals("growth.points_added", engine.apply(PetGrowth.INITIAL, report(), needsMet = true).explanation.key)
     }
 
     @Test
     fun `отсутствие очков объясняется своим ключом`() {
-        val bad = report(mandatoryOk = false, optionalOk = false, savingsOk = false)
-        assertEquals("growth.no_points", engine.apply(PetGrowth.INITIAL, bad).explanation.key)
+        assertEquals("growth.no_points", engine.apply(PetGrowth.INITIAL, bad, needsMet = false).explanation.key)
     }
 
     @Test
     fun `объяснение несёт заработанные и накопленные очки`() {
-        val result = engine.apply(PetGrowth(points = 3, stage = GrowthStage.CUB), report())
+        val result = engine.apply(PetGrowth(points = 3, stage = GrowthStage.CUB), report(), needsMet = true)
         assertEquals(balance.maxGrowthPerPeriod.toString(), result.explanation.args["earned"])
         assertEquals((3 + balance.maxGrowthPerPeriod).toString(), result.explanation.args["points"])
     }
@@ -138,7 +162,7 @@ class GrowthEngineTest {
     fun `стадия не падает когда пороги подняли под уже сохранённым прогрессом`() {
         val raised = GrowthEngine(balance.copy(growthThresholds = listOf(0, 20, 40)))
         val stale = PetGrowth(points = 15, stage = GrowthStage.YOUNG)
-        val result = raised.apply(stale, report(mandatoryOk = false, optionalOk = false, savingsOk = false))
+        val result = raised.apply(stale, bad, needsMet = false)
         assertEquals(GrowthStage.YOUNG, result.value.stage)
     }
 
@@ -146,7 +170,7 @@ class GrowthEngineTest {
     fun `удержание стадии не объявляется повышением`() {
         val raised = GrowthEngine(balance.copy(growthThresholds = listOf(0, 20, 40)))
         val stale = PetGrowth(points = 15, stage = GrowthStage.YOUNG)
-        val result = raised.apply(stale, report(mandatoryOk = false, optionalOk = false, savingsOk = false))
+        val result = raised.apply(stale, bad, needsMet = false)
         assertEquals("growth.no_points", result.explanation.key)
         assertTrue(result.changes.isEmpty())
     }
@@ -170,17 +194,28 @@ class GrowthEngineTest {
     @Test
     fun `нераспределённые накопления не приносят очков`() {
         val expected = balance.growthForMandatoryCovered + balance.growthForPlanFollowed
-        assertEquals(expected, engine.pointsFor(onlyMandatoryPlanned()))
+        assertEquals(expected, engine.pointsFor(onlyMandatoryPlanned(), needsMet = true))
     }
 
     @Test
     fun `нераспределённое направление не даёт максимум очков`() {
-        assertTrue(engine.pointsFor(onlyMandatoryPlanned()) < balance.maxGrowthPerPeriod)
+        assertTrue(engine.pointsFor(onlyMandatoryPlanned(), needsMet = true) < balance.maxGrowthPerPeriod)
     }
 
+    /** Замечание 13: раньше нулевой план на нужное засчитывался и сова росла без еды. */
     @Test
-    fun `нераспределённые обязательные не приносят своих очков`() {
-        val onlySavings = PlanFactReport(
+    fun `нулевой план на нужное при голодной сове не приносит очков`() {
+        assertEquals(0, engine.pointsFor(nothingForNeeds(), needsMet = false))
+    }
+
+    /** Сыта ли сова, решают потребности, а не сумма в плане на нужное (R3). */
+    @Test
+    fun `нулевой план на нужное при сытой сове приносит очки за потребности`() {
+        val expected = balance.growthForMandatoryCovered + balance.growthForSavingsKept + balance.growthForPlanFollowed
+        assertEquals(expected, engine.pointsFor(nothingForNeeds(), needsMet = true))
+    }
+
+    private fun nothingForNeeds() = PlanFactReport(
             lines = listOf(
                 PlanFactLine(SpendCategory.MANDATORY, Coins.ZERO, Coins.ZERO),
                 PlanFactLine(SpendCategory.OPTIONAL, Coins.ZERO, Coins.ZERO),
@@ -189,7 +224,4 @@ class GrowthEngineTest {
             planTotal = Coins(15),
             factTotal = Coins(15),
         )
-        val expected = balance.growthForSavingsKept + balance.growthForPlanFollowed
-        assertEquals(expected, engine.pointsFor(onlySavings))
-    }
 }
