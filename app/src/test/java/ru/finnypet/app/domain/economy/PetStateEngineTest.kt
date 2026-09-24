@@ -212,6 +212,21 @@ class PetStateEngineTest {
         assertEquals(listOf("porridge", "vitamins", "water"), cover.map { it.id.value }.sorted())
     }
 
+    /** Раздел 8 плана: «Финни нужно не меньше 37: еда 22, уход 15». */
+    @Test
+    fun `цена каждой потребности отдельно — еда 22, уход 15`() {
+        assertEquals(
+            mapOf(PetStatKind.SATIETY to Coins(22), PetStatKind.CARE to Coins(15)),
+            engine.coverByNeed(pet(satiety = 30, care = 55), shop),
+        )
+    }
+
+    @Test
+    fun `цена по потребностям — null, если одну нечем закрыть`() {
+        val noCare = shop.filter { it.effects.none { effect -> effect.stat == PetStatKind.CARE } }
+        assertNull(engine.coverByNeed(pet(satiety = 30, care = 50), noCare))
+    }
+
     @Test
     fun `две воды дешевле каши с водой`() {
         val cover = engine.cheapestCover(pet(satiety = 40, care = 90), shop)!!

@@ -22,23 +22,14 @@ class BudgetEngine {
     }
 
     /**
-     * Новая сумма направления после шага кнопкой или `null`, если двигать
-     * некуда. Шаг урезается по месту: добавить можно не больше, чем осталось
-     * нераспределённого, а убрать — не больше, чем лежит. Так последние
-     * монеты не застревают, когда сумма не делится на шаг нацело. Одно
-     * правило для плана дня и для задания «раздели монеты».
+     * Сумма, которую ребёнок выставил ползунком, урезанная по кошельку: в
+     * банку помещается то, что в ней лежит, плюс нераспределённое. Так
+     * ползунок не уходит дальше монет (ТЗ 2.5.5). Одно правило для плана дня
+     * и для задания «раздели монеты».
      */
-    fun stepped(plan: BudgetPlan, category: SpendCategory, delta: Int, available: Coins): Coins? {
-        val current = plan.amountFor(category).amount
-        val next = if (delta > 0) {
-            val free = available.amount - plan.total.amount
-            if (free <= 0) return null
-            current + minOf(delta, free)
-        } else {
-            if (current == 0) return null
-            current - minOf(-delta, current)
-        }
-        return Coins(next)
+    fun clamped(plan: BudgetPlan, category: SpendCategory, amount: Coins, available: Coins): Coins {
+        val others = plan.total.amount - plan.amountFor(category).amount
+        return Coins(amount.amount.coerceIn(0, (available.amount - others).coerceAtLeast(0)))
     }
 
     fun compare(plan: BudgetPlan, fact: PeriodFact): PlanFactReport {

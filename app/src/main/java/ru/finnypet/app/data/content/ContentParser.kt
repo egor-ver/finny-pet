@@ -87,6 +87,7 @@ class ContentParser @Inject constructor() {
                 statFloor = dto.statFloor,
                 needThreshold = dto.needThreshold,
                 sadThreshold = dto.sadThreshold,
+                needSlack = dto.needSlack,
                 moodBonusPlanFollowed = dto.moodBonusPlanFollowed,
                 growthForMandatoryCovered = dto.growthForMandatoryCovered,
                 growthForPlanFollowed = dto.growthForPlanFollowed,

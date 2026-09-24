@@ -47,7 +47,7 @@ import ru.finnypet.app.ui.screens.budget.BudgetViewModel
 import java.io.File
 
 /**
- * Проверяет планирование целиком: от кнопки «плюс» до подтверждённого дня
+ * Проверяет планирование целиком: от ползунка до подтверждённого дня
  * в базе (ТЗ 2.5.5).
  *
  * Экранные тесты показывают вёрстку на выдуманном состоянии, а здесь работает
@@ -103,6 +103,10 @@ class BudgetPlanningTest {
             confirmPlan = confirmPlan(),
             budget = BudgetEngine(),
             periodEngine = periodEngine(),
+            petState = PetStateEngine(balance),
+            savingsEngine = SavingsEngine(clock),
+            balance = balance,
+            content = AssetContentRepository(context, ContentParser()),
         )
     }
 
@@ -136,9 +140,9 @@ class BudgetPlanningTest {
     fun монеты_раскладываются_по_направлениям() = runBlocking {
         awaitPlanning()
 
-        viewModel.add(SpendCategory.MANDATORY)
-        viewModel.add(SpendCategory.MANDATORY)
-        viewModel.add(SpendCategory.SAVINGS)
+        viewModel.set(SpendCategory.MANDATORY, Coins(10))
+        await { it.plan.mandatory == Coins(10) }
+        viewModel.set(SpendCategory.SAVINGS, Coins(5))
 
         val planning = await { it.plan.total == Coins(15) }
         assertEquals(Coins(10), planning.plan.mandatory)
@@ -152,7 +156,7 @@ class BudgetPlanningTest {
     fun черновик_плана_остаётся_в_базе() = runBlocking {
         awaitPlanning()
 
-        viewModel.add(SpendCategory.OPTIONAL)
+        viewModel.set(SpendCategory.OPTIONAL, Coins(5))
 
         await { it.plan.optional == Coins(5) }
         val period = periods.current(profileId)!!
@@ -163,24 +167,26 @@ class BudgetPlanningTest {
     @Test
     fun больше_доступного_распределить_нельзя() = runBlocking {
         val planning = awaitPlanning()
-        val steps = planning.available.amount / planning.step
 
-        repeat(steps) { viewModel.add(SpendCategory.SAVINGS) }
-        val full = await { it.remainder == Coins.ZERO }
-        assertEquals(false, full.canAdd())
+        viewModel.set(SpendCategory.SAVINGS, planning.available)
+        await { it.remainder == Coins.ZERO }
 
-        viewModel.add(SpendCategory.SAVINGS)
+        // Ползунок другой банки дальше свободных монет не идёт: их нет.
+        viewModel.set(SpendCategory.OPTIONAL, Coins(5))
 
-        assertEquals(planning.available, await { true }.plan.total)
+        // Сова объясняет, почему бегунок стоит: монеты кончились.
+        val full = await { it.phrase.startsWith("Монеты кончились") }
+        assertEquals(planning.available, full.plan.total)
+        assertEquals(Coins.ZERO, full.plan.optional)
     }
 
     /**
-     * Доступная сумма не обязана делиться на шаг: числа экономики правит
-     * контент-пак. Последние монеты должны добираться неполным шагом, иначе
-     * остаток нельзя обнулить и план не подтвердить целиком.
+     * Доступная сумма не обязана быть круглой: числа экономики правит
+     * контент-пак. Ползунок с шагом в монету раскладывает и нечётную сумму,
+     * а остаток в одну монету — не ошибка, он переходит на завтра (R5).
      */
     @Test
-    fun последние_монеты_добираются_неполным_шагом() = runBlocking {
+    fun нечётная_сумма_раскладывается_до_монеты() = runBlocking {
         // Дожидаемся, пока вьюмодель из setUp откроет день первому профилю.
         // Иначе она всё ещё ждёт активный профиль, дожидается уже второго и
         // открывает день ему — своими числами, а не теми, что проверяем.
@@ -211,6 +217,10 @@ class BudgetPlanningTest {
             confirmPlan = confirmPlan(),
             budget = BudgetEngine(),
             periodEngine = periodEngine(),
+            petState = PetStateEngine(odd),
+            savingsEngine = SavingsEngine(clock),
+            balance = odd,
+            content = AssetContentRepository(context, ContentParser()),
         )
         try {
             val start = withTimeout(TIMEOUT_MS) {
@@ -218,15 +228,15 @@ class BudgetPlanningTest {
             }
             assertEquals(Coins(82), start.available)
 
-            repeat(start.available.amount / start.step) { second.add(SpendCategory.MANDATORY) }
+            second.set(SpendCategory.MANDATORY, Coins(81))
             val almost = withTimeout(TIMEOUT_MS) {
                 second.state.first {
-                    it is BudgetState.Planning && it.remainder == Coins(2)
+                    it is BudgetState.Planning && it.remainder == Coins(1)
                 } as BudgetState.Planning
             }
-            assertTrue("остаток меньше шага, а кнопка недоступна", almost.canAdd())
+            assertTrue("остаток в монету не мешает подтвердить", almost.canConfirm)
 
-            second.add(SpendCategory.MANDATORY)
+            second.set(SpendCategory.MANDATORY, Coins(82))
 
             val full = withTimeout(TIMEOUT_MS) {
                 second.state.first {
@@ -244,19 +254,19 @@ class BudgetPlanningTest {
     @Test
     fun убрать_монеты_можно_обратно() = runBlocking {
         awaitPlanning()
-        viewModel.add(SpendCategory.MANDATORY)
+        viewModel.set(SpendCategory.MANDATORY, Coins(5))
         await { it.plan.mandatory == Coins(5) }
 
-        viewModel.remove(SpendCategory.MANDATORY)
+        viewModel.set(SpendCategory.MANDATORY, Coins.ZERO)
 
         val planning = await { it.plan.mandatory == Coins.ZERO }
-        assertEquals(false, planning.canRemove(SpendCategory.MANDATORY))
+        assertEquals(false, planning.canConfirm)
     }
 
     @Test
     fun подтверждение_запускает_день_и_открывает_сравнение() = runBlocking {
         awaitPlanning()
-        viewModel.add(SpendCategory.MANDATORY)
+        viewModel.set(SpendCategory.MANDATORY, Coins(5))
         await { it.plan.mandatory == Coins(5) }
 
         viewModel.confirm()

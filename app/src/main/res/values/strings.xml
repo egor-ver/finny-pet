@@ -164,15 +164,18 @@
     <!-- План личного бюджета -->
     <string name="budget_title">План на день</string>
     <string name="budget_action_plan">Спланировать день</string>
-    <string name="budget_available">Можно распределить</string>
     <string name="budget_remainder">Осталось распределить</string>
     <string name="budget_distributed">Все монеты распределены</string>
     <string name="budget_over">Перебор на</string>
-    <string name="budget_hint">Сначала отложи на нужное, потом на желаемое, остальное спрячь в копилку.</string>
-    <string name="budget_add">Добавить в «%1$s»</string>
-    <string name="budget_remove">Убрать из «%1$s»</string>
     <string name="budget_amount">%1$s: %2$d</string>
     <string name="budget_confirm">Подтвердить план</string>
+    <string name="budget_confirm_title">План закрепится до вечера</string>
+    <string name="budget_confirm_body">Поменять его сегодня уже не получится.</string>
+    <string name="budget_confirm_yes">Подтвердить</string>
+    <!-- «Сразу в копилку: 8 монет» — доля копилки уходит при подтверждении (R6) -->
+    <string name="budget_to_savings">Сразу в копилку: %1$s</string>
+    <!-- «1 монета останется на завтра» — остаток не ошибка (R5) -->
+    <string name="budget_left_for_tomorrow">%1$s останется на завтра</string>
     <string name="budget_needs_goal">Чтобы откладывать, выбери цель в копилке.</string>
     <string name="budget_started">План подтверждён. Смотри, как он сходится.</string>
     <string name="budget_planned">План</string>

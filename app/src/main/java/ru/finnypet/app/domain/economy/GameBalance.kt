@@ -27,6 +27,13 @@ data class GameBalance(
     val needThreshold: Int,
     /** Сытость или уход ниже этого — сова грустит; тогда задание дня — разбор ошибки (AD-7). */
     val sadThreshold: Int,
+    /**
+     * На сколько план на нужное может превышать цену потребностей, прежде
+     * чем сова скажет «мне столько не нужно». Без запаса сова ворчала бы на
+     * план, где нужное взято с копеечным округлением; без фразы лазейка
+     * «всё в нужное» оставалась бы незамеченной (раздел 3 плана).
+     */
+    val needSlack: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
@@ -78,6 +85,9 @@ data class GameBalance(
         require(sadThreshold in Stat.RANGE) {
             "Порог грусти задаётся в пределах ${Stat.RANGE}, задан: $sadThreshold"
         }
+        require(needSlack >= 0) {
+            "Запас на нужное не может быть отрицательным, задан: $needSlack"
+        }
         require(growthForMandatoryCovered >= 0 && growthForPlanFollowed >= 0 && growthForSavingsKept >= 0) {
             "Очки роста не могут быть отрицательными"
         }
@@ -108,6 +118,7 @@ data class GameBalance(
             statFloor = 30,
             needThreshold = 70,
             sadThreshold = 40,
+            needSlack = 9,
             moodBonusPlanFollowed = 10,
             growthForMandatoryCovered = 2,
             growthForPlanFollowed = 2,

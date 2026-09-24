@@ -254,8 +254,8 @@ class TaskFlowTest {
         vm.start()
         vm.await { it.stage is TaskStage.Step }
 
-        repeat(3) { vm.add(SpendCategory.MANDATORY) }
-        repeat(2) { vm.add(SpendCategory.SAVINGS) }
+        vm.set(SpendCategory.MANDATORY, Coins(15))
+        vm.set(SpendCategory.SAVINGS, Coins(10))
         val step = vm.await { ((it.stage as? TaskStage.Step)?.step as? StepView.Distribute)?.plan?.total == Coins(25) }
         assertEquals(Coins(15), ((step.stage as TaskStage.Step).step as StepView.Distribute).remainder)
         vm.next()

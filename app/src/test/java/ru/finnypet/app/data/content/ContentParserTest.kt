@@ -170,6 +170,12 @@ class ContentParserTest {
 
     // --- Сообщения об ошибках: по ним продакт должен найти место в своём файле ---
 
+    /** Раздел 3 плана: запас для фразы совы «мне столько не нужно». */
+    @Test
+    fun `запас на нужное читается из чисел экономики`() {
+        assertEquals(9, parser.parse(realContent()).balance.needSlack)
+    }
+
     @Test
     fun `лимит заданий с наградой читается из чисел экономики`() {
         assertEquals(1, parser.parse(realContent()).balance.rewardedTasksPerPeriod)

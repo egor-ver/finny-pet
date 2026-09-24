@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.economy
 
 import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GameResult
 import ru.finnypet.app.domain.model.PetEffect
@@ -55,6 +56,15 @@ class PetStateEngine(private val balance: GameBalance) {
     fun cheapestCover(state: PetState, shop: List<ShopItem>): List<ShopItem>? =
         needsOf(state).flatMap { kind ->
             cheapestFor(kind, balance.needThreshold - state.statFor(kind).value, shop) ?: return null
+        }
+
+    /**
+     * Цена закрытия каждой потребности отдельно — для пояснения в плане:
+     * «еда 22, уход 15». `null` — какую-то из них в магазине нечем закрыть.
+     */
+    fun coverByNeed(state: PetState, shop: List<ShopItem>): Map<PetStatKind, Coins>? =
+        needsOf(state).associateWith { kind ->
+            cheapestFor(kind, balance.needThreshold - state.statFor(kind).value, shop)?.totalPrice() ?: return null
         }
 
     /**

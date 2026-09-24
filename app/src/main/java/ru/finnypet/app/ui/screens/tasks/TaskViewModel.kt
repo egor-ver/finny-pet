@@ -98,10 +98,6 @@ sealed interface StepView {
 
         val remainder: Coins get() = budget - plan.total
 
-        val canAdd: Boolean get() = remainder > Coins.ZERO
-
-        fun canRemove(category: SpendCategory): Boolean = plan.amountFor(category) > Coins.ZERO
-
         override val canProceed: Boolean get() = plan.total > Coins.ZERO
     }
 
@@ -261,9 +257,16 @@ class TaskViewModel @Inject constructor(
         }
     }
 
-    fun add(category: SpendCategory) = move(category, +STEP)
-
-    fun remove(category: SpendCategory) = move(category, -STEP)
+    /** Тот же ползунок, что в плане дня: правило одно, живёт в [BudgetEngine]. */
+    fun set(category: SpendCategory, amount: Coins) {
+        val task = task ?: return
+        progress.update { current ->
+            val draft = current.draft as? Draft.Allocated ?: return@update current
+            val step = task.steps[current.answers.size] as? TaskStep.Distribute ?: return@update current
+            val clamped = budget.clamped(draft.plan, category, amount, step.budget)
+            current.copy(draft = Draft.Allocated(draft.plan.with(category, clamped)))
+        }
+    }
 
     /** Можно ли взять — решает та же [StepView.Pick], что показана на экране: правило одно. */
     fun toggle(itemId: String) {
@@ -304,17 +307,6 @@ class TaskViewModel @Inject constructor(
                     progress.update { it.copy(submitting = false) }
                 }
             }
-        }
-    }
-
-    /** Тот же шаг, что в плане дня: правило одно, живёт в [BudgetEngine]. */
-    private fun move(category: SpendCategory, delta: Int) {
-        val task = task ?: return
-        progress.update { current ->
-            val draft = current.draft as? Draft.Allocated ?: return@update current
-            val step = task.steps[current.answers.size] as? TaskStep.Distribute ?: return@update current
-            val amount = budget.stepped(draft.plan, category, delta, step.budget) ?: return@update current
-            current.copy(draft = Draft.Allocated(draft.plan.with(category, amount)))
         }
     }
 
@@ -481,7 +473,6 @@ class TaskViewModel @Inject constructor(
     }
 
     private companion object {
-        const val STEP = 5
         const val STOP_TIMEOUT_MS = 5_000L
     }
 }

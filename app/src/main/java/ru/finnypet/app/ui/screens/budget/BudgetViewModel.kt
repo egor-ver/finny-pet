@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -14,22 +15,33 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.BudgetEngine
+import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PlanCheck
+import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
-import ru.finnypet.app.domain.model.GamePeriod
+import ru.finnypet.app.domain.model.Goal
+import ru.finnypet.app.domain.model.GoalId
+import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.PeriodStatus
-import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.Pet
+import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
+import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.ConfirmPlan
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
 /**
@@ -49,30 +61,24 @@ sealed interface BudgetState {
      * [available] — весь кошелёк, а не остаток со вчера и доход: бонус
      * взрослого и награда за задание тоже раскладываются по плану (R5).
      * [needsGoal] — в копилку запланировано, а цели нет: отложить некуда.
+     * [owl] и [phrase] — сова отвечает на каждое движение ползунка;
+     * [hints] — строка пояснения под банкой, `null` — пояснять нечего.
      */
     data class Planning(
         val available: Coins,
         val plan: BudgetPlan,
         val remainder: Coins,
         val overBy: Coins,
-        val step: Int,
         val needsGoal: Boolean,
+        val owl: OwlLook,
+        val phrase: String,
+        val hints: Map<SpendCategory, String?> = emptyMap(),
     ) : BudgetState {
 
         /** Пустой план подтверждать нечего, а перебор сначала надо исправить. */
         val canConfirm: Boolean get() = plan.total > Coins.ZERO && overBy == Coins.ZERO && !needsGoal
 
         val isDistributed: Boolean get() = remainder == Coins.ZERO && overBy == Coins.ZERO
-
-        /**
-         * Хватает и остатка меньше шага: последние монеты добираются неполным
-         * шагом. Иначе при доступной сумме, не кратной шагу, остаток нельзя
-         * было бы обнулить, а числа экономики правит контент-пак.
-         */
-        fun canAdd(): Boolean = remainder > Coins.ZERO
-
-        fun canRemove(category: SpendCategory): Boolean =
-            plan.amountFor(category) > Coins.ZERO
     }
 
     data class Started(
@@ -98,14 +104,25 @@ class BudgetViewModel @Inject constructor(
     private val confirmPlan: ConfirmPlan,
     private val budget: BudgetEngine,
     private val periodEngine: PeriodEngine,
+    private val petState: PetStateEngine,
+    private val savingsEngine: SavingsEngine,
+    private val balance: GameBalance,
+    content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
+    private val pack = content.pack()
+    private val goals: Map<GoalId, Goal> = pack.goals.associateBy { it.id }
+    private val wants = pack.shop.filter { it.category == SpendCategory.OPTIONAL }
+
     /**
-     * Правки плана идут по одной. Без этого два быстрых нажатия «плюс»
-     * прочитали бы одно и то же значение и вторая монета потерялась бы:
-     * запись в базу занимает больше времени, чем промежуток между нажатиями.
+     * Правки плана идут по одной. Без этого два быстрых движения ползунка
+     * прочитали бы одно и то же значение и одно из них потерялось бы:
+     * запись в базу занимает больше времени, чем промежуток между ними.
      */
     private val editing = Mutex()
+
+    /** Ползунок только что упёрся в конец кошелька — до следующего движения. */
+    private val hitLimit = MutableStateFlow(false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<BudgetState> =
@@ -114,7 +131,7 @@ class BudgetViewModel @Inject constructor(
                 when {
                     isFailed -> flowOf(BudgetState.Failed)
                     profile == null -> flowOf(BudgetState.Loading)
-                    else -> forProfile(profile.id)
+                    else -> forProfile(profile)
                 }
             }
             .stateIn(
@@ -131,9 +148,6 @@ class BudgetViewModel @Inject constructor(
 
     fun retry() = retryWith { openPeriod(it) }
 
-    fun add(category: SpendCategory) = change(category, STEP)
-
-    fun remove(category: SpendCategory) = change(category, -STEP)
 
     /**
      * Подтверждение переводит день из планирования в работу и сразу
@@ -148,62 +162,86 @@ class BudgetViewModel @Inject constructor(
 
     /**
      * Превысить доступную сумму нельзя: ТЗ 2.5.5 требует, чтобы приложение это
-     * контролировало. Кнопка «плюс» в таком случае просто недоступна, и ребёнок
-     * видит нулевой остаток, а не сообщение об ошибке.
+     * контролировало. Ползунок дальше свободных монет не идёт, а сова
+     * объясняет почему — сообщения об ошибке нет.
      */
-    private fun change(category: SpendCategory, delta: Int) {
+    fun set(category: SpendCategory, amount: Coins) {
         act { profileId ->
             editing.withLock {
                 val period = periods.current(profileId) ?: return@withLock
                 if (period.status != PeriodStatus.PLANNING) return@withLock
 
                 // Считаем от того, что лежит в базе, а не от показанного на
-                // экране: экран отстаёт от базы на время записи, и при быстрых
-                // нажатиях он вернул бы устаревшую сумму.
+                // экране: экран отстаёт от базы на время записи, и при быстром
+                // движении он вернул бы устаревшую сумму.
                 val stored = periods.plan(period.id) ?: BudgetPlan.EMPTY
-                val amount = budget.stepped(stored, category, delta, periods.balance(period)) ?: return@withLock
-                periods.savePlan(period.id, stored.with(category, amount))
+                val clamped = budget.clamped(stored, category, amount, periods.balance(period))
+                hitLimit.value = clamped < amount
+                periods.savePlan(period.id, stored.with(category, clamped))
             }
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun forProfile(profileId: ProfileId): Flow<BudgetState> =
-        periods.observeCurrent(profileId).flatMapLatest { period ->
-            if (period == null) {
+    private fun forProfile(profile: Profile): Flow<BudgetState> = combine(
+        periods.observeCurrent(profile.id),
+        profiles.observePet(profile.id),
+    ) { period, pet -> period to pet }
+        .flatMapLatest { (period, pet) ->
+            if (period == null || pet == null) {
                 flowOf(BudgetState.Loading)
             } else {
                 combine(
                     periods.observePlan(period.id),
                     periods.observeTransactions(period.id),
                     periods.observeBalance(period),
-                    savings.observeActive(profileId),
-                ) { plan, transactions, wallet, goal ->
-                    stateOf(period, plan ?: BudgetPlan.EMPTY, transactions, wallet, hasGoal = goal != null)
+                    savings.observeActive(profile.id),
+                    hitLimit,
+                ) { plan, transactions, wallet, goal, limit ->
+                    val stored = plan ?: BudgetPlan.EMPTY
+                    when (period.status) {
+                        PeriodStatus.PLANNING -> planning(profile, pet, stored, wallet, goal, limit)
+                        else -> started(stored, transactions)
+                    }
                 }
             }
         }
 
-    private fun stateOf(
-        period: GamePeriod,
+    private fun planning(
+        profile: Profile,
+        pet: Pet,
         plan: BudgetPlan,
-        transactions: List<Transaction>,
         wallet: Coins,
-        hasGoal: Boolean,
-    ): BudgetState = when (period.status) {
-        PeriodStatus.PLANNING -> planning(plan, wallet, hasGoal)
-        else -> started(plan, transactions)
-    }
-
-    private fun planning(plan: BudgetPlan, wallet: Coins, hasGoal: Boolean): BudgetState.Planning {
+        progress: GoalProgress?,
+        limit: Boolean,
+    ): BudgetState.Planning {
         val check = budget.check(plan, wallet)
+        val goal = progress?.let { goals[it.goalId] }
+        val goalTitle = goal?.let { pack.texts.textOf(it.titleKey) }
+        val coverByNeed = petState.coverByNeed(pet.state, pack.shop)
+        val cover = coverByNeed?.values?.fold(Coins.ZERO) { sum, price -> sum + price }
+        val owl = planOwl(plan, wallet, cover, balance.needSlack, goalTitle, limit)
+        val days = if (progress != null && goal != null) savingsEngine.periodsToGoal(progress, goal, plan.savings) else null
         return BudgetState.Planning(
             available = wallet,
             plan = plan,
             remainder = (check as? PlanCheck.Fits)?.remainder ?: Coins.ZERO,
             overBy = (check as? PlanCheck.Exceeds)?.overBy ?: Coins.ZERO,
-            step = STEP,
-            needsGoal = plan.savings > Coins.ZERO && !hasGoal,
+            needsGoal = plan.savings > Coins.ZERO && progress == null,
+            owl = owlLook(
+                pets = pack.pets,
+                appearance = profile.appearance,
+                stage = pet.growth.stage,
+                mood = owl.mood,
+                // Грусть на плане — от нехватки на потребности, первой из них.
+                description = owlDescription(pack.texts, profile.petName, owl.mood, petState.needsOf(pet.state).firstOrNull()),
+            ),
+            phrase = pack.texts.textOf(owl.phrase),
+            hints = mapOf(
+                SpendCategory.MANDATORY to mandatoryHint(pack.texts, coverByNeed),
+                SpendCategory.OPTIONAL to optionalHint(pack.texts, plan.optional, wants),
+                SpendCategory.SAVINGS to savingsHint(pack.texts, plan.savings, goalTitle, days),
+            ),
         )
     }
 
@@ -224,12 +262,6 @@ class BudgetViewModel @Inject constructor(
     }
 
     private companion object {
-        /**
-         * Шаг в пять монет: суммы в игре двузначные, и набирать их по одной
-         * ребёнку долго, а клавиатура на этом экране лишняя — промах по цифре
-         * ломал бы весь план.
-         */
-        const val STEP = 5
         const val STOP_TIMEOUT_MS = 5_000L
     }
 }

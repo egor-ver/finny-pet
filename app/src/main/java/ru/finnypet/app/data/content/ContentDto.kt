@@ -25,6 +25,7 @@ data class BalanceDto(
     val statFloor: Int,
     val needThreshold: Int,
     val sadThreshold: Int,
+    val needSlack: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
