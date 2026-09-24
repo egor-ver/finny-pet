@@ -1,8 +1,18 @@
 package ru.finnypet.app.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -16,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -29,18 +40,23 @@ import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.ui.text.textOf
+import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Всё, из чего рисуется сова, и что о ней скажет TalkBack. */
+/**
+ * Всё, из чего рисуется сова, и что о ней скажет TalkBack. [wellbeing] —
+ * сумма показателей: выросла — сове стало лучше, и она подпрыгивает.
+ */
 data class OwlLook(
     val colors: PetColor,
     val stage: GrowthStage,
     val mood: PetMood,
     val accessoryId: String?,
     val description: String,
+    val wellbeing: Int = 0,
 )
 
 /** «Сова Пушок грустит: хочет есть» — слова из контент-пака, а не из кода (раздел 5 плана). */
@@ -56,12 +72,14 @@ fun owlLook(
     stage: GrowthStage,
     mood: PetMood,
     description: String,
+    wellbeing: Int = 0,
 ) = OwlLook(
     colors = pets.colors.firstOrNull { it.id == appearance.colorId } ?: pets.colors.first(),
     stage = stage,
     mood = mood,
     accessoryId = appearance.accessoryId,
     description = description,
+    wellbeing = wellbeing,
 )
 
 /**
@@ -72,9 +90,22 @@ fun owlLook(
  */
 @Composable
 fun Owl(look: OwlLook, modifier: Modifier = Modifier, size: Dp = 170.dp) {
+    val motion = LocalAnimationsEnabled.current
+    val lift = remember { Animatable(0f) }
+    // Прошлое самочувствие переживает уход в магазин и возврат: после
+    // покупки сова подпрыгивает на главном, куда ребёнок вернулся.
+    var seen by rememberSaveable { mutableIntStateOf(look.wellbeing) }
+    LaunchedEffect(look.wellbeing) {
+        if (shouldJump(seen, look.wellbeing, motion)) {
+            lift.animateTo(1f, tween(JUMP_UP_MS))
+            lift.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+        }
+        seen = look.wellbeing
+    }
     Canvas(
         modifier = modifier
             .size(size)
+            .graphicsLayer { translationY = -lift.value * JUMP_HEIGHT.toPx() }
             .semantics {
                 contentDescription = look.description
                 role = Role.Image
@@ -86,6 +117,12 @@ fun Owl(look: OwlLook, modifier: Modifier = Modifier, size: Dp = 170.dp) {
         }
     }
 }
+
+/**
+ * Прыжок, когда сове стало лучше (ТЗ 2.5.9), — только с включённым движением
+ * (ТЗ 3.6). Смысл движением не передаётся: выражение и описание меняются и так.
+ */
+internal fun shouldJump(before: Int, after: Int, motion: Boolean): Boolean = motion && after > before
 
 /**
  * Пропорции стадии: [top] — верх головы, [bottom] — низ тела, [half] —
@@ -330,6 +367,8 @@ private fun cubic(p0: Offset, p1: Offset, p2: Offset, p3: Offset, t: Float): Off
     return p0 * (u * u * u) + p1 * (3 * u * u * t) + p2 * (3 * u * t * t) + p3 * (t * t * t)
 }
 
+private const val JUMP_UP_MS = 160
+private val JUMP_HEIGHT = 14.dp
 private const val FIELD_WIDTH = 240f
 private const val FIELD_HEIGHT = 262f
 private const val CX = 120f

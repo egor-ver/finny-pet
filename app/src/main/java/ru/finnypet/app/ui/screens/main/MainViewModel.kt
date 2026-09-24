@@ -193,7 +193,10 @@ class MainViewModel @Inject constructor(
             }
         }
 
-    /** Настроение по показателям (R11) и описание для TalkBack: «Сова Пушок грустит: хочет есть». */
+    /**
+     * Настроение по показателям (R11), описание для TalkBack («Сова Пушок
+     * грустит: хочет есть») и самочувствие, по росту которого сова подпрыгивает.
+     */
     private fun owlOf(profile: Profile, pet: Pet): OwlLook {
         val mood = petState.moodOf(pet.state)
         return owlLook(
@@ -202,6 +205,7 @@ class MainViewModel @Inject constructor(
             stage = pet.growth.stage,
             mood = mood,
             description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+            wellbeing = pet.state.let { it.mood.value + it.satiety.value + it.care.value },
         )
     }
 
