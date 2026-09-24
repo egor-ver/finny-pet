@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сова Финни — прототип</title>
+<style>
+  :root { --bg: #F4F3EF; --card: #FFFFFF; --soft: #F3F2EE; --line: rgba(0,0,0,.14); --text: #1F1E1C; --muted: #5F5E5A; --accent: #185FA5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  h2 { font-size: 18px; margin: 32px 0 12px; }
+  p { color: var(--muted); line-height: 1.5; margin: 4px 0; }
+  .top { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 16px; }
+  @media (max-width: 700px) { .top { grid-template-columns: 1fr; } }
+  .stage { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .stage .owl { height: 320px; }
+  .label { text-align: center; color: var(--muted); margin-top: 6px; }
+  .group { margin-bottom: 16px; }
+  .group b { display: block; font-weight: 600; margin-bottom: 8px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-size: 16px; cursor: pointer; }
+  button.on { border: 2px solid var(--accent); color: var(--accent); font-weight: 600; }
+  .swatch { width: 48px; padding: 0; border-radius: 50%; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .cell { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: center; font-size: 14px; color: var(--muted); }
+  .cell .owl { height: 150px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Сова Финни — прототип для переноса в Compose</h1>
+  <p>Геометрия и цвета — в <code>owl.js</code>. Это эталон для <code>Owl.kt</code> (коммит 17 плана), цвета окрасов уходят в <code>pets.json</code> (коммит 15).</p>
+  <p>По плану: 5 окрасов × 2 аксессуара = 10 комбинаций без «без аксессуара» (ТЗ 2.6), 3 стадии, 3 эмоции.</p>
+
+  <div class="top">
+    <div class="stage">
+      <div class="owl" id="owl"></div>
+      <div class="label" id="label"></div>
+    </div>
+    <div>
+      <div class="group"><b>Окрас</b><div class="buttons" id="colors"></div></div>
+      <div class="group"><b>Аксессуар</b><div class="buttons" id="accessories"></div></div>
+      <div class="group"><b>Стадия</b><div class="buttons" id="stages"></div></div>
+      <div class="group"><b>Эмоция</b><div class="buttons" id="emotions"></div></div>
+    </div>
+  </div>
+
+  <h2>Все комбинации внешности (детёныш, спокойно)</h2>
+  <div class="gallery" id="combos"></div>
+
+  <h2>Стадии роста выбранного окраса</h2>
+  <div class="gallery" id="growth"></div>
+
+  <h2>Эмоции выбранного окраса</h2>
+  <div class="gallery" id="moods"></div>
+</main>
+
+<script src="owl.js"></script>
+<script>
+  const O = window.FinnyOwl;
+  const state = { color: 'cream', accessory: 'scarf', stage: 'cub', emotion: 'calm' };
+
+  function cell(color, stage, emotion, accessory, caption) {
+    return `<div class="cell"><div class="owl">${O.svg(color, stage, emotion, accessory)}</div>${caption}</div>`;
+  }
+
+  function buttons(id, entries, key, swatch) {
+    const el = document.getElementById(id);
+    el.innerHTML = entries.map(([value, text, color]) => swatch
+      ? `<button class="swatch${state[key] === value ? ' on' : ''}" data-v="${value}" style="background:${color}" aria-label="${text}" aria-pressed="${state[key] === value}"></button>`
+      : `<button class="${state[key] === value ? 'on' : ''}" data-v="${value}" aria-pressed="${state[key] === value}">${text}</button>`).join('');
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { state[key] = b.dataset.v; render(); }));
+  }
+
+  function render() {
+    document.getElementById('owl').innerHTML = O.svg(state.color, state.stage, state.emotion, state.accessory);
+    document.getElementById('label').textContent = [
+      O.PAL[state.color].name, O.ACCESSORIES[state.accessory], O.STAGES[state.stage].name, O.EMOTIONS[state.emotion],
+    ].map(s => s.toLowerCase()).join(' · ');
+
+    buttons('colors', Object.entries(O.PAL).map(([k, p]) => [k, p.name, p.body]), 'color', true);
+    buttons('accessories', Object.entries(O.ACCESSORIES), 'accessory');
+    buttons('stages', Object.entries(O.STAGES).map(([k, s]) => [k, s.name]), 'stage');
+    buttons('emotions', Object.entries(O.EMOTIONS), 'emotion');
+
+    document.getElementById('combos').innerHTML = Object.keys(O.PAL).flatMap(c =>
+      Object.keys(O.ACCESSORIES).map(a => cell(c, 'cub', 'calm', a, `${O.PAL[c].name} · ${O.ACCESSORIES[a].toLowerCase()}`))).join('');
+    document.getElementById('growth').innerHTML = Object.keys(O.STAGES).map(s =>
+      cell(state.color, s, 'calm', state.accessory, O.STAGES[s].name)).join('');
+    document.getElementById('moods').innerHTML = Object.keys(O.EMOTIONS).map(e =>
+      cell(state.color, state.stage, e, 'none', O.EMOTIONS[e])).join('');
+  }
+
+  render();
+</script>
+</body>
+</html>

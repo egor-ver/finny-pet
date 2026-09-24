@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Питомец Финни — прототипы экранов v3</title>
+<style>
+  :root {
+    --bg: #F4F3EF; --phone: #FFFFFF; --soft: #F3F2EE; --line: rgba(0,0,0,.12); --line2: rgba(0,0,0,.25);
+    --text: #1F1E1C; --muted: #5F5E5A; --accent: #185FA5;
+    --need-bg: #E1F5EE; --need: #085041; --need-mid: #1D9E75;
+    --want-bg: #FAECE7; --want: #712B13; --want-mid: #D85A30;
+    --save-bg: #EEEDFE; --save: #3C3489; --save-mid: #7F77DD;
+    --coin-bg: #FAEEDA; --coin: #633806; --coin-mid: #EF9F27;
+    --ok-bg: #EAF3DE; --ok: #27500A; --ok-mid: #639922;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { max-width: 1120px; margin: 0 auto; padding: 24px 16px 4px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  header p { margin: 4px 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .grid { max-width: 1120px; margin: 0 auto; padding: 16px 16px 48px; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 24px; }
+  .cap { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
+  .ph { background: var(--phone); border: 1px solid var(--line2); border-radius: 28px; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; min-height: 680px; font-size: 16px; line-height: 1.35; position: relative; overflow: hidden; }
+  .top { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+  .ib { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--muted); border: 1px solid var(--line); flex: none; }
+  .ttl { font-size: 18px; font-weight: 600; flex: 1; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; min-height: 44px; border-radius: 999px; font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .coin { background: var(--coin-bg); color: var(--coin); }
+  .bub { background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; }
+  .bar { height: 8px; border-radius: 4px; background: var(--soft); border: 1px solid var(--line); overflow: hidden; }
+  .bar > i { display: block; height: 100%; }
+  .cta { border-radius: 12px; min-height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; font-size: 17px; background: var(--accent); color: #FFFFFF; padding: 0 12px; }
+  .sec { border-radius: 12px; min-height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; font-size: 16px; border: 1px solid var(--line2); padding: 0 12px; }
+  .lnk { border: 1px solid var(--line); border-radius: 12px; min-height: 48px; padding: 6px 12px; display: flex; align-items: center; gap: 8px; }
+  .card { border-radius: 12px; padding: 10px 12px; }
+  .opt { border-radius: 12px; min-height: 52px; padding: 8px 12px; border: 1px solid var(--line2); display: flex; align-items: center; gap: 8px; }
+  .item { border-radius: 12px; padding: 6px 2px; min-height: 108px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--line); text-align: center; font-size: 15px; }
+  .item .e { font-size: 24px; }
+  .item b { font-size: 18px; }
+  .item.dim { color: var(--muted); background: var(--soft); }
+  .tag { font-size: 14px; font-weight: 600; }
+  .sub { font-size: 15px; }
+  .muted { color: var(--muted); }
+  .os { flex: none; margin: 0 auto; }
+  .lbl { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .cols { display: flex; gap: 10px; align-items: flex-start; }
+  .cols > div { flex: 1; text-align: center; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--phone); border-top: 1px solid var(--line2); border-radius: 20px 20px 0 0; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .dim-bg { position: absolute; inset: 0; background: rgba(0,0,0,.35); }
+  input[type=range] { width: 100%; height: 32px; }
+  .swatch { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line2); padding: 0; cursor: pointer; }
+  .swatch.on { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .ab { min-height: 44px; padding: 0 14px; font-size: 16px; border-radius: 12px; border: 1px solid var(--line2); background: var(--phone); cursor: pointer; }
+  .ab.on { border: 2px solid var(--accent); color: var(--accent); font-weight: 600; }
+  .inp { border: 1px solid var(--line2); border-radius: 12px; min-height: 52px; padding: 4px 12px; display: flex; flex-direction: column; justify-content: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Питомец Финни — прототипы экранов v3</h1>
+  <p>Числа — эталонный сценарий из <code>docs/PLAN_V3.md</code>, раздел 4: день 3 после ошибки дня 2 (копилка — день 5). Текстовые схемы экранов — раздел 8.</p>
+  <p>Сова рисуется <code>owl.js</code>. Картинки товаров и целей — эмодзи, как в контенте. Весь текст от 16 sp, всё нажимаемое от 48 dp. Можно двигать ползунки плана и выбирать окрас и аксессуар при создании питомца.</p>
+</header>
+
+<div class="grid">
+
+<!-- 1. Разбор -->
+<div>
+<p class="cap">1 · Утро дня 3 — задание дня: разбор вчерашней ошибки</p>
+<div class="ph">
+  <div class="top"><span class="ib">‹</span><span class="ttl">Задание дня</span><span class="chip coin">🪙 38</span></div>
+  <div class="row" style="gap:10px;align-items:flex-start">
+    <div class="os" data-owl="cream|cub|sad|none" style="width:74px;height:81px"></div>
+    <div class="bub" style="flex:1">Вчера я лёг спать голодным. Почему так вышло?</div>
+  </div>
+  <div class="opt">Отложили в копилку — вот и не хватило</div>
+  <div class="opt" style="background:var(--ok-bg);color:var(--ok);border:2px solid var(--ok-mid)">✓ В плане на еду было слишком мало</div>
+  <div class="opt">Каша в магазине подорожала</div>
+  <div style="font-size:20px;font-weight:600;color:var(--ok)">✓ Верно!</div>
+  <div class="card" style="background:var(--ok-bg);color:var(--ok)">На еду в плане было меньше, чем стоит каша. Сегодня начнём день с еды.</div>
+  <div><span class="chip coin">🪙 +10 в кошелёк</span></div>
+  <div style="flex:1"></div>
+  <div class="cta">Дальше</div>
+</div>
+</div>
+
+<!-- 2. Главный -->
+<div>
+<p class="cap">2 · Главный — строки «Финни» и «Монеты», кнопка по фазе дня</p>
+<div class="ph">
+  <div class="top">
+    <span class="chip coin" style="font-size:20px">🪙 48</span>
+    <span style="flex:1"></span>
+    <span class="ib" title="Как играть">?</span>
+    <span class="ib" title="Для взрослого">🔒</span>
+  </div>
+  <div class="bub" style="text-align:center">Доброе утро! Пришло 35 монет. Я голодный — начнём с завтрака?</div>
+  <div class="os" data-owl="cream|cub|sad|none" style="width:150px;height:164px"></div>
+  <div style="text-align:center;font-size:18px;font-weight:600">Алекс · детёныш</div>
+  <div class="lnk"><span>⭐ До подростка</span><div class="bar" style="flex:1"><i style="width:75%;background:var(--coin-mid)"></i></div><span>6 из 8 ›</span></div>
+  <div class="lbl">Финни</div>
+  <div class="cols">
+    <div>🥣<div class="bar"><i style="width:30%;background:var(--need-mid)"></i></div><div class="sub">Еда · <b style="color:#854F0B">нужно</b></div></div>
+    <div>😊<div class="bar"><i style="width:90%;background:var(--want-mid)"></i></div><div class="sub">Радость</div></div>
+    <div>✨<div class="bar"><i style="width:55%;background:var(--save-mid)"></i></div><div class="sub">Уход · <b style="color:#854F0B">нужно</b></div></div>
+  </div>
+  <div class="lbl">Монеты</div>
+  <div class="lnk"><span class="muted" style="flex:1">Монеты ещё не разложены</span><span style="color:var(--save)">🐷 Комиксы 16/40 ›</span></div>
+  <div class="lnk"><span style="color:var(--ok)">✓</span><span style="flex:1">Разбор вчерашнего дня</span><b style="color:#854F0B">+10</b></div>
+  <div style="flex:1"></div>
+  <div class="row"><div class="sec" style="flex:1">Магазин</div><div class="cta" style="flex:2">Спланировать день</div></div>
+</div>
+</div>
+
+<!-- 3. Кошелёк сегодня -->
+<div>
+<p class="cap">3 · Кошелёк сегодня — откуда пришли и куда ушли монеты</p>
+<div class="ph">
+  <div class="top"><span class="chip coin" style="font-size:20px">🪙 26</span></div>
+  <div class="os" data-owl="cream|cub|calm|none" style="width:110px;height:120px;opacity:.5"></div>
+  <div class="dim-bg"></div>
+  <div class="sheet">
+    <div style="font-size:22px;font-weight:600">В кошельке 26</div>
+    <div class="row" style="justify-content:space-between;min-height:40px"><span>Осталось со вчера</span><b>+3</b></div>
+    <div class="row" style="justify-content:space-between;min-height:40px"><span>Доход дня</span><b>+35</b></div>
+    <div class="row" style="justify-content:space-between;min-height:40px"><span>Задание: разбор</span><b>+10</b></div>
+    <div class="row" style="justify-content:space-between;min-height:40px"><span>🐷 В копилку: комиксы</span><b>−8</b></div>
+    <div class="row" style="justify-content:space-between;min-height:40px"><span>🥣 Каша</span><b>−14</b></div>
+    <div class="cta">Понятно</div>
+  </div>
+</div>
+</div>
+
+<!-- 4. План -->
+<div>
+<p class="cap">4 · План — двигай ползунки: сова и пояснения меняются</p>
+<div class="ph">
+  <div class="top"><span class="ib">‹</span><span class="ttl">План на день</span><span class="chip coin">🪙 48</span></div>
+  <div class="row" style="gap:10px;align-items:flex-start">
+    <div class="os" id="planOwl" style="width:74px;height:81px"></div>
+    <div class="bub" id="planSay" style="flex:1"></div>
+  </div>
+  <div class="card" style="background:var(--need-bg);color:var(--need)">
+    <div class="row" style="justify-content:space-between;font-weight:600"><span>🥣 Нужное</span><span id="vn" style="font-size:20px"></span></div>
+    <input type="range" min="0" max="48" step="1" id="sn" aria-label="Нужное">
+    <div class="sub">Финни нужно не меньше 37: еда 22, уход 15</div>
+  </div>
+  <div class="card" style="background:var(--want-bg);color:var(--want)">
+    <div class="row" style="justify-content:space-between;font-weight:600"><span>⚽ Желаемое</span><span id="vw" style="font-size:20px"></span></div>
+    <input type="range" min="0" max="48" step="1" id="sw" aria-label="Желаемое">
+    <div class="sub" id="tw"></div>
+  </div>
+  <div class="card" style="background:var(--save-bg);color:var(--save)">
+    <div class="row" style="justify-content:space-between;font-weight:600"><span>🐷 Копилка</span><span id="vs" style="font-size:20px"></span></div>
+    <input type="range" min="0" max="48" step="1" id="ss" aria-label="Копилка">
+    <div class="sub" id="ts"></div>
+  </div>
+  <div class="row" style="justify-content:space-between"><span>Осталось разложить</span><b style="font-size:20px" id="vr"></b></div>
+  <div style="flex:1"></div>
+  <div class="cta">Подтвердить план</div>
+  <div class="sub muted" style="text-align:center" id="tc"></div>
+</div>
+</div>
+
+<!-- 5. Магазин -->
+<div>
+<p class="cap">5 · Магазин — после каши и воды, нажат мячик</p>
+<div class="ph">
+  <div class="top"><span class="ib">‹</span><span class="ttl">Магазин</span><span class="chip coin">🪙 18</span></div>
+  <div class="row" style="gap:10px">
+    <div class="os" data-owl="cream|cub|calm|none" style="width:64px;height:70px"></div>
+    <div class="bub" style="flex:1">Спасибо, я сыт! Осталось почистить перья.<br><span class="sub muted">−8 монет</span></div>
+  </div>
+  <div class="row" style="flex-wrap:wrap;gap:6px">
+    <span class="chip" style="background:var(--need-bg);color:var(--need)">🥣 Нужное: ещё 16</span>
+    <span class="chip" style="background:var(--want-bg);color:var(--want)">⚽ Желаемое: ещё 2</span>
+  </div>
+  <div style="font-weight:600;color:var(--need)">Нужное для Финни</div>
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+    <div class="item dim"><span class="e">🥣</span>Каша<b>14</b><span class="tag">пока не нужно</span></div>
+    <div class="item dim"><span class="e">💧</span>Вода<b>8</b><span class="tag">пока не нужно</span></div>
+    <div class="item" style="border:2px solid var(--need-mid)"><span class="e">🪥</span>Щётка<b>18</b><span class="tag" style="color:var(--need)">нужно сейчас</span></div>
+    <div class="item" style="border:2px solid var(--need-mid)"><span class="e">💊</span>Витамины<b>15</b><span class="tag" style="color:var(--need)">нужно сейчас</span></div>
+  </div>
+  <div style="font-weight:600;color:var(--want)">Желаемое</div>
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+    <div class="item dim"><span class="e">🫐</span>Ягоды<b>12</b><span class="tag">не в плане</span></div>
+    <div class="item dim"><span class="e">⭐</span>Наклейка<b>10</b><span class="tag">не в плане</span></div>
+    <div class="item dim" style="border:2px solid var(--want-mid)"><span class="e">⚽</span>Мячик<b>24</b><span class="tag">не в плане</span></div>
+    <div class="item dim"><span class="e">📘</span>Книга<b>32</b><span class="tag">не в плане</span></div>
+  </div>
+  <div style="flex:1;min-height:170px"></div>
+  <div class="sheet" style="border:1px solid var(--line2)">
+    <div style="font-size:18px;font-weight:600">⚽ Мячик · 24 · радость +25</div>
+    <div>Сегодня не в плане: на желаемое осталось 2.</div>
+    <div class="row"><div class="sec" style="flex:1">Хочу завтра</div><div class="cta" style="flex:1">Понятно</div></div>
+  </div>
+</div>
+</div>
+
+<!-- 6. Итоги дня -->
+<div>
+<p class="cap">6 · Итоги дня 3 — ошибка исправлена, Финни вырос</p>
+<div class="ph">
+  <div class="top"><span class="ttl">День 3 завершён</span></div>
+  <div class="bub" style="text-align:center">Спасибо! Я сыт, перья блестят. Сегодня без игрушек, зато мы ближе к комиксам!</div>
+  <div class="os" data-owl="cream|young|happy|none" style="width:120px;height:131px"></div>
+  <div style="text-align:center"><span class="chip coin">⭐ Вырос! Теперь подросток</span></div>
+  <div class="card row" style="background:var(--need-bg);color:var(--need)">✓<div style="flex:1">Еда и уход — всё купили<div class="sub">потратили 37, 1 монета осталась</div></div></div>
+  <div class="card row" style="background:var(--want-bg);color:var(--want)">✓<div style="flex:1">Желаемое — по плану<div class="sub">сегодня без покупок</div></div></div>
+  <div class="card row" style="background:var(--save-bg);color:var(--save)">✓<div style="flex:1">Копилка +8<div class="sub">до комиксов осталось 16</div></div></div>
+  <div class="row"><span>⭐</span><span style="flex:1">+6 очков роста</span><span>12 из 20</span></div>
+  <div class="bar"><i style="width:60%;background:var(--coin-mid)"></i></div>
+  <div class="row">🪙 На завтра: 3 монеты</div>
+  <div class="card row" style="border:1px solid var(--line)">💡 Корми Финни каждый день: обычно еда стоит 8–14, а сегодня пришлось 22.</div>
+  <div style="flex:1"></div>
+  <div class="cta">Начать день 4</div>
+</div>
+</div>
+
+<!-- 7. Копилка: покупка цели -->
+<div>
+<p class="cap">7 · Копилка, день 5 — цель собрана, её можно купить</p>
+<div class="ph">
+  <div class="top"><span class="ib">‹</span><span class="ttl">Копилка</span></div>
+  <div class="card" style="background:var(--save-bg);color:var(--save)">
+    <div class="row" style="font-size:20px;font-weight:600">📚 Комиксы</div>
+    <div class="row" style="justify-content:space-between;margin-top:6px"><span>Накоплено</span><b style="font-size:20px">40 из 40</b></div>
+    <div class="bar" style="margin-top:6px"><i style="width:100%;background:var(--save-mid)"></i></div>
+    <div style="margin-top:8px;font-weight:600">Собрано!</div>
+  </div>
+  <div class="cta">Купить комиксы</div>
+  <div class="row" style="gap:10px;align-items:center">
+    <div class="os" data-owl="cream|grown|happy|none" style="width:84px;height:92px"></div>
+    <span style="font-size:32px">📚</span>
+    <div class="bub sub" style="flex:1">После покупки: «📚 теперь рядом с Финни. Выбери новую цель».</div>
+  </div>
+  <div style="font-weight:600">Следующая цель</div>
+  <div class="lnk"><span style="flex:1">🎲 Настольная игра</span><b>70</b></div>
+  <div class="lnk"><span style="flex:1">🛴 Самокат</span><b>120</b></div>
+  <div style="flex:1"></div>
+  <div class="row"><div class="sec" style="flex:1">Отложить</div><div class="sec" style="flex:1">Взять из копилки</div></div>
+</div>
+</div>
+
+<!-- 8. Создание питомца -->
+<div>
+<p class="cap">8 · Создание питомца — окрас и аксессуар можно выбрать</p>
+<div class="ph">
+  <div class="top"><span class="ttl">Твой питомец</span></div>
+  <div class="os" id="createOwl" style="width:150px;height:164px"></div>
+  <div style="font-weight:600">Окрас · <span id="createName"></span></div>
+  <div class="row" id="createColors" style="justify-content:space-between"></div>
+  <div style="font-weight:600">Аксессуар</div>
+  <div class="row" id="createAcc" style="gap:6px"></div>
+  <div class="inp"><span class="sub muted">Твоё игровое имя</span>Егор</div>
+  <div class="inp"><span class="sub muted">Имя питомца</span>Алекс</div>
+  <div class="sub muted">Настоящее имя писать не нужно — придумай любое</div>
+  <div style="flex:1"></div>
+  <div class="cta">Готово</div>
+</div>
+</div>
+
+<!-- 9. Для взрослого -->
+<div>
+<p class="cap">9 · Для взрослого — после дня 3</p>
+<div class="ph">
+  <div class="top"><span class="ib">‹</span><span class="ttl">Для взрослого</span></div>
+  <div class="card" style="background:#E6F1FB;color:#0C447C">
+    <div style="font-weight:600">💬 О чём поговорить сегодня</div>
+    <div style="margin-top:6px">День прошёл по плану, копилка на «Комиксы» — 24 из 40. Спросите, когда ребёнок рассчитывает их купить и почему.</div>
+  </div>
+  <div style="font-weight:600">Прогресс</div>
+  <div class="row" style="justify-content:space-between"><span>Сыграно дней</span><b>3</b></div>
+  <div class="row" style="justify-content:space-between"><span>Стадия питомца</span><b>подросток</b></div>
+  <div class="row" style="justify-content:space-between"><span>Очки роста</span><b>12</b></div>
+  <div class="row" style="justify-content:space-between"><span>Копилка</span><b>24 из 40</b></div>
+  <div style="font-weight:600">Пройденные темы (только верно)</div>
+  <div class="row" style="justify-content:space-between"><span>Накопления</span><b>1 из 2</b></div>
+  <div class="row" style="justify-content:space-between"><span>Планирование</span><span class="muted">пока нет</span></div>
+  <div class="row" style="justify-content:space-between"><span>Покупки</span><span class="muted">пока нет</span></div>
+  <div class="lnk" style="justify-content:space-between"><span>Звук в игре</span><b>вкл</b></div>
+  <div class="lnk" style="justify-content:space-between"><span>Движение на экране</span><b>вкл</b></div>
+  <div style="flex:1"></div>
+  <div class="sec">🪙 Начислить 10 монет за помощь</div>
+</div>
+</div>
+
+</div>
+
+<script src="owl.js"></script>
+<script>
+  const O = window.FinnyOwl;
+
+  document.querySelectorAll('[data-owl]').forEach(el => {
+    const [color, stage, emotion, accessory] = el.dataset.owl.split('|');
+    el.innerHTML = O.svg(color, stage, emotion, accessory);
+  });
+
+  // План: числа — эталонный день 3 (раздел 4 плана).
+  const TOTAL = 48, NEED = 37, GOAL_LEFT = 24, NEED_MARGIN = 9;
+  const plan = { n: 38, w: 2, s: 8 };
+  const say = document.getElementById('planSay');
+  const planOwl = document.getElementById('planOwl');
+  const days = d => d % 10 === 1 && d % 100 !== 11 ? 'день' : (d % 10 >= 2 && d % 10 <= 4 && (d % 100 < 12 || d % 100 > 14)) ? 'дня' : 'дней';
+  const coins = d => d % 10 === 1 && d % 100 !== 11 ? 'монета' : (d % 10 >= 2 && d % 10 <= 4 && (d % 100 < 12 || d % 100 > 14)) ? 'монеты' : 'монет';
+
+  function setBank(key, value) {
+    const free = TOTAL - (plan.n + plan.w + plan.s) + plan[key];
+    const stuck = value > free;
+    plan[key] = Math.max(0, Math.min(value, free));
+    renderPlan(stuck);
+  }
+
+  function renderPlan(stuck) {
+    ['n', 'w', 's'].forEach(k => {
+      document.getElementById('v' + k).textContent = plan[k];
+      document.getElementById('s' + k).value = plan[k];
+    });
+    const rest = TOTAL - plan.n - plan.w - plan.s;
+    document.getElementById('vr').textContent = rest;
+    const w = plan.w;
+    document.getElementById('tw').textContent = w >= 32 ? 'Хватит на книгу' : w >= 24 ? 'Хватит на мячик' : w >= 12 ? 'Хватит на ягоды' : w >= 10 ? 'Хватит на наклейку' : 'Пока ни на что';
+    const d = plan.s > 0 ? Math.ceil(GOAL_LEFT / plan.s) : 0;
+    document.getElementById('ts').textContent = plan.s > 0 ? `Если откладывать по ${plan.s} в день — комиксы через ${d} ${days(d)}` : 'Без копилки комиксы не приблизятся';
+    document.getElementById('tc').textContent = plan.s > 0 ? `${plan.s} ${coins(plan.s)} сразу уйдут в копилку` : 'План закрепится до вечера';
+
+    let text, emotion = 'calm';
+    if (stuck && rest === 0) text = 'Монеты кончились. Сначала забери из другой банки.';
+    else if (plan.n < NEED) { text = `Мне не хватит: нужно хотя бы ${NEED}.`; emotion = 'sad'; }
+    else if (plan.n > NEED + NEED_MARGIN) text = 'Мне столько не нужно. Может, отложим?';
+    else if (plan.s === 0) text = 'А на комиксы совсем не отложим?';
+    else if (rest > 0) text = `${rest} ${coins(rest)} останется на завтра. Или разложим?`;
+    else if (plan.w < 10) { text = 'Спасибо! Сегодня без игрушек, зато я наемся.'; emotion = 'happy'; }
+    else { text = 'Отличный план!'; emotion = 'happy'; }
+    say.textContent = text;
+    planOwl.innerHTML = O.svg('cream', 'cub', emotion, 'none');
+  }
+
+  ['n', 'w', 's'].forEach(k => document.getElementById('s' + k).addEventListener('input', e => setBank(k, +e.target.value)));
+  renderPlan(false);
+
+  // Создание питомца.
+  const look = { color: 'cream', accessory: 'scarf' };
+  function renderCreate() {
+    document.getElementById('createOwl').innerHTML = O.svg(look.color, 'cub', 'calm', look.accessory);
+    document.getElementById('createName').textContent = O.PAL[look.color].name.toLowerCase();
+    const colors = document.getElementById('createColors');
+    colors.innerHTML = Object.entries(O.PAL).map(([k, p]) =>
+      `<button class="swatch${look.color === k ? ' on' : ''}" data-k="${k}" style="background:${p.body}" aria-label="${p.name}" aria-pressed="${look.color === k}"></button>`).join('');
+    colors.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { look.color = b.dataset.k; renderCreate(); }));
+    const acc = document.getElementById('createAcc');
+    acc.innerHTML = Object.entries(O.ACCESSORIES).map(([k, name]) =>
+      `<button class="ab${look.accessory === k ? ' on' : ''}" data-k="${k}" aria-pressed="${look.accessory === k}">${name}</button>`).join('');
+    acc.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { look.accessory = b.dataset.k; renderCreate(); }));
+  }
+  renderCreate();
+</script>
+</body>
+</html>
