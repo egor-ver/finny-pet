@@ -137,7 +137,11 @@ fun FinnyNavHost(
         }
 
         composable<Budget> {
-            BudgetScreen(onBack = { navController.popBackStack() })
+            BudgetScreen(
+                onBack = { navController.popBackStack() },
+                onShop = { navController.navigate(Shop) },
+                onSavings = { navController.navigate(Savings) },
+            )
         }
 
         composable<Shop> {

@@ -61,6 +61,7 @@ sealed interface BudgetState {
      * [available] — весь кошелёк, а не остаток со вчера и доход: бонус
      * взрослого и награда за задание тоже раскладываются по плану (R5).
      * [needsGoal] — в копилку запланировано, а цели нет: отложить некуда.
+     * [hasGoal] — без цели копилку не разложить: вместо ползунка «Выбрать цель».
      * [owl] и [phrase] — сова отвечает на каждое движение ползунка;
      * [hints] — строка пояснения под банкой, `null` — пояснять нечего.
      */
@@ -70,6 +71,7 @@ sealed interface BudgetState {
         val remainder: Coins,
         val overBy: Coins,
         val needsGoal: Boolean,
+        val hasGoal: Boolean,
         val owl: OwlLook,
         val phrase: String,
         val hints: Map<SpendCategory, String?> = emptyMap(),
@@ -81,11 +83,8 @@ sealed interface BudgetState {
         val isDistributed: Boolean get() = remainder == Coins.ZERO && overBy == Coins.ZERO
     }
 
-    data class Started(
-        val lines: List<BudgetLine>,
-        val planTotal: Coins,
-        val factTotal: Coins,
-    ) : BudgetState
+    /** Банки после подтверждения: сколько задумано и сколько уже потрачено или отложено. */
+    data class Started(val lines: List<BudgetLine>) : BudgetState
 }
 
 /**
@@ -228,6 +227,7 @@ class BudgetViewModel @Inject constructor(
             remainder = (check as? PlanCheck.Fits)?.remainder ?: Coins.ZERO,
             overBy = (check as? PlanCheck.Exceeds)?.overBy ?: Coins.ZERO,
             needsGoal = plan.savings > Coins.ZERO && progress == null,
+            hasGoal = progress != null,
             owl = owlLook(
                 pets = pack.pets,
                 appearance = profile.appearance,
@@ -256,8 +256,6 @@ class BudgetViewModel @Inject constructor(
                     followed = line.followed,
                 )
             },
-            planTotal = report.planTotal,
-            factTotal = report.factTotal,
         )
     }
 

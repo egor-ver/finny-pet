@@ -2,6 +2,7 @@ package ru.finnypet.app.ui.screens.budget
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -17,12 +18,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
@@ -31,9 +35,12 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
-import ru.finnypet.app.ui.components.PlanComparison
 import ru.finnypet.app.ui.components.PlanEditor
+import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.coinsText
+import ru.finnypet.app.ui.components.color
+import ru.finnypet.app.ui.components.icon
+import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -46,6 +53,8 @@ import ru.finnypet.app.ui.theme.Dimens
 @Composable
 fun BudgetScreen(
     onBack: () -> Unit,
+    onShop: () -> Unit,
+    onSavings: () -> Unit,
     viewModel: BudgetViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -53,6 +62,8 @@ fun BudgetScreen(
     BudgetContent(
         state = state,
         onBack = onBack,
+        onShop = onShop,
+        onSavings = onSavings,
         onSet = viewModel::set,
         onConfirm = viewModel::confirm,
         onRetry = viewModel::retry,
@@ -63,6 +74,8 @@ fun BudgetScreen(
 fun BudgetContent(
     state: BudgetState,
     onBack: () -> Unit,
+    onShop: () -> Unit = {},
+    onSavings: () -> Unit = {},
     onSet: (SpendCategory, Coins) -> Unit = { _, _ -> },
     onConfirm: () -> Unit = {},
     onRetry: () -> Unit = {},
@@ -90,9 +103,10 @@ fun BudgetContent(
             onBack = onBack,
             onSet = onSet,
             onConfirm = onConfirm,
+            onSavings = onSavings,
         )
 
-        is BudgetState.Started -> Started(state = state, onBack = onBack)
+        is BudgetState.Started -> Started(state = state, onBack = onBack, onShop = onShop)
     }
 }
 
@@ -119,6 +133,7 @@ private fun Planning(
     onBack: () -> Unit,
     onSet: (SpendCategory, Coins) -> Unit,
     onConfirm: () -> Unit,
+    onSavings: () -> Unit,
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
     if (confirming) {
@@ -183,6 +198,7 @@ private fun Planning(
             overBy = state.overBy,
             onSet = onSet,
             hints = state.hints,
+            onChooseGoal = onSavings.takeUnless { state.hasGoal },
         )
 
         // Остаток — не ошибка: он переходит на завтра (R5).
@@ -221,20 +237,57 @@ private fun ConfirmDialog(savings: Coins, onConfirm: () -> Unit, onCancel: () ->
     }
 }
 
+/**
+ * План после подтверждения: в каждой банке сколько уже ушло и сколько
+ * осталось (раздел 8 плана). Полоса — доля плана, которая потрачена; число
+ * рядом словами, цвет — не единственный признак (ТЗ 3.6).
+ */
 @Composable
-private fun Started(state: BudgetState.Started, onBack: () -> Unit) {
+private fun Started(state: BudgetState.Started, onBack: () -> Unit, onShop: () -> Unit) {
     Screen(
         onBack = onBack,
+        bottomBar = {
+            ButtonColumn {
+                FinnyButton(text = stringResource(R.string.shop_action), onClick = onShop)
+            }
+        },
     ) {
         Text(
             text = stringResource(R.string.budget_started),
             style = MaterialTheme.typography.bodyLarge,
         )
+        state.lines.forEach { line -> JarProgress(line) }
+    }
+}
 
-        PlanComparison(
-            lines = state.lines,
-            planTotal = state.planTotal,
-            factTotal = state.factTotal,
-        )
+/** Копилка — «отложено»; траты — «потрачено, осталось», а пока не тратили — только остаток. */
+@Composable
+private fun JarProgress(line: BudgetLine) {
+    val title = stringResource(line.category.label)
+    val left = line.actual.shortfallTo(line.planned).amount
+    val status = when {
+        line.category == SpendCategory.SAVINGS -> stringResource(R.string.budget_jar_saved, line.actual.amount)
+        line.actual == Coins.ZERO -> stringResource(R.string.budget_jar_left, left)
+        else -> stringResource(R.string.budget_jar_spent_left, line.actual.amount, left)
+    }
+    val spoken = stringResource(R.string.budget_jar_description, title, status)
+    FinnyCard {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+            modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            ) {
+                Text(text = line.category.icon, style = MaterialTheme.typography.titleMedium)
+                Text(text = title, style = MaterialTheme.typography.titleMedium)
+            }
+            ProgressLine(
+                fraction = if (line.planned == Coins.ZERO) 0f else line.actual.amount.toFloat() / line.planned.amount,
+                color = line.category.color,
+            )
+            Text(text = status, style = MaterialTheme.typography.bodyLarge)
+        }
     }
 }

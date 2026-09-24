@@ -67,6 +67,11 @@ fun PlanEditor(
      * направления называются одинаково на всех экранах.
      */
     jars: List<PlanJar> = emptyList(),
+    /**
+     * Цели нет — копилку раскладывать некуда: вместо ползунка кнопка выбора
+     * цели (раздел 8 плана). `null` — цель есть или копилка задания.
+     */
+    onChooseGoal: (() -> Unit)? = null,
 ) {
     val rows = jars.ifEmpty { SpendCategory.entries.map { PlanJar(it, label = null) } }
     rows.forEach { jar ->
@@ -80,6 +85,7 @@ fun PlanEditor(
             available = available,
             hint = hints[category],
             onSet = { onSet(category, it) },
+            onChooseGoal = onChooseGoal.takeIf { category == SpendCategory.SAVINGS },
         )
     }
 
@@ -120,6 +126,7 @@ private fun CategoryRow(
     available: Coins,
     hint: String?,
     onSet: (Coins) -> Unit,
+    onChooseGoal: (() -> Unit)?,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
@@ -153,7 +160,11 @@ private fun CategoryRow(
                 MoneyAmount(amount = amount)
             }
         }
-        AmountSlider(category = category, title = title, amount = amount, max = max, available = available, onSet = onSet)
+        if (onChooseGoal != null) {
+            FinnySecondaryButton(text = stringResource(R.string.budget_choose_goal), onClick = onChooseGoal)
+        } else {
+            AmountSlider(category = category, title = title, amount = amount, max = max, available = available, onSet = onSet)
+        }
         if (hint != null) {
             Text(
                 text = hint,

@@ -274,10 +274,16 @@ class BudgetPlanningTest {
         val started = withTimeout(TIMEOUT_MS) {
             viewModel.state.first { it is BudgetState.Started } as BudgetState.Started
         }
-        assertEquals(Coins(5), started.planTotal)
-        assertEquals(Coins.ZERO, started.factTotal)
+        assertEquals(Coins(5), started.lines.single { it.category == SpendCategory.MANDATORY }.planned)
+        assertTrue(started.lines.all { it.actual == Coins.ZERO })
         assertEquals(PeriodStatus.RUNNING, periods.current(profileId)!!.status)
         assertEquals(3, started.lines.size)
+    }
+
+    /** Раздел 8 плана: без цели копилку не разложить — экран зовёт её выбрать. */
+    @Test
+    fun без_цели_копилку_не_разложить() = runBlocking {
+        assertEquals(false, awaitPlanning().hasGoal)
     }
 
     private suspend fun awaitPlanning(): BudgetState.Planning = await { true }
