@@ -26,23 +26,32 @@ sealed interface NextStep {
     /** Сколько по плану осталось отложить. */
     data class Save(val left: Coins) : NextStep
 
-    data object Finish : NextStep
+    /** [onPlan] — всё по плану; иначе монет на план не хватило, но день закончить можно. */
+    data class Finish(val onPlan: Boolean) : NextStep
 }
 
+/**
+ * Шаг предлагается, только если его можно сделать: без монет звать в магазин
+ * или в копилку — значит отправить в тупик (ТЗ 3.4).
+ */
 fun nextStep(
     status: PeriodStatus,
     plan: BudgetPlan?,
     fact: PeriodFact,
+    balance: Coins,
+    cheapestMandatory: Coins?,
     taskRewardAvailable: Boolean,
 ): NextStep {
     if (status == PeriodStatus.PLANNING || plan == null) return NextStep.Plan
     if (taskRewardAvailable) return NextStep.Task
 
     val mandatory = fact.amountFor(SpendCategory.MANDATORY).shortfallTo(plan.mandatory)
-    if (mandatory > Coins.ZERO) return NextStep.Shop(mandatory)
+    val canBuy = cheapestMandatory != null && balance.covers(cheapestMandatory)
+    if (mandatory > Coins.ZERO && canBuy) return NextStep.Shop(mandatory)
 
     val savings = fact.amountFor(SpendCategory.SAVINGS).shortfallTo(plan.savings)
-    if (savings > Coins.ZERO) return NextStep.Save(savings)
+    if (savings > Coins.ZERO && balance > Coins.ZERO) return NextStep.Save(minOf(savings, balance))
 
-    return NextStep.Finish
+    val optionalKept = fact.amountFor(SpendCategory.OPTIONAL) <= plan.optional
+    return NextStep.Finish(onPlan = mandatory == Coins.ZERO && savings == Coins.ZERO && optionalKept)
 }

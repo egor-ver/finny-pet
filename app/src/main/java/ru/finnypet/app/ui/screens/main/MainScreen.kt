@@ -233,14 +233,16 @@ private fun NextStepBar(
             stringResource(R.string.shop_action)
         is NextStep.Save -> stringResource(R.string.main_step_save, coinsText(step.left)) to
             stringResource(R.string.main_step_save_action)
-        NextStep.Finish -> stringResource(R.string.main_step_finish) to stringResource(R.string.day_action_close)
+        is NextStep.Finish -> stringResource(
+            if (step.onPlan) R.string.main_step_finish else R.string.main_step_finish_off_plan,
+        ) to stringResource(R.string.day_action_close)
     }
     val onAction: () -> Unit = when (step) {
         NextStep.Plan -> onPlan
         NextStep.Task -> { { state.task?.let { onTask(it.id) } } }
         is NextStep.Shop -> onShop
         is NextStep.Save -> onSavings
-        NextStep.Finish -> onFinishDay
+        is NextStep.Finish -> onFinishDay
     }
 
     ButtonColumn {
@@ -291,7 +293,7 @@ private fun DayLine(state: MainState.Ready, onFinishDay: () -> Unit) {
         state.periodNumber,
         stringResource(state.periodStatus.label),
     )
-    if (state.periodStatus == PeriodStatus.PLANNING || state.step == NextStep.Finish) {
+    if (state.periodStatus == PeriodStatus.PLANNING || state.step is NextStep.Finish) {
         Text(
             text = line,
             style = MaterialTheme.typography.bodyMedium,

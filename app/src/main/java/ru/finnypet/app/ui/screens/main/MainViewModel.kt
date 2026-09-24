@@ -26,6 +26,7 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Profile
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.repository.ContentRepository
@@ -110,6 +111,9 @@ class MainViewModel @Inject constructor(
 
     private val goals: Map<GoalId, Goal> = content.pack().goals.associateBy { it.id }
     private val tasks = content.pack().tasks
+    private val cheapestMandatory: Coins? = content.pack().shop
+        .filter { it.category == SpendCategory.MANDATORY }
+        .minOfOrNull { it.price }
     private val texts: Map<String, String> = content.pack().texts
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -172,6 +176,8 @@ class MainViewModel @Inject constructor(
                             status = period.status,
                             plan = plan,
                             fact = periodEngine.factOf(transactions),
+                            balance = balance,
+                            cheapestMandatory = cheapestMandatory,
                             taskRewardAvailable = task?.rewardAvailable == true,
                         ),
                     )

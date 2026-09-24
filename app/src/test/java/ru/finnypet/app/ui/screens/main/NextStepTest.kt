@@ -33,19 +33,56 @@ class NextStepTest {
         assertEquals(NextStep.Save(Coins(5)), step(fact = fact(mandatory = 20, savings = 10)))
     }
 
+    /** Все монеты потрачены — звать в магазин и копилку незачем, это тупик. */
+    @Test
+    fun `без монет — итоги не по плану, а не магазин и копилка`() {
+        assertEquals(NextStep.Finish(onPlan = false), step(fact = fact(mandatory = 8), balance = 0))
+    }
+
+    @Test
+    fun `на нужное не хватает даже на самое дешёвое — сразу копилка`() {
+        assertEquals(NextStep.Save(Coins(5)), step(fact = fact(mandatory = 8), balance = 5))
+    }
+
+    @Test
+    fun `в копилку предлагается не больше, чем есть`() {
+        assertEquals(NextStep.Save(Coins(3)), step(fact = fact(mandatory = 20), balance = 3))
+    }
+
+    @Test
+    fun `желаемое сверх плана — итоги не по плану`() {
+        assertEquals(NextStep.Finish(onPlan = false), step(fact = fact(mandatory = 20, optional = 11, savings = 15)))
+    }
+
     /** Желаемое не шаг: отказ от него ТЗ не считает ошибкой. */
     @Test
     fun `нужное и копилка по плану — итоги, даже без желаемого`() {
-        assertEquals(NextStep.Finish, step(fact = fact(mandatory = 25, savings = 15)))
+        assertEquals(NextStep.Finish(onPlan = true), step(fact = fact(mandatory = 25, savings = 15)))
     }
 
     private fun step(
         status: PeriodStatus = PeriodStatus.RUNNING,
         fact: PeriodFact = fact(),
+        balance: Int = 50,
         taskReward: Boolean = false,
-    ) = nextStep(status = status, plan = plan, fact = fact, taskRewardAvailable = taskReward)
-
-    private fun fact(mandatory: Int = 0, savings: Int = 0) = PeriodFact(
-        mapOf(SpendCategory.MANDATORY to Coins(mandatory), SpendCategory.SAVINGS to Coins(savings)),
+    ) = nextStep(
+        status = status,
+        plan = plan,
+        fact = fact,
+        balance = Coins(balance),
+        cheapestMandatory = CHEAPEST_MANDATORY,
+        taskRewardAvailable = taskReward,
     )
+
+    private fun fact(mandatory: Int = 0, optional: Int = 0, savings: Int = 0) = PeriodFact(
+        mapOf(
+            SpendCategory.MANDATORY to Coins(mandatory),
+            SpendCategory.OPTIONAL to Coins(optional),
+            SpendCategory.SAVINGS to Coins(savings),
+        ),
+    )
+
+    private companion object {
+        val CHEAPEST_MANDATORY = Coins(8)
+    }
 }

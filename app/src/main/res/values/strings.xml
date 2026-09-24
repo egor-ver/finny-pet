@@ -243,6 +243,7 @@
     <string name="main_step_save">Отложи в копилку: по плану ещё %1$s.</string>
     <string name="main_step_save_action">В копилку</string>
     <string name="main_step_finish">Всё по плану! Можно заканчивать день.</string>
+    <string name="main_step_finish_off_plan">Монет на план не хватило. Закончи день и посмотри, что получилось.</string>
 
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>

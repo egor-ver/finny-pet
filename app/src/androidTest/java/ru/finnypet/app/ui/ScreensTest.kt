@@ -368,7 +368,7 @@ class ScreensTest {
     @Test
     fun `когда_всё_по_плану_главная_кнопка_заканчивает_день`() {
         var opened = false
-        showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Finish), onFinishDay = { opened = true })
+        showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Finish(onPlan = true)), onFinishDay = { opened = true })
 
         compose.onNodeWithText(text(R.string.main_step_finish)).assertIsDisplayed()
         compose.onAllNodesWithText(text(R.string.day_action_close)).assertCountEquals(1)
