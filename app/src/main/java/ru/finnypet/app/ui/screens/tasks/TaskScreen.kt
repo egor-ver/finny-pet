@@ -334,9 +334,9 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
  */
 @Composable
 private fun Shelf(step: StepView.Pick, onToggle: (String) -> Unit) {
-    // Счётчик читается одной фразой: «в корзине 18 из 30 монет», а не
+    // Счётчик читается одной фразой: «в корзине 18 монет из 30», а не
     // «корзина, 18 монет, слеш, 30 монет» и ещё раз то же самое с полосы.
-    val spoken = stringResource(R.string.task_basket_progress, step.spent.amount, step.budget.amount)
+    val spoken = stringResource(R.string.task_basket_progress, coinsText(step.spent), step.budget.amount)
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = Modifier

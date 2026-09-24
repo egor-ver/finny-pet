@@ -5,7 +5,9 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Transaction
 
 /** Строка итогов дня: ✓ или ✗ и пояснение словами (раздел 8 плана). */
 data class DayCheck(val done: Boolean, val text: Explanation)
@@ -71,6 +73,35 @@ fun dayMood(checks: List<DayCheck>): PetMood = when {
     checks.all { it.done } -> PetMood.HAPPY
     else -> PetMood.CALM
 }
+
+/**
+ * Один совет в итогах (раздел 8 плана) — о первом, что не получилось, в
+ * порядке строк итогов. Всё получилось, но еда обошлась дороже обычного —
+ * так бывает после голодного дня — совет про еду каждый день. Иначе похвала.
+ */
+fun dayTip(checks: List<DayCheck>, foodSpent: Coins, shop: List<ShopItem>): Explanation {
+    val (needs, optional, savings) = checks
+    val prices = shop.filter(::isFood).map { it.price }
+    val usual = prices.maxOrNull()
+    return when {
+        !needs.done -> Explanation("day.tip.needs_first")
+        !optional.done -> Explanation("day.tip.optional")
+        !savings.done -> Explanation("day.tip.savings")
+        usual != null && foodSpent > usual -> Explanation(
+            "day.tip.feed_daily",
+            mapOf("min" to "${prices.min().amount}", "max" to "${usual.amount}", "spent" to "${foodSpent.amount}"),
+        )
+        else -> Explanation("day.tip.keep")
+    }
+}
+
+/** Сколько за день ушло на еду: покупки товаров, которые поднимают сытость. */
+fun foodSpent(transactions: List<Transaction>, shop: List<ShopItem>): Coins {
+    val food = shop.filter(::isFood).map { it.id }.toSet()
+    return Coins(transactions.filter { it.itemId in food }.sumOf { it.amount.amount })
+}
+
+private fun isFood(item: ShopItem): Boolean = item.effects.any { it.stat == PetStatKind.SATIETY && it.delta > 0 }
 
 /**
  * Перед сном (R14): потребности не закрыты, а на нужное монеты есть — сова

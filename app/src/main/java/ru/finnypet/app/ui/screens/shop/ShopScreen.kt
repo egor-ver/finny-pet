@@ -51,6 +51,7 @@ import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.StatEffectLine
+import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
@@ -260,7 +261,7 @@ private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?)
                         )
                     }
                     Text(
-                        text = stringResource(R.string.shop_spent, done.price.amount),
+                        text = stringResource(R.string.shop_spent, coinsText(done.price)),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }

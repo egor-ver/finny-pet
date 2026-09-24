@@ -61,6 +61,8 @@ data class DaySummary(
     val headline: String,
     val owl: OwlLook,
     val checks: List<DayCheckView>,
+    /** Один совет на завтра. */
+    val tip: String,
     val earnedPoints: Int,
     /** `null` — сова взрослая, расти некуда. */
     val growth: GrowthView?,
@@ -228,6 +230,7 @@ class DayViewModel @Inject constructor(
                 description = owlDescription(texts, profile.petName, mood, petState.needsOf(outcome.state).firstOrNull()),
             ),
             checks = checks.map { DayCheckView(done = it.done, text = texts.textOf(it.text)) },
+            tip = texts.textOf(dayTip(checks, foodSpent(periods.transactions(outcome.closedPeriod.id), pack.shop), pack.shop)),
             earnedPoints = closed.earnedPoints,
             growth = growthOf(outcome.growth, balance.growthThresholds),
             newStage = changes.filterIsInstance<Change.Stage>().firstOrNull()?.to,

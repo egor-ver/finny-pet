@@ -87,14 +87,14 @@ class PlanAdviceTest {
     @Test
     fun `нужное — сколько стоит каждая потребность`() {
         assertEquals(
-            "Финни нужно не меньше 37: еда 22, уход 15",
+            "На нужное — не меньше 37: еда 22, уход 15",
             mandatoryHint(texts, mapOf(PetStatKind.SATIETY to Coins(22), PetStatKind.CARE to Coins(15))),
         )
     }
 
     @Test
     fun `нужное без потребностей и без известной цены`() {
-        assertEquals("Финни сегодня ничего не нужно.", mandatoryHint(texts, emptyMap()))
+        assertEquals("Сегодня всё нужное уже есть.", mandatoryHint(texts, emptyMap()))
         assertNull(mandatoryHint(texts, null))
     }
 

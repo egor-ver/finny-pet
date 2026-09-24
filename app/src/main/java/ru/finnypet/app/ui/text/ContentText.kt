@@ -14,7 +14,7 @@ fun Map<String, String>.textOf(key: String): String = this[key] ?: key
  * Текст объяснения с подставленными числами.
  *
  * В контент-паке места для чисел записаны в фигурных скобках: «осталось
- * {balance} монет». Домен отдаёт ключ и аргументы, склеивает их этот слой —
+ * {coins:balance}». Домен отдаёт ключ и аргументы, склеивает их этот слой —
  * учебный текст правится без кода (ТЗ 3.2).
  *
  * Аргумент без места в тексте не мешает, место без аргумента остаётся
@@ -22,5 +22,15 @@ fun Map<String, String>.textOf(key: String): String = this[key] ?: key
  */
 fun Map<String, String>.textOf(explanation: Explanation): String =
     explanation.args.entries.fold(textOf(explanation.key)) { text, (name, value) ->
-        text.replace("{$name}", value)
+        text.replace("{coins:$name}", coinsOf(value)).replace("{$name}", value)
     }
+
+/**
+ * «{coins:balance}» — число со словом в нужной форме: «81 монета», а не
+ * «81 монет». Формы слова — в контент-паке, выбор формы — по русскому
+ * правилу ([wordFormOf]).
+ */
+private fun Map<String, String>.coinsOf(value: String): String {
+    val amount = value.toIntOrNull() ?: return value
+    return "$value ${textOf("word.coins.${wordFormOf(amount).name}")}"
+}

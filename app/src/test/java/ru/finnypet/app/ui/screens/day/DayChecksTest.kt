@@ -10,9 +10,13 @@ import ru.finnypet.app.domain.economy.BudgetEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.Transaction
+import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.ui.text.textOf
 
 /**
  * Итоги дня на эталонном сценарии (раздел 4 плана): три строки ✓/✗ ставятся
@@ -99,6 +103,64 @@ class DayChecksTest {
         val missing = keys.toSet().filterNot(texts::containsKey)
         assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
     }
+
+    // --- Совет дня ---
+
+    private val shop = ContentParser().parse(RealContent.raw()).shop
+
+    /** Эталон, день 3: каша 14 + вода 8 = 22 на еду, всё выполнено — совет про еду каждый день. */
+    @Test
+    fun `день 3 — всё выполнено, но еда дороже обычного — корми каждый день`() {
+        val checks = dayChecks(true, report(plan(38, 2, 8), fact(37, 0, 8)), null, null)
+        val spent = foodSpent(
+            listOf(buy(1, "food-porridge", 14), buy(2, "water-fresh", 8), buy(3, "care-vitamins", 15)),
+            shop,
+        )
+
+        assertEquals(Coins(22), spent)
+        assertEquals(
+            Explanation("day.tip.feed_daily", mapOf("min" to "8", "max" to "14", "spent" to "22")),
+            dayTip(checks, spent, shop),
+        )
+        assertEquals(
+            "Совет: корми меня каждый день. Обычно еда стоит 8–14, а сегодня пришлось 22.",
+            texts.textOf(dayTip(checks, spent, shop)),
+        )
+    }
+
+    @Test
+    fun `совет — о первом, что не получилось, в порядке строк итогов`() {
+        val hungry = dayChecks(false, report(plan(30, 5, 0), fact(20, 12, 0)), null, null)
+        val over = dayChecks(true, report(plan(30, 5, 5), fact(30, 12, 0)), null, null)
+        val noSavings = dayChecks(true, report(plan(30, 5, 0), fact(30, 5, 0)), null, null)
+
+        assertEquals("day.tip.needs_first", dayTip(hungry, Coins(8), shop).key)
+        assertEquals("day.tip.optional", dayTip(over, Coins(8), shop).key)
+        assertEquals("day.tip.savings", dayTip(noSavings, Coins(8), shop).key)
+    }
+
+    @Test
+    fun `всё выполнено и еда по обычной цене — похвала`() {
+        val checks = dayChecks(true, report(plan(30, 5, 8), fact(22, 5, 8)), null, null)
+        assertEquals("day.tip.keep", dayTip(checks, Coins(14), shop).key)
+    }
+
+    @Test
+    fun `у каждого совета есть текст`() {
+        val keys = listOf("day.tip.needs_first", "day.tip.optional", "day.tip.savings", "day.tip.feed_daily", "day.tip.keep")
+        val missing = keys.filterNot(texts::containsKey)
+        assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
+    }
+
+    private fun buy(id: Long, item: String, price: Int) = Transaction(
+        id = id,
+        periodId = 3,
+        type = TransactionType.PURCHASE_MANDATORY,
+        amount = Coins(price),
+        reasonKey = "purchase.done",
+        createdAt = id,
+        itemId = ItemId(item),
+    )
 
     private fun plan(mandatory: Int, optional: Int, savings: Int) =
         BudgetPlan(mandatory = Coins(mandatory), optional = Coins(optional), savings = Coins(savings))

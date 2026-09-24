@@ -66,4 +66,31 @@ class ContentTextTest {
 
         assertEquals("5 и ещё раз 5", repeated.textOf(Explanation(key = "k", args = mapOf("n" to "5"))))
     }
+
+    /** Контрольная точка 4 плана: нигде нет «81 монет». */
+    @Test
+    fun `число с монетами склоняется по русскому правилу`() {
+        val words = mapOf(
+            "rest" to "Осталось: {coins:balance}.",
+            "word.coins.ONE" to "монета",
+            "word.coins.FEW" to "монеты",
+            "word.coins.MANY" to "монет",
+        )
+        val shown = listOf("1", "2", "5", "11", "21", "81", "104").map {
+            words.textOf(Explanation("rest", mapOf("balance" to it)))
+        }
+
+        assertEquals(
+            listOf(
+                "Осталось: 1 монета.", "Осталось: 2 монеты.", "Осталось: 5 монет.", "Осталось: 11 монет.",
+                "Осталось: 21 монета.", "Осталось: 81 монета.", "Осталось: 104 монеты.",
+            ),
+            shown,
+        )
+    }
+
+    @Test
+    fun `не число в месте для монет остаётся как есть`() {
+        assertEquals("Цена: много.", mapOf("x" to "Цена: {coins:p}.").textOf(Explanation("x", mapOf("p" to "много"))))
+    }
 }

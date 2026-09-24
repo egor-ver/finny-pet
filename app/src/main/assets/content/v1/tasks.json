@@ -31,6 +31,22 @@
             "type": "OTHERWISE"
           },
           "explanationKey": "task.plan_pocket_money.otherwise"
+        },
+        {
+          "id": "food-short",
+          "condition": {
+            "type": "JARS_DISTRIBUTION",
+            "minSavings": 5
+          },
+          "explanationKey": "task.plan_pocket_money.food_short"
+        },
+        {
+          "id": "no-savings",
+          "condition": {
+            "type": "JARS_DISTRIBUTION",
+            "minMandatory": 15
+          },
+          "explanationKey": "task.plan_pocket_money.no_savings"
         }
       ]
     },
@@ -66,6 +82,22 @@
             "type": "OTHERWISE"
           },
           "explanationKey": "task.plan_school_supplies.otherwise"
+        },
+        {
+          "id": "keychain-first",
+          "condition": {
+            "type": "BASKET_CONTAINS",
+            "itemId": "keychain"
+          },
+          "explanationKey": "task.plan_school_supplies.extra_first"
+        },
+        {
+          "id": "pad-first",
+          "condition": {
+            "type": "BASKET_CONTAINS",
+            "itemId": "sparkle-pad"
+          },
+          "explanationKey": "task.plan_school_supplies.extra_first"
         }
       ]
     },
@@ -99,6 +131,14 @@
             "type": "OTHERWISE"
           },
           "explanationKey": "task.save_gift_coins.otherwise"
+        },
+        {
+          "id": "saved-little",
+          "condition": {
+            "type": "JARS_DISTRIBUTION",
+            "minSavings": 1
+          },
+          "explanationKey": "task.save_gift_coins.saved_little"
         }
       ]
     },
@@ -164,6 +204,22 @@
             "type": "OTHERWISE"
           },
           "explanationKey": "task.pay_smart_pack.otherwise"
+        },
+        {
+          "id": "small-juice",
+          "condition": {
+            "type": "BASKET_CONTAINS",
+            "itemId": "juice_small"
+          },
+          "explanationKey": "task.pay_smart_pack.small"
+        },
+        {
+          "id": "only-candy",
+          "condition": {
+            "type": "BASKET_CONTAINS",
+            "itemId": "lollipop"
+          },
+          "explanationKey": "task.pay_smart_pack.candy"
         }
       ]
     },
@@ -223,6 +279,22 @@
         {
           "condition": { "type": "OTHERWISE" },
           "explanationKey": "task.review_hungry.otherwise"
+        },
+        {
+          "id": "taste",
+          "condition": {
+            "type": "SELECTED_OPTION",
+            "optionId": "dislikes_food"
+          },
+          "explanationKey": "task.review_hungry.taste"
+        },
+        {
+          "id": "shop",
+          "condition": {
+            "type": "SELECTED_OPTION",
+            "optionId": "shop_empty"
+          },
+          "explanationKey": "task.review_hungry.shop"
         }
       ]
     }

@@ -222,6 +222,9 @@ private fun Closed(summary: DaySummary, onBack: () -> Unit) {
         summary.checks.forEach { check -> CheckLine(check) }
         Growth(earned = summary.earnedPoints, growth = summary.growth)
         MoneyCard(label = stringResource(R.string.day_carry_over), amount = summary.carryOver)
+        FinnyCard(color = MaterialTheme.colorScheme.secondaryContainer) {
+            Text(text = summary.tip, style = MaterialTheme.typography.bodyLarge)
+        }
     }
 }
 

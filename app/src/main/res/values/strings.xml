@@ -118,7 +118,7 @@
     <string name="adult_topics">Пройденные темы</string>
     <string name="adult_topic_passed">пройдено %1$d из %2$d</string>
     <string name="adult_topic_none">заданий по теме пока нет</string>
-    <string name="adult_overview">Как идут дела у %1$s</string>
+    <string name="adult_overview">Как идут дела: %1$s</string>
     <string name="adult_days">Сыграно дней</string>
     <string name="adult_stage">Стадия питомца</string>
     <string name="adult_points">Очки роста</string>
@@ -207,7 +207,7 @@
     <!-- «Нужное: ещё 24» — остаток по плану -->
     <string name="shop_jar_left">%1$s: ещё %2$d</string>
     <!-- «−14 монет» в облачке после покупки -->
-    <string name="shop_spent">−%1$d монет</string>
+    <string name="shop_spent">−%1$s</string>
     <string name="shop_planning_hint">Сначала спланируй день — потом можно покупать.</string>
     <string name="shop_empty">В магазине пока пусто.</string>
     <string name="shop_price">Цена</string>
@@ -279,7 +279,7 @@
     <string name="task_answer">Ответить</string>
     <string name="task_budget">Монет на этот шаг</string>
     <string name="task_basket">Корзина</string>
-    <string name="task_basket_progress">В корзине %1$d из %2$d монет</string>
+    <string name="task_basket_progress">В корзине %1$s из %2$d</string>
     <string name="task_pick">Взять</string>
     <string name="task_picked">В корзине</string>
     <string name="task_pick_full">Не влезает</string>
@@ -288,7 +288,7 @@
     <string name="task_wrong">Не совсем</string>
     <string name="task_reward_paid">+%1$s в кошелёк</string>
     <string name="task_reward_rule">Монеты — за верный ответ с первой попытки</string>
-    <string name="task_reward_none">Сегодня без монет — но ты стал умнее!</string>
+    <string name="task_reward_none">Сегодня без монет — зато знаешь больше!</string>
     <string name="task_try_again">Попробовать ещё</string>
     <string name="task_finish">Продолжить</string>
     <string name="main_task">Задание дня</string>

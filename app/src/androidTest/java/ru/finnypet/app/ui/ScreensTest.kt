@@ -840,7 +840,7 @@ class ScreensTest {
         )
         showTask(taskReady(stage = TaskStage.Step(index = 0, total = 1, step = step)), onToggle = { toggled = it })
 
-        scrollToDescription(text(R.string.task_basket_progress, 18, 30))
+        scrollToDescription(text(R.string.task_basket_progress, "18 монет", 30))
         scrollToText(text(R.string.task_picked))
         scrollToText(text(R.string.task_pick_full))
         compose.onNodeWithText("Каша").performClick()
@@ -1619,6 +1619,7 @@ class ScreensTest {
                     headline = "День успешно завершён.",
                     owl = testOwl(),
                     checks = listOf(DayCheckView(done = true, text = "Еда и уход — всё купили, потратили 37.")),
+                    tip = "Совет: так держать!",
                     earnedPoints = 6,
                     growth = null,
                     newStage = GrowthStage.YOUNG,
@@ -1649,6 +1650,7 @@ class ScreensTest {
                     headline = "День завершён.",
                     owl = testOwl(),
                     checks = emptyList(),
+                    tip = "Совет: так держать!",
                     earnedPoints = 0,
                     growth = null,
                     newStage = null,
