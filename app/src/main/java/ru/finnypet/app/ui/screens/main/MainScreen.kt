@@ -6,26 +6,32 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
-import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
@@ -34,10 +40,9 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.GoalProgressBar
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.Owl
-import ru.finnypet.app.ui.components.StatBar
-import ru.finnypet.app.ui.components.coinsText
+import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -157,111 +162,192 @@ private fun ReadyScreen(
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
     FinnyScaffold(
-        // Заголовком стоит приветствие, а не название игры: ребёнок должен
-        // видеть, чей это профиль, а место на экране дорого — по ТЗ 2.5.3
-        // сюда обязаны поместиться шесть блоков сразу.
-        title = stringResource(R.string.main_hello, state.childName),
-        spacing = Dimens.SpaceMedium,
-        bottomBar = {
-            NextStepBar(
-                state = state,
-                onPlan = onPlan,
-                onTask = onTask,
-                onShop = onShop,
-                onSavings = onSavings,
-                onFinishDay = onFinishDay,
-            )
+        // Вместо заголовка — кошелёк: сколько монет есть, ребёнок видит
+        // первым делом, без инструкции (ТЗ 8.4).
+        title = { MoneyAmount(amount = state.balance) },
+        actions = {
+            TopIcon(symbol = "?", label = stringResource(R.string.help_action), onClick = onHelp)
+            TopIcon(symbol = "🔒", label = stringResource(R.string.adult_action), onClick = onAdult)
         },
+        spacing = Dimens.SpaceMedium,
+        bottomBar = { DayButtons(step = state.step, onPlan = onPlan, onShop = onShop, onSleep = onFinishDay) },
     ) {
         banner()
 
-        DayLine(state = state, onFinishDay = onFinishDay)
-
+        Bubble(text = state.phrase)
         Pet(state = state)
+        PetStats(state = state)
 
-        MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
         SavingsCard(savings = state.savings, onOpen = onSavings)
-        state.task?.let { task ->
-            TaskCard(
-                task = task,
-                locked = state.periodStatus == PeriodStatus.PLANNING,
-                onOpen = { onTask(task.id) },
-            )
-        }
+        state.task?.let { task -> TaskCard(task = task, onOpen = { onTask(task.id) }) }
 
-        Text(
-            text = stringResource(R.string.main_pet_state, state.petName),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        StatBar(label = stringResource(R.string.stat_mood), stat = state.stats.mood)
-        StatBar(
-            label = stringResource(R.string.stat_satiety),
-            stat = state.stats.satiety,
-            color = MaterialTheme.colorScheme.secondary,
-        )
-        StatBar(
-            label = stringResource(R.string.stat_care),
-            stat = state.stats.care,
-            color = MaterialTheme.colorScheme.tertiary,
-        )
-
+        // После подтверждения главная кнопка к плану больше не ведёт, а
+        // сравнить план с фактом ребёнок должен иметь возможность (ТЗ 2.5.5).
+        if (state.step != NextStep.Plan) Link(stringResource(R.string.budget_action_show), onPlan)
         Link(stringResource(R.string.progress_action), onProgress)
-        Link(stringResource(R.string.help_action), onHelp)
-        Link(stringResource(R.string.adult_action), onAdult)
     }
 }
 
 /**
- * Один следующий шаг: подсказка словами и главная кнопка к нему. Вторая
- * кнопка — магазин, чтобы покупки были в одном нажатии с главного (ТЗ 2.5.3);
- * когда магазин и есть следующий шаг, вторая ведёт к плану.
+ * Вход в подсказку или раздел для взрослого — значок 48 dp в шапке. Значок
+ * для озвучки молчит, TalkBack читает подпись: «?» и замок сами по себе
+ * ничего не говорят (ТЗ 3.6).
  */
 @Composable
-private fun NextStepBar(
-    state: MainState.Ready,
-    onPlan: () -> Unit,
-    onTask: (TaskId) -> Unit,
-    onShop: () -> Unit,
-    onSavings: () -> Unit,
-    onFinishDay: () -> Unit,
-) {
-    val step = state.step
-    val (hint, action) = when (step) {
-        NextStep.Plan -> stringResource(R.string.main_step_plan) to stringResource(R.string.budget_action_plan)
-        NextStep.Task -> stringResource(R.string.main_step_task) to stringResource(R.string.main_step_task_action)
-        is NextStep.Shop -> stringResource(R.string.main_step_shop, coinsText(step.needs)) to
-            stringResource(R.string.shop_action)
-        is NextStep.Save -> stringResource(R.string.main_step_save, coinsText(step.left)) to
-            stringResource(R.string.main_step_save_action)
-        is NextStep.Finish -> stringResource(
-            if (step.onPlan) R.string.main_step_finish else R.string.main_step_finish_off_plan,
-        ) to stringResource(R.string.day_action_close)
+private fun TopIcon(symbol: String, label: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .defaultMinSize(minWidth = Dimens.TouchTarget, minHeight = Dimens.TouchTarget)
+            .semantics { contentDescription = label },
+    ) {
+        Text(
+            text = symbol,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
     }
-    val onAction: () -> Unit = when (step) {
-        NextStep.Plan -> onPlan
-        NextStep.Task -> { { state.task?.let { onTask(it.id) } } }
-        is NextStep.Shop -> onShop
-        is NextStep.Save -> onSavings
-        is NextStep.Finish -> onFinishDay
-    }
+}
 
-    ButtonColumn {
-        // Черта отделяет подсказку от прокрутки: без неё она читается как
-        // продолжение карточки, обрезанной краем панели.
-        HorizontalDivider()
-        Text(text = hint, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        FinnyButton(text = action, onClick = onAction)
-        if (step is NextStep.Shop) {
-            FinnySecondaryButton(text = stringResource(R.string.budget_action_show), onClick = onPlan)
+/**
+ * Главная кнопка идёт по фазе дня, вторая — магазин, чтобы покупки были в
+ * одном нажатии с главного (ТЗ 2.5.3).
+ *
+ * Пока главная зовёт в магазин, вторая укладывает спать: иначе голодную сову
+ * было бы не уложить, а ТЗ 2.2 разрешает ошибиться — и разобрать ошибку в итогах.
+ */
+@Composable
+private fun DayButtons(step: NextStep, onPlan: () -> Unit, onShop: () -> Unit, onSleep: () -> Unit) {
+    val shop = stringResource(R.string.shop_action)
+    val sleep = stringResource(R.string.main_action_sleep)
+    val (main, onMain) = when (step) {
+        NextStep.Plan -> stringResource(R.string.budget_action_plan) to onPlan
+        NextStep.Shop -> shop to onShop
+        NextStep.Sleep -> sleep to onSleep
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (step == NextStep.Shop) {
+            FinnySecondaryButton(text = sleep, onClick = onSleep, modifier = Modifier.weight(1f))
         } else {
-            FinnySecondaryButton(text = stringResource(R.string.shop_action), onClick = onShop)
+            FinnySecondaryButton(text = shop, onClick = onShop, modifier = Modifier.weight(1f))
+        }
+        FinnyButton(
+            text = main,
+            onClick = onMain,
+            modifier = Modifier
+                .weight(2f)
+                .heightIn(min = MAIN_BUTTON_HEIGHT),
+        )
+    }
+}
+
+/**
+ * Облачко совы: почему она такая и что делать дальше (ТЗ 2.5.9, 2.5.10).
+ * Одна фраза вместо подсказки внизу — говорит тот, о ком заботятся.
+ */
+@Composable
+private fun Bubble(text: String) {
+    FinnyCard {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * Питомец с именем и стадией.
+ *
+ * Стадия написана словом, а не только нарисована: по картинке отличить
+ * подростка от взрослого труднее, чем прочитать, и озвучке картинка недоступна
+ * вовсе (ТЗ 3.6). Заодно это выполняет ТЗ 2.5.10 — стадия видна ребёнку.
+ */
+@Composable
+private fun Pet(state: MainState.Ready) {
+    // На низком экране сова меньше: иначе строки под ней уйдут под кнопки
+    // и главный перестанет помещаться без прокрутки (раздел 8 плана).
+    val low = LocalConfiguration.current.screenHeightDp < LOW_SCREEN_DP
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Owl(look = state.owl, size = if (low) 120.dp else 170.dp)
+        Text(
+            text = stringResource(R.string.main_pet_stage, state.petName, stringResource(state.stage.label)),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/**
+ * Строка «Финни»: три показателя в ряд. Под потребностью — слово «нужно»:
+ * цвет полосы не единственный признак (ТЗ 3.6). Полосы одного нейтрального
+ * цвета, чтобы не спорить с цветами направлений трат (раздел 8 плана).
+ */
+@Composable
+private fun PetStats(state: MainState.Ready) {
+    Text(
+        text = stringResource(R.string.main_pet_state, state.petName),
+        style = MaterialTheme.typography.titleMedium,
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        STATS.forEach { kind ->
+            PetStat(
+                kind = kind,
+                stat = state.stats.statFor(kind),
+                needed = kind in state.needs,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
 
 /**
- * Дорога в раздел — строкой внизу, а не кнопкой: кнопок внизу уже две, а
- * третья вытесняет показатели питомца за край экрана при крупном шрифте.
+ * Название и «нужно» — отдельными строками: в треть ширины 360 dp при 16 sp
+ * «Уход · нужно» не помещается, а при крупном шрифте обрезалось бы (ТЗ 3.6).
+ */
+@Composable
+private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Modifier) {
+    val label = stringResource(kind.label)
+    val need = stringResource(R.string.main_stat_need)
+    val value = stringResource(R.string.stat_description, label, stat.value, Stat.RANGE.last)
+    val spoken = if (needed) "$value, $need" else value
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
+    ) {
+        Text(text = kind.icon, style = MaterialTheme.typography.bodyLarge)
+        ProgressLine(
+            fraction = stat.value.toFloat() / Stat.RANGE.last,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+        if (needed) {
+            Text(
+                text = need,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/**
+ * Дорога в раздел — строкой, а не кнопкой: кнопок внизу уже две, а третья
+ * вытесняет показатели питомца за край экрана при крупном шрифте.
  *
  * Текст называет действие словом: цвет — не единственный признак того, что
  * строка нажимается (ТЗ 3.6).
@@ -279,81 +365,6 @@ private fun Link(text: String, onOpen: () -> Unit) {
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(vertical = Dimens.SpaceSmall),
     )
-}
-
-/**
- * Строка игрового дня. Пока день идёт — ещё и дорога к его итогам: закончить
- * день можно в любой момент, не дожидаясь, пока подсказка дойдёт до итогов.
- * Когда итоги и есть следующий шаг, они уже на главной кнопке.
- */
-@Composable
-private fun DayLine(state: MainState.Ready, onFinishDay: () -> Unit) {
-    val line = stringResource(
-        R.string.main_period,
-        state.periodNumber,
-        stringResource(state.periodStatus.label),
-    )
-    if (state.periodStatus == PeriodStatus.PLANNING || state.step is NextStep.Finish) {
-        Text(
-            text = line,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        return
-    }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .clickable(role = Role.Button, onClick = onFinishDay)
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .semantics(mergeDescendants = true) {},
-    ) {
-        Text(
-            text = line,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        // Подпись говорит, что строка нажимается: цветом это не передашь (ТЗ 3.6).
-        Text(
-            text = stringResource(R.string.day_action_close),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
-}
-
-/**
- * Питомец с именем и стадией.
- *
- * Стадия написана словом, а не только нарисована: по картинке отличить
- * подростка от взрослого труднее, чем прочитать, и озвучке картинка недоступна
- * вовсе (ТЗ 3.6). Заодно это выполняет ТЗ 2.5.10 — стадия видна ребёнку.
- */
-@Composable
-private fun Pet(state: MainState.Ready) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        // Меньше, чем по умолчанию: питомец остаётся главным на экране, но
-        // не выталкивает показатели состояния за нижний край.
-        Owl(look = state.owl, size = 140.dp)
-        Text(
-            text = state.petName,
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = stringResource(state.stage.label),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }
 
 /**
@@ -410,12 +421,12 @@ private fun SavingsCard(savings: SavingsView, onOpen: () -> Unit) {
 
 /**
  * Задание дня (ТЗ 2.5.3): тема, начало вступления и состояние награды.
- * Карточка целиком — кнопка в задание, подпись «Открыть» словом. Пока день
- * не спланирован, задания закрыты — карточка так и говорит, а не зовёт внутрь.
+ * Карточка целиком — кнопка в задание, подпись «Открыть» словом. Замка до
+ * плана нет: сначала заработай, потом распредели (R7).
  */
 @Composable
-private fun TaskCard(task: TaskOfDay, locked: Boolean, onOpen: () -> Unit) {
-    FinnyCard(onClick = onOpen.takeUnless { locked }) {
+private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit) {
+    FinnyCard(onClick = onOpen) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -455,20 +466,18 @@ private fun TaskCard(task: TaskOfDay, locked: Boolean, onOpen: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = stringResource(if (locked) R.string.main_task_locked else R.string.main_task_open),
+            text = stringResource(R.string.main_task_open),
             style = MaterialTheme.typography.bodyMedium,
-            color = if (locked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.align(Alignment.End),
         )
     }
 }
 
+/** Порядок как на макете: еда первой — о ней сова просит чаще всего. */
+private val STATS = listOf(PetStatKind.SATIETY, PetStatKind.MOOD, PetStatKind.CARE)
 
-private val PeriodStatus.label: Int
-    get() = when (this) {
-        PeriodStatus.PLANNING -> R.string.main_period_planning
-        PeriodStatus.RUNNING -> R.string.main_period_running
-        // На главный экран закрытый период не попадает — текущим считается
-        // незакрытый. Подпись нужна, чтобы разбор был полным и честным.
-        PeriodStatus.CLOSED -> R.string.main_period_closed
-    }
+/** Ниже этой высоты сова уменьшается (раздел 8 плана); vivo V2111 выше. */
+private const val LOW_SCREEN_DP = 730
+
+private val MAIN_BUTTON_HEIGHT = 56.dp

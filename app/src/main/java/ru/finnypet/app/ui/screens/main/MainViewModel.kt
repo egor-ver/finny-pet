@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import ru.finnypet.app.domain.economy.GameBalance
-import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
@@ -21,9 +20,9 @@ import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.GrowthStage
-import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.Pet
 import ru.finnypet.app.domain.model.PetState
+import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
@@ -79,16 +78,17 @@ sealed interface MainState {
     data object Failed : MainState
 
     data class Ready(
-        val childName: String,
         val petName: String,
         val owl: OwlLook,
         val stage: GrowthStage,
         val stats: PetState,
+        /** Чего сове не хватает: у показателя подпись «нужно». */
+        val needs: List<PetStatKind>,
+        /** Фраза совы в облачке — уже готовый текст из контент-пака. */
+        val phrase: String,
         val balance: Coins,
         val savings: SavingsView,
         val task: TaskOfDay?,
-        val periodNumber: Int,
-        val periodStatus: PeriodStatus,
         val step: NextStep,
     ) : MainState
 }
@@ -108,7 +108,6 @@ class MainViewModel @Inject constructor(
     private val savings: SavingsRepository,
     private val taskProgress: TaskProgressRepository,
     private val openPeriod: OpenPeriodIfNeeded,
-    private val periodEngine: PeriodEngine,
     private val petState: PetStateEngine,
     private val balance: GameBalance,
     content: ContentRepository,
@@ -159,35 +158,36 @@ class MainViewModel @Inject constructor(
             if (pet == null || period == null) {
                 flowOf(MainState.Loading)
             } else {
-                // Баланс, операции и план наблюдаются отдельно, потому что
-                // зависят от периода: баланс считается по операциям, лимит
-                // наград за задания и следующий шаг — по ним же.
+                // Баланс и операции наблюдаются отдельно, потому что зависят
+                // от периода: баланс считается по операциям, лимит наград за
+                // задания — по ним же.
                 combine(
                     periods.observeBalance(period),
                     periods.observeTransactions(period.id),
-                    periods.observePlan(period.id),
-                ) { balance, transactions, plan ->
+                ) { wallet, transactions ->
                     val task = taskOf(completed, transactions, pet.state)
+                    val needs = petState.needsOf(pet.state)
+                    val step = nextStep(period.status, needs.isNotEmpty(), wallet, cheapestMandatory)
+                    val phrase = owlPhrase(
+                        step = step,
+                        needs = needs,
+                        sadAbout = petState.sadAbout(pet.state),
+                        cover = petState.cheapestCover(pet.state, shop)?.totalPrice(),
+                        wallet = wallet,
+                        reward = balance.taskReward.takeIf { task?.rewardAvailable == true },
+                        income = balance.periodIncome,
+                    )
                     MainState.Ready(
-                        childName = profile.childName,
                         petName = profile.petName,
                         owl = owlOf(profile, pet),
                         stage = pet.growth.stage,
                         stats = pet.state,
-                        balance = balance,
+                        needs = needs,
+                        phrase = texts.textOf(phrase),
+                        balance = wallet,
                         savings = savingsOf(progress),
                         task = task,
-                        periodNumber = period.number,
-                        periodStatus = period.status,
-                        step = nextStep(
-                            status = period.status,
-                            plan = plan,
-                            fact = periodEngine.factOf(transactions),
-                            balance = balance,
-                            needs = petState.cheapestCover(pet.state, shop)?.totalPrice() ?: Coins.ZERO,
-                            cheapestMandatory = cheapestMandatory,
-                            taskRewardAvailable = task?.rewardAvailable == true,
-                        ),
+                        step = step,
                     )
                 }
             }

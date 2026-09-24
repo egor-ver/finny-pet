@@ -1,63 +1,78 @@
 package ru.finnypet.app.ui.screens.main
 
-import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
-import ru.finnypet.app.domain.model.PeriodFact
+import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PeriodStatus
-import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.PetStatKind
 
 /**
- * Что ребёнку сделать дальше: главная кнопка и подсказка над ней.
- *
- * Порядок — цикл Приложения А ТЗ: задание, план, покупка нужного, копилка,
- * итоги дня. Это подсказка, а не замок: остальные разделы открыты, ребёнок
- * может идти в любом порядке (ТЗ 8.4: без длинной инструкции понятно, что
- * делать сейчас).
+ * Главная кнопка по фазе дня (раздел 8 плана): спланировать, купить нужное,
+ * уложить спать. Задание в кнопку не входит — о нём говорит сова, а открыть
+ * его можно карточкой: кнопка остаётся одной и той же дорогой через день.
  */
 sealed interface NextStep {
 
     data object Plan : NextStep
 
-    data object Task : NextStep
+    data object Shop : NextStep
 
-    /** Во сколько обойдётся закрыть потребности совы самым дешёвым набором. */
-    data class Shop(val needs: Coins) : NextStep
-
-    /** Сколько по плану осталось отложить. */
-    data class Save(val left: Coins) : NextStep
-
-    /** [onPlan] — всё по плану; иначе монет на план не хватило, но день закончить можно. */
-    data class Finish(val onPlan: Boolean) : NextStep
+    data object Sleep : NextStep
 }
 
 /**
- * Шаг предлагается, только если его можно сделать: без монет звать в магазин
- * или в копилку — значит отправить в тупик (ТЗ 3.4).
- *
  * В магазин зовут потребности совы, а не недотраченный план: иначе кнопка
- * учила бы «потрать всё, что запланировал на нужное» (R3). [needs] — цена
- * закрытия потребностей, ноль — их нет.
+ * учила бы «потрать всё, что запланировал на нужное» (R3). И только если
+ * хватает хотя бы на самое дешёвое нужное — иначе кнопка вела бы в тупик
+ * (ТЗ 3.4).
  */
 fun nextStep(
     status: PeriodStatus,
-    plan: BudgetPlan?,
-    fact: PeriodFact,
-    balance: Coins,
-    needs: Coins,
+    hasNeeds: Boolean,
+    wallet: Coins,
     cheapestMandatory: Coins?,
-    taskRewardAvailable: Boolean,
 ): NextStep {
-    // Сначала заработай, потом распредели (R7): награда входит в план.
-    if (taskRewardAvailable) return NextStep.Task
-    if (status == PeriodStatus.PLANNING || plan == null) return NextStep.Plan
+    if (status == PeriodStatus.PLANNING) return NextStep.Plan
+    val canBuy = cheapestMandatory != null && wallet.covers(cheapestMandatory)
+    return if (hasNeeds && canBuy) NextStep.Shop else NextStep.Sleep
+}
 
-    val canBuy = cheapestMandatory != null && balance.covers(cheapestMandatory)
-    if (needs > Coins.ZERO && canBuy) return NextStep.Shop(needs)
-
-    val savings = fact.amountFor(SpendCategory.SAVINGS).shortfallTo(plan.savings)
-    if (savings > Coins.ZERO && balance > Coins.ZERO) return NextStep.Save(minOf(savings, balance))
-
-    val spentKept = fact.amountFor(SpendCategory.MANDATORY) <= plan.mandatory &&
-        fact.amountFor(SpendCategory.OPTIONAL) <= plan.optional
-    return NextStep.Finish(onPlan = needs == Coins.ZERO && savings == Coins.ZERO && spentKept)
+/**
+ * Что сова говорит в облачке: почему она такая и что делать дальше
+ * (ТЗ 2.5.9, 2.5.10). Слова — в `explanations.json`, здесь только выбор.
+ *
+ * Утром грусть объясняется раньше всего: ребёнок должен понять, что вчерашний
+ * голод — следствие решения, а не случайность. Потом задание: сначала
+ * заработай, потом распредели (R7). Утренние фразы называют выбор между
+ * тремя направлениями, а не готовый ответ (ТЗ 8.4).
+ *
+ * [needs] — потребности по порядку важности, еда первой; [cover] — цена
+ * закрытия всех потребностей, `null` — в магазине их не закрыть целиком;
+ * [reward] — сколько дадут за задание, `null` — сегодня уже не дадут.
+ */
+fun owlPhrase(
+    step: NextStep,
+    needs: List<PetStatKind>,
+    sadAbout: PetStatKind?,
+    cover: Coins?,
+    wallet: Coins,
+    reward: Coins?,
+    income: Coins,
+): Explanation {
+    val first = needs.firstOrNull()
+    val morning = mapOf("income" to income.amount.toString())
+    return when (step) {
+        NextStep.Plan -> when {
+            sadAbout != null -> Explanation("owl.say.sad.${sadAbout.name}")
+            reward != null -> Explanation("owl.say.task", morning + ("reward" to reward.amount.toString()))
+            first != null -> Explanation("owl.say.morning.${first.name}", morning)
+            else -> Explanation("owl.say.morning", morning)
+        }
+        else -> when {
+            first == null -> Explanation("owl.say.done")
+            step == NextStep.Sleep -> Explanation("owl.say.no_coins")
+            cover != null && wallet.covers(cover) ->
+                Explanation("owl.say.shop.${first.name}", mapOf("price" to cover.amount.toString()))
+            else -> Explanation("owl.say.not_all.${first.name}")
+        }
+    }
 }

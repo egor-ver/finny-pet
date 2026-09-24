@@ -27,6 +27,14 @@ val PetStatKind.label: Int
         PetStatKind.CARE -> R.string.stat_care
     }
 
+/** Иконка показателя рядом со словом — для глаз; TalkBack читает слово (раздел 8 плана). */
+val PetStatKind.icon: String
+    get() = when (this) {
+        PetStatKind.SATIETY -> "🥣"
+        PetStatKind.MOOD -> "😊"
+        PetStatKind.CARE -> "✨"
+    }
+
 val TaskTopic.label: Int
     @StringRes get() = when (this) {
         TaskTopic.PLANNING -> R.string.topic_planning

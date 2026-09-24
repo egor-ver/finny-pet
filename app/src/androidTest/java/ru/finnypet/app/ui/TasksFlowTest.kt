@@ -170,11 +170,11 @@ class TasksFlowTest {
         val plan = BudgetPlan(mandatory = Coins(10), optional = Coins.ZERO, savings = Coins.ZERO)
         periods.savePlan(periods.current(profileId)!!.id, plan)
         val main = mainViewModel()
-        main.await { it.step == NextStep.Task }
+        main.await { it.task?.rewardAvailable == true }
 
         pass(planning, reward = Coins(15))
 
-        assertEquals(NextStep.Shop(Coins(10)), main.await { it.step is NextStep.Shop }.step)
+        assertEquals(NextStep.Shop, main.await { it.step is NextStep.Shop }.step)
     }
 
     private suspend fun pass(task: LearningTask, reward: Coins) {
@@ -214,7 +214,6 @@ class TasksFlowTest {
         savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions()),
         taskProgress = progress,
         openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
-        periodEngine = periodEngine(),
         petState = PetStateEngine(balance),
         balance = balance,
         content = content(),

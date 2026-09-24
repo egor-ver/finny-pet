@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
@@ -57,8 +58,37 @@ fun FinnyScaffold(
     bottomBar: (@Composable () -> Unit)? = null,
     spacing: Dp = Dimens.Space,
     content: @Composable ColumnScope.() -> Unit,
+) = FinnyScaffold(
+    title = { TitleText(title) },
+    modifier = modifier,
+    onBack = onBack,
+    bottomBar = bottomBar,
+    spacing = spacing,
+    content = content,
+)
+
+/**
+ * Каркас с шапкой из своих элементов — для главного экрана: там вместо
+ * заголовка кошелёк, а справа входы в подсказку и раздел для взрослого
+ * (раздел 8 плана). Место и отступы шапки те же, что у всех экранов (ТЗ 3.6).
+ */
+@Composable
+fun FinnyScaffold(
+    title: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    bottomBar: (@Composable () -> Unit)? = null,
+    spacing: Dp = Dimens.Space,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    ScaffoldChrome(title = title, modifier = modifier, onBack = onBack, bottomBar = bottomBar) { insets ->
+    ScaffoldChrome(
+        title = title,
+        modifier = modifier,
+        onBack = onBack,
+        actions = actions,
+        bottomBar = bottomBar,
+    ) { insets ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -95,7 +125,13 @@ fun FinnyListScaffold(
     spacing: Dp = Dimens.SpaceMedium,
     content: LazyListScope.() -> Unit,
 ) {
-    ScaffoldChrome(title = title, modifier = modifier, onBack = onBack, bottomBar = bottomBar) { insets ->
+    ScaffoldChrome(
+        title = { TitleText(title) },
+        modifier = modifier,
+        onBack = onBack,
+        actions = {},
+        bottomBar = bottomBar,
+    ) { insets ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -121,9 +157,10 @@ fun FinnyListScaffold(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScaffoldChrome(
-    title: String,
+    title: @Composable () -> Unit,
     modifier: Modifier,
     onBack: (() -> Unit)?,
+    actions: @Composable RowScope.() -> Unit,
     bottomBar: (@Composable () -> Unit)?,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -135,9 +172,8 @@ private fun ScaffoldChrome(
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
         topBar = {
             TopAppBar(
-                title = {
-                    Text(text = title, style = MaterialTheme.typography.titleLarge)
-                },
+                title = title,
+                actions = actions,
                 navigationIcon = {
                     if (onBack != null) {
                         val back = stringResource(R.string.action_back)
@@ -201,4 +237,9 @@ private fun ScaffoldChrome(
         }
         Box(modifier = bottom) { content(insets) }
     }
+}
+
+@Composable
+private fun TitleText(title: String) {
+    Text(text = title, style = MaterialTheme.typography.titleLarge)
 }

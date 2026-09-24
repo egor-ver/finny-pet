@@ -25,19 +25,14 @@
 
     <!-- Показатели питомца: подпись для чтения вслух -->
     <string name="stat_description">%1$s: %2$d из %3$d</string>
-    <string name="stat_mood">Настроение</string>
-    <string name="stat_satiety">Сытость</string>
+    <string name="stat_mood">Радость</string>
+    <string name="stat_satiety">Еда</string>
     <string name="stat_care">Уход</string>
-    <!-- Насколько сдвинулся показатель: «Настроение +15» -->
+    <!-- Насколько сдвинулся показатель: «Радость +15» -->
     <string name="stat_change">%1$s %2$s</string>
 
     <!-- Главный экран -->
     <string name="main_title">Финни</string>
-    <string name="main_hello">Привет, %1$s!</string>
-    <string name="main_period">День %1$d · %2$s</string>
-    <string name="main_period_planning">планируем</string>
-    <string name="main_period_running">идёт</string>
-    <string name="main_period_closed">завершён</string>
     <string name="main_balance">Баланс</string>
     <string name="main_savings">Накоплено</string>
     <string name="main_goal_none">Цель пока не выбрана</string>
@@ -45,6 +40,11 @@
     <string name="main_goal_reached">Цель собрана!</string>
     <string name="main_goal_progress">Цель «%1$s»: накоплено %2$d из %3$d</string>
     <string name="main_pet_state">Как себя чувствует %1$s</string>
+    <!-- «Пушок · детёныш» под совой -->
+    <string name="main_pet_stage">%1$s · %2$s</string>
+    <!-- Подпись показателя ниже порога потребности (R2) -->
+    <string name="main_stat_need">нужно</string>
+    <string name="main_action_sleep">Уложить спать</string>
     <string name="main_failed">Не получилось начать игровой день. Попробуй ещё раз.</string>
     <string name="action_retry">Попробовать снова</string>
 
@@ -236,15 +236,6 @@
     <string name="main_task_reward">За задание сегодня дадут монеты</string>
     <string name="main_task_reward_taken">Монеты за сегодня получены</string>
     <string name="main_task_open">Открыть</string>
-    <string name="main_task_locked">Откроется после плана</string>
-    <string name="main_step_plan">Раздели монеты: на нужное, на желаемое и в копилку.</string>
-    <string name="main_step_task">Выполни задание дня — за него дают монеты.</string>
-    <string name="main_step_task_action">Выполнить задание</string>
-    <string name="main_step_shop">Купи нужное для совы: ещё на %1$s.</string>
-    <string name="main_step_save">Отложи в копилку: по плану ещё %1$s.</string>
-    <string name="main_step_save_action">В копилку</string>
-    <string name="main_step_finish">Всё по плану! Можно заканчивать день.</string>
-    <string name="main_step_finish_off_plan">Монет на план не хватило. Закончи день и посмотри, что получилось.</string>
 
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>
