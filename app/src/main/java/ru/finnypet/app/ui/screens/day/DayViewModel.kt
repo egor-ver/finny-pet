@@ -8,13 +8,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.BudgetEngine
+import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
@@ -22,32 +25,45 @@ import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.ClosedDay
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
 import ru.finnypet.app.ui.screens.ProfileViewModel
+import ru.finnypet.app.ui.screens.main.GrowthView
+import ru.finnypet.app.ui.screens.main.growthOf
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-/** Итоги закрытого дня — всё, что ребёнок должен увидеть после «Закончить день». */
+/** Строка итогов, готовая к показу: ✓ или ✗ и пояснение. */
+data class DayCheckView(val done: Boolean, val text: String)
+
+/**
+ * Итоги закрытого дня одним экраном (раздел 8 плана): облачко, сова с
+ * выражением дня, три строки ✓/✗, очки роста и что перешло на завтра.
+ */
 data class DaySummary(
     val number: Int,
     val nextNumber: Int,
     /** Почему день закончился так: объяснение из контент-пака. */
     val headline: String,
-    /** Что стало с ростом: прибавка очков или новая стадия. */
-    val growthText: String,
-    val lines: List<BudgetLine>,
-    val planTotal: Coins,
-    val factTotal: Coins,
-    val statChanges: List<Change.PetStat>,
+    val owl: OwlLook,
+    val checks: List<DayCheckView>,
+    val earnedPoints: Int,
+    /** `null` — сова взрослая, расти некуда. */
+    val growth: GrowthView?,
     val newStage: GrowthStage?,
     val carryOver: Coins,
 )
@@ -73,6 +89,8 @@ sealed interface DayState {
         val factTotal: Coins,
         /** Закрытие уже идёт: кнопка гаснет, второе нажатие не нужно. */
         val closing: Boolean = false,
+        /** «Я ещё голодный. Уложить так?» (R14); `null` — переспрашивать не о чем. */
+        val warning: String? = null,
     ) : DayState
 
     data class Closed(val summary: DaySummary) : DayState
@@ -94,10 +112,17 @@ class DayViewModel @Inject constructor(
     private val closeDay: CloseDay,
     private val budget: BudgetEngine,
     private val periodEngine: PeriodEngine,
+    private val petState: PetStateEngine,
+    private val savings: SavingsRepository,
+    private val balance: GameBalance,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
-    private val texts: Map<String, String> = content.pack().texts
+    private val pack = content.pack()
+    private val texts: Map<String, String> = pack.texts
+    private val cheapestMandatory: Coins? = pack.shop
+        .filter { it.category == SpendCategory.MANDATORY }
+        .minOfOrNull { it.price }
 
     /** Закрытие идёт по одному: второй запуск закрыл бы уже следующий день. */
     private val closing = Mutex()
@@ -136,6 +161,9 @@ class DayViewModel @Inject constructor(
             try {
                 closing.withLock {
                     if (summary.value != null) return@withLock
+                    // Профиль нужен итогам — внешность и имя совы. Читается до
+                    // закрытия: закрыть день и не суметь показать итоги хуже.
+                    val profile = profiles.observeActive().first() ?: return@withLock
 
                     // Пусто — значит закрывать нечего: день уже не идёт или
                     // план не подтверждён. Отдельного сообщения не нужно,
@@ -163,7 +191,7 @@ class DayViewModel @Inject constructor(
                         // Начислится при следующем входе на любой экран игры.
                     }
 
-                    summary.value = summaryOf(result.value, result.explanation, result.changes)
+                    summary.value = summaryOf(profile, result.value, result.explanation, result.changes)
                 }
             } finally {
                 working.value = false
@@ -171,57 +199,61 @@ class DayViewModel @Inject constructor(
         }
     }
 
-    private fun summaryOf(
+    private suspend fun summaryOf(
+        profile: Profile,
         closed: ClosedDay,
         explanation: Explanation,
         changes: List<Change>,
     ): DaySummary {
-        val report = closed.outcome.report
-        val stage = changes.filterIsInstance<Change.Stage>().firstOrNull()
+        val outcome = closed.outcome
+        val progress = savings.activeProgress(profile.id)
+        val goal = progress?.let { active -> pack.goals.firstOrNull { it.id == active.goalId } }
+        val checks = dayChecks(
+            needsMet = outcome.needsMet,
+            report = outcome.report,
+            goalTitle = goal?.let { texts.textOf(it.titleKey) },
+            goalLeft = goal?.let { progress.remaining(it) },
+        )
+        val mood = dayMood(checks)
         return DaySummary(
-            number = closed.outcome.closedPeriod.number,
+            number = outcome.closedPeriod.number,
             nextNumber = closed.nextPeriod.number,
             headline = texts.textOf(explanation),
-            growthText = growthText(closed.earnedPoints, grew = stage != null),
-            lines = report.lines.map { line ->
-                BudgetLine(
-                    category = line.category,
-                    planned = line.planned,
-                    actual = line.actual,
-                    followed = line.followed,
-                )
-            },
-            planTotal = report.planTotal,
-            factTotal = report.factTotal,
-            statChanges = changes.filterIsInstance<Change.PetStat>(),
-            newStage = stage?.to,
-            carryOver = closed.outcome.carryOver,
+            owl = owlLook(
+                pets = pack.pets,
+                appearance = profile.appearance,
+                stage = outcome.growth.stage,
+                mood = mood,
+                // Грустит сова в итогах от голодного дня — первой потребности.
+                description = owlDescription(texts, profile.petName, mood, petState.needsOf(outcome.state).firstOrNull()),
+            ),
+            checks = checks.map { DayCheckView(done = it.done, text = texts.textOf(it.text)) },
+            earnedPoints = closed.earnedPoints,
+            growth = growthOf(outcome.growth, balance.growthThresholds),
+            newStage = changes.filterIsInstance<Change.Stage>().firstOrNull()?.to,
+            carryOver = outcome.carryOver,
         )
     }
 
-    /**
-     * Слова про рост берутся из контент-пака теми же тремя ключами, что и в
-     * домене: выросла стадия, прибавились очки или день прошёл без прибавки.
-     */
-    private fun growthText(earned: Int, grew: Boolean): String = when {
-        grew -> texts.textOf(KEY_STAGE_UP)
-        earned > 0 -> texts.textOf(KEY_POINTS_ADDED).replace("{earned}", earned.toString())
-        else -> texts.textOf(KEY_NO_POINTS)
-    }
-
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun forProfile(profileId: ProfileId): Flow<DayState> =
-        periods.observeCurrent(profileId).flatMapLatest { period ->
-            if (period == null) {
+    private fun forProfile(profileId: ProfileId): Flow<DayState> = combine(
+        periods.observeCurrent(profileId),
+        profiles.observePet(profileId),
+    ) { period, pet -> period to pet }
+        .flatMapLatest { (period, pet) ->
+            if (period == null || pet == null) {
                 flowOf(DayState.Loading)
             } else {
                 combine(
                     periods.observePlan(period.id),
                     periods.observeTransactions(period.id),
+                    periods.observeBalance(period),
                     summary,
                     working,
-                ) { plan, transactions, done, isWorking ->
-                    stateOf(period, plan, transactions, done, isWorking)
+                ) { plan, transactions, wallet, done, isWorking ->
+                    val canBuy = cheapestMandatory != null && wallet.covers(cheapestMandatory)
+                    val warning = sleepWarning(petState.needsOf(pet.state), canBuy)?.let(texts::textOf)
+                    stateOf(period, plan, transactions, done, isWorking, warning)
                 }
             }
         }
@@ -232,6 +264,7 @@ class DayViewModel @Inject constructor(
         transactions: List<Transaction>,
         done: DaySummary?,
         isWorking: Boolean,
+        warning: String?,
     ): DayState = when {
         // Итоги показываются, пока ребёнок сам не уйдёт: день уже следующий,
         // но экран обязан объяснить, чем закончился прошлый (ТЗ 2.5.9).
@@ -252,14 +285,12 @@ class DayViewModel @Inject constructor(
                 planTotal = report.planTotal,
                 factTotal = report.factTotal,
                 closing = isWorking,
+                warning = warning,
             )
         }
     }
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
-        const val KEY_STAGE_UP = "growth.stage_up"
-        const val KEY_POINTS_ADDED = "growth.points_added"
-        const val KEY_NO_POINTS = "growth.no_points"
     }
 }

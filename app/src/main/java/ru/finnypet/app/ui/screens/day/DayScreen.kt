@@ -1,6 +1,9 @@
 package ru.finnypet.app.ui.screens.day
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,19 +12,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.PlanComparison
-import ru.finnypet.app.ui.components.StatChangeLine
+import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.screens.main.GrowthView
+import ru.finnypet.app.ui.text.WordForm
+import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -95,12 +109,13 @@ fun DayContent(
 
 @Composable
 private fun Screen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
+    title: String = stringResource(R.string.day_title),
     bottomBar: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     FinnyScaffold(
-        title = stringResource(R.string.day_title),
+        title = title,
         onBack = onBack,
         bottomBar = bottomBar,
         spacing = Dimens.SpaceMedium,
@@ -111,12 +126,14 @@ private fun Screen(
 /**
  * День идёт: видно, к чему ребёнок пришёл, и можно закончить.
  *
- * Закрытие спрашивает подтверждения: день не вернуть, а кнопка стоит там же,
- * где на других экранах стоит безобидное действие.
+ * Окно «Закончить день?» открывается сразу, до экрана (раздел 8 плана): сюда
+ * приходят по «Уложить спать», и вопрос — единственное, что тут решается.
+ * День не вернуть, поэтому подтверждение обязательно (ТЗ 3.6). Если сова
+ * голодна, а монеты на нужное есть, она переспрашивает сама (R14).
  */
 @Composable
 private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> Unit) {
-    var asking by rememberSaveable { mutableStateOf(false) }
+    var asking by rememberSaveable { mutableStateOf(true) }
 
     Screen(
         onBack = onBack,
@@ -153,14 +170,18 @@ private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> 
                         onClose()
                     },
                 )
+                // Передумал — обратно на главный: итогов ещё нет, смотреть здесь нечего.
                 FinnySecondaryButton(
                     text = stringResource(R.string.action_back),
-                    onClick = { asking = false },
+                    onClick = {
+                        asking = false
+                        onBack()
+                    },
                 )
             },
         ) {
             Text(
-                text = stringResource(R.string.day_confirm_text),
+                text = state.warning ?: stringResource(R.string.day_confirm_text),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -168,15 +189,15 @@ private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> 
 }
 
 /**
- * Итоги: объяснение, сравнение, что стало с питомцем и что перешло на завтра.
- *
- * Объяснение стоит первым: ТЗ 2.5.9 требует объяснить причину и следствие, а
- * не показать одни цифры.
+ * Итоги одним экраном (раздел 8 плана): облачко с объяснением, сова с
+ * выражением дня, новая стадия, три строки ✓/✗, очки роста и что перешло на
+ * завтра. Единственное действие — начать следующий день: «Назад» здесь некуда.
  */
 @Composable
 private fun Closed(summary: DaySummary, onBack: () -> Unit) {
     Screen(
-        onBack = onBack,
+        onBack = null,
+        title = stringResource(R.string.day_closed, summary.number),
         bottomBar = {
             ButtonColumn {
                 FinnyButton(
@@ -186,42 +207,69 @@ private fun Closed(summary: DaySummary, onBack: () -> Unit) {
             }
         },
     ) {
-        Text(
-            text = stringResource(R.string.day_closed, summary.number),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = summary.headline, style = MaterialTheme.typography.bodyLarge)
-
-        PlanComparison(
-            lines = summary.lines,
-            planTotal = summary.planTotal,
-            factTotal = summary.factTotal,
-        )
-
-        Text(
-            text = stringResource(R.string.day_pet_changes),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        if (summary.statChanges.isEmpty()) {
-            Text(
-                text = stringResource(R.string.day_pet_same),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            summary.statChanges.forEach { change -> StatChangeLine(change = change) }
+        FinnyCard {
+            Text(text = summary.headline, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
-
-        Text(text = summary.growthText, style = MaterialTheme.typography.bodyLarge)
+        Owl(look = summary.owl, size = 140.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
         summary.newStage?.let { stage ->
+            FinnyCard(color = MaterialTheme.colorScheme.primaryContainer) {
+                Text(
+                    text = stringResource(R.string.day_new_stage, stringResource(stage.label)),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+        }
+        summary.checks.forEach { check -> CheckLine(check) }
+        Growth(earned = summary.earnedPoints, growth = summary.growth)
+        MoneyCard(label = stringResource(R.string.day_carry_over), amount = summary.carryOver)
+    }
+}
+
+/** ✓ или ✗ — знаком и словом для TalkBack: цвет тут не нужен вовсе (ТЗ 3.6). */
+@Composable
+private fun CheckLine(check: DayCheckView) {
+    val spoken = stringResource(if (check.done) R.string.day_check_done else R.string.day_check_missed) + ". " + check.text
+    FinnyCard {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
+        ) {
+            Text(text = if (check.done) "\u2713" else "\u2717", style = MaterialTheme.typography.titleMedium)
+            Text(text = check.text, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+/** «+6 очков роста» и полоса «12 из 20» — до следующей стадии, как на главном. */
+@Composable
+private fun Growth(earned: Int, growth: GrowthView?) {
+    Text(
+        text = stringResource(
+            when (wordFormOf(earned)) {
+                WordForm.ONE -> R.string.day_growth_one
+                WordForm.FEW -> R.string.day_growth_few
+                WordForm.MANY -> R.string.day_growth_many
+            },
+            earned,
+        ),
+        style = MaterialTheme.typography.titleMedium,
+    )
+    if (growth != null) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        ) {
+            ProgressLine(
+                fraction = growth.points.toFloat() / growth.target,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                contentDescription = stringResource(R.string.main_growth_points, growth.points, growth.target),
+                modifier = Modifier.weight(1f),
+            )
             Text(
-                text = stringResource(R.string.day_new_stage, stringResource(stage.label)),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
+                text = stringResource(R.string.main_growth_points, growth.points, growth.target),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.clearAndSetSemantics {},
             )
         }
-
-        MoneyCard(label = stringResource(R.string.day_carry_over), amount = summary.carryOver)
     }
 }

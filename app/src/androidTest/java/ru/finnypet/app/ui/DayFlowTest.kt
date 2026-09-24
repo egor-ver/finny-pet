@@ -23,6 +23,7 @@ import ru.finnypet.app.data.local.FinnyDatabase
 import ru.finnypet.app.data.repository.DayRecorderImpl
 import ru.finnypet.app.data.repository.PeriodRepositoryImpl
 import ru.finnypet.app.data.repository.ProfileRepositoryImpl
+import ru.finnypet.app.data.repository.SavingsRepositoryImpl
 import ru.finnypet.app.domain.content.ContentPack
 import ru.finnypet.app.domain.content.PetOptions
 import ru.finnypet.app.domain.content.ContentOption
@@ -101,6 +102,9 @@ class DayFlowTest {
             ),
             budget = BudgetEngine(),
             periodEngine = periodEngine(),
+            petState = PetStateEngine(balance),
+            savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions()),
+            balance = balance,
             content = content(),
         )
     }
@@ -134,9 +138,9 @@ class DayFlowTest {
         assertEquals(1, closed.summary.number)
         assertEquals(2, closed.summary.nextNumber)
         assertTrue("объяснение обязано быть", closed.summary.headline.isNotBlank())
-        assertEquals(3, closed.summary.lines.size)
-        // Обязательное не куплено — показатели просели, и это видно в итогах.
-        assertTrue("изменения питомца обязаны быть", closed.summary.statChanges.isNotEmpty())
+        // Три строки итогов — те же три условия, за которые даются очки роста (R10).
+        assertEquals(3, closed.summary.checks.size)
+        assertTrue("у каждой строки обязано быть пояснение", closed.summary.checks.all { it.text.isNotBlank() })
     }
 
     /**

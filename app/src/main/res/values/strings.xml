@@ -155,10 +155,15 @@
     <string name="day_confirm_title">Закончить день?</string>
     <string name="day_confirm_text">Потратить монеты сегодня уже не получится. Неистраченное перейдёт на завтра.</string>
     <string name="day_not_started">День ещё планируется. Сначала распредели монеты, а закончить его можно будет потом.</string>
-    <string name="day_pet_changes">Что стало с питомцем</string>
-    <string name="day_pet_same">Показатели питомца не изменились.</string>
-    <string name="day_new_stage">Новая стадия: %1$s</string>
-    <string name="day_carry_over">Перешло на завтра</string>
+    <string name="day_new_stage">Вырос! Теперь %1$s</string>
+    <string name="day_carry_over">На завтра</string>
+    <!-- Строки итогов для TalkBack: знак ✓ или ✗ читается словом -->
+    <string name="day_check_done">Выполнено</string>
+    <string name="day_check_missed">Не выполнено</string>
+    <!-- «+6 очков роста»: склонение по русскому правилу, как у монет -->
+    <string name="day_growth_one">+%1$d очко роста</string>
+    <string name="day_growth_few">+%1$d очка роста</string>
+    <string name="day_growth_many">+%1$d очков роста</string>
     <string name="day_failed">Не получилось закончить день. Попробуй ещё раз.</string>
 
     <!-- План личного бюджета -->
