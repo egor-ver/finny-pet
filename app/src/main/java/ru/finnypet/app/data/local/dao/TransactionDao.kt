@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import ru.finnypet.app.data.local.entity.TransactionEntity
+import ru.finnypet.app.domain.model.TransactionType
 
 @Dao
 interface TransactionDao {
@@ -43,4 +44,13 @@ interface TransactionDao {
             "ORDER BY t.createdAt, t.id"
     )
     suspend fun byGoal(profileId: String, goalId: String): List<TransactionEntity>
+
+    /** Купленные цели профиля по порядку покупки — коллекция вещей рядом с совой (AD-10). */
+    @Query(
+        "SELECT t.goalId FROM transactions AS t " +
+            "INNER JOIN periods AS p ON p.id = t.periodId " +
+            "WHERE p.profileId = :profileId AND t.type = :type AND t.goalId IS NOT NULL " +
+            "ORDER BY t.createdAt, t.id"
+    )
+    fun observeGoalsOfType(profileId: String, type: TransactionType): Flow<List<String>>
 }

@@ -301,12 +301,29 @@ private fun Pet(state: MainState.Ready) {
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Owl(look = state.owl, size = if (low) 120.dp else 170.dp)
+        // Вещи сбоку, а не под совой: высота главного не растёт (раздел 8 плана).
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        ) {
+            Owl(look = state.owl, size = if (low) 120.dp else 170.dp)
+            Things(state.things)
+        }
         Text(
             text = stringResource(R.string.main_pet_stage, state.petName, stringResource(state.stage.label)),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+/** Купленные цели столбиком; озвучиваются одной фразой «Мои вещи: комиксы». */
+@Composable
+private fun Things(things: List<Thing>) {
+    if (things.isEmpty()) return
+    val spoken = stringResource(R.string.main_things, things.joinToString { it.title.replaceFirstChar { c -> c.lowercase() } })
+    Column(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
+        things.forEach { Text(text = it.icon, style = MaterialTheme.typography.headlineMedium) }
     }
 }
 
@@ -453,6 +470,7 @@ private fun walletLabel(line: WalletLine): String {
             TransactionType.SAVINGS_DEPOSIT -> R.string.wallet_to_savings
             TransactionType.SAVINGS_WITHDRAW -> R.string.wallet_from_savings
             TransactionType.UNEXPECTED_EXPENSE -> R.string.wallet_unexpected
+            TransactionType.GOAL_PURCHASE -> R.string.wallet_goal_change
         },
     )
     val name = line.name ?: return source

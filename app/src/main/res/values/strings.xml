@@ -63,6 +63,7 @@
     <string name="main_task_intro">%1$s: %2$s</string>
     <string name="main_tasks_all">Все задания</string>
     <!-- Кошелёк сегодня (ТЗ 2.5.4) -->
+    <string name="main_things">Мои вещи: %1$s</string>
     <string name="wallet_open">Кошелёк сегодня</string>
     <string name="wallet_title">В кошельке %1$d</string>
     <string name="wallet_carry_over">Осталось со вчера</string>
@@ -73,6 +74,7 @@
     <string name="wallet_from_savings">Из копилки</string>
     <string name="wallet_purchase">Покупка</string>
     <string name="wallet_unexpected">Непредвиденная трата</string>
+    <string name="wallet_goal_change">Сдача с покупки цели</string>
     <!-- «В копилку: Комиксы» -->
     <string name="wallet_named">%1$s: %2$s</string>
     <string name="main_failed">Не получилось начать игровой день. Попробуй ещё раз.</string>
@@ -226,8 +228,13 @@
     <string name="savings_goals_empty">Целей пока нет.</string>
     <string name="savings_goal_none">Выбери цель — и копилка заработает.</string>
     <string name="savings_goal_active">Выбрана</string>
+    <string name="savings_goal_bought">Уже куплено</string>
     <string name="savings_price">Стоит</string>
-    <string name="savings_eta">При таких пополнениях соберём через %1$s</string>
+    <string name="savings_eta">Если откладывать как обычно, по %1$d, — через %2$s</string>
+    <string name="savings_buy">Собрано! Купить %1$s</string>
+    <string name="savings_buy_title">Купить %1$s?</string>
+    <string name="savings_buy_text">Монеты этой цели уйдут на покупку, а %1$s встанет рядом с совой.</string>
+    <string name="savings_buy_confirm">Купить</string>
     <string name="savings_eta_unknown">Отложи первые монеты — и я посчитаю, когда соберём.</string>
     <string name="savings_deposit">Отложить</string>
     <string name="savings_withdraw">Взять из копилки</string>

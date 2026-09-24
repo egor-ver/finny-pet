@@ -61,4 +61,8 @@ class SavingsRepositoryImpl @Inject constructor(
         if (deposits.isEmpty()) return Coins.ZERO
         return Coins(deposits.sumOf { it.amount } / deposits.size)
     }
+
+    override fun observeBought(profileId: ProfileId): Flow<List<GoalId>> =
+        transactions.observeGoalsOfType(profileId.value, TransactionType.GOAL_PURCHASE)
+            .map { ids -> ids.map(::GoalId) }
 }

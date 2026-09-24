@@ -6,6 +6,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import ru.finnypet.app.data.content.ContentParser
+import ru.finnypet.app.data.content.RealContent
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Goal
@@ -215,5 +217,54 @@ class SavingsEngineTest {
         assertThrows(IllegalArgumentException::class.java) {
             engine.withdraw(Coins.ZERO, Coins(10), progress(Coins(60)), goal, periodId = 1)
         }
+    }
+
+    /** Эталон, раздел 4 плана: копилка 24 из 40, откладываем как обычно по 8 — через 2 дня. */
+    @Test
+    fun `по 8 от 24 до 40 — через 2 дня`() {
+        val comics = Goal(id = GoalId("comics"), titleKey = "goal.comics", price = Coins(40))
+        assertEquals(2, engine.periodsToGoal(GoalProgress(comics.id, saved = Coins(24)), comics, avgDeposit = Coins(8)))
+    }
+
+    /** Эталон, день 5: копилка 40, комиксы 40 — копилка пуста, кошелёк прежний, цель снята (R13). */
+    @Test
+    fun `покупка собранной цели обнуляет копилку и не трогает кошелёк`() {
+        val comics = Goal(id = GoalId("comics"), titleKey = "goal.comics", price = Coins(40), icon = "📚")
+        val result = engine.buy(Coins(3), GoalProgress(comics.id, saved = Coins(40), isActive = true), comics, periodId = 5)
+
+        assertEquals(GoalProgress(comics.id, saved = Coins.ZERO, isActive = false), result.value.progress)
+        assertEquals(Coins(3), result.value.balance)
+        val transaction = result.value.transaction
+        assertEquals(TransactionType.GOAL_PURCHASE, transaction.type)
+        assertEquals(comics.id, transaction.goalId)
+        assertEquals(0, transaction.balanceDelta)
+        assertEquals(listOf(Change.Savings(from = Coins(40), to = Coins.ZERO)), result.changes)
+        assertEquals("savings.goal_bought", result.explanation.key)
+    }
+
+    @Test
+    fun `отложенное сверх цены возвращается в кошелёк сдачей`() {
+        val result = engine.buy(Coins(3), progress(Coins(108)).copy(isActive = true), goal, periodId = 5)
+
+        assertEquals(Coins.ZERO, result.value.progress.saved)
+        assertEquals(Coins(11), result.value.balance)
+        assertEquals(8, result.value.transaction.balanceDelta)
+        assertEquals("savings.goal_bought_change", result.explanation.key)
+        assertEquals("8", result.explanation.args["change"])
+    }
+
+    @Test
+    fun `несобранную цель купить нельзя`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.buy(Coins(3), progress(Coins(99)), goal, periodId = 5)
+        }
+    }
+
+    @Test
+    fun `у фраз покупки есть текст`() {
+        val texts = ContentParser().parse(RealContent.raw()).texts
+        val keys = listOf(Coins(100), Coins(108)).map { engine.buy(Coins.ZERO, progress(it), goal, periodId = 5).explanation.key }
+        val missing = keys.filterNot(texts::containsKey)
+        assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
     }
 }

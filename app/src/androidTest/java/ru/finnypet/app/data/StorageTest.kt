@@ -299,6 +299,22 @@ class StorageTest {
         assertEquals(Coins(15), savings.averageDeposit(profile.id, goal))
     }
 
+    /** Коллекция вещей строится по операциям (AD-10): только покупки цели и только своего профиля. */
+    @Test
+    fun `купленные_цели_читаются_по_операциям_покупки_своего_профиля`() = runTest {
+        val first = profiles.create("Егор", "Финни", PetAppearance("owl", "mint", null))
+        val firstPeriod = periods.open(runningPeriod(first.id))
+        periods.addTransaction(deposit(firstPeriod.id, 40, GoalId("comics")))
+        periods.addTransaction(deposit(firstPeriod.id, 0, GoalId("comics")).copy(type = TransactionType.GOAL_PURCHASE))
+
+        val second = profiles.create("Аня", "Лапа", PetAppearance("cat", "rose", null))
+        val secondPeriod = periods.open(runningPeriod(second.id))
+        periods.addTransaction(deposit(secondPeriod.id, 0, GoalId("book")).copy(type = TransactionType.GOAL_PURCHASE))
+
+        assertEquals(listOf(GoalId("comics")), savings.observeBought(first.id).first())
+        assertEquals(listOf(GoalId("book")), savings.observeBought(second.id).first())
+    }
+
     @Test
     fun `активной_целью_остаётся_только_последняя_выбранная`() = runTest {
         val profile = profiles.create("Егор", "Финни", PetAppearance("owl", "mint", null))

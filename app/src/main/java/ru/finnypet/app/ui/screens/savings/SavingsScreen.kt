@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
@@ -68,6 +73,7 @@ fun SavingsScreen(
         onCancel = viewModel::cancel,
         onDismiss = viewModel::dismissOutcome,
         onRetry = viewModel::retry,
+        onBuy = viewModel::buy,
     )
 }
 
@@ -85,6 +91,7 @@ fun SavingsContent(
     onCancel: () -> Unit = {},
     onDismiss: () -> Unit = {},
     onRetry: () -> Unit = {},
+    onBuy: () -> Unit = {},
 ) {
     when (state) {
         SavingsState.Loading -> Screen(onBack = onBack) {}
@@ -116,6 +123,7 @@ fun SavingsContent(
             onConfirm = onConfirm,
             onCancel = onCancel,
             onDismiss = onDismiss,
+            onBuy = onBuy,
         )
     }
 }
@@ -148,6 +156,7 @@ private fun Ready(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     onDismiss: () -> Unit,
+    onBuy: () -> Unit,
 ) {
     Screen(
         onBack = onBack,
@@ -179,7 +188,7 @@ private fun Ready(
                 style = MaterialTheme.typography.bodyLarge,
             )
         } else {
-            ActiveGoal(goal = active, periodsToGoal = state.periodsToGoal)
+            ActiveGoal(state = state, goal = active, onBuy = onBuy)
         }
 
         Text(
@@ -226,7 +235,10 @@ private fun Ready(
  * ТЗ 2.5.7 показать ребёнку о цели.
  */
 @Composable
-private fun ActiveGoal(goal: GoalView, periodsToGoal: Int?) {
+private fun ActiveGoal(state: SavingsState.Ready, goal: GoalView, onBuy: () -> Unit) {
+    var askingBuy by rememberSaveable { mutableStateOf(false) }
+    // «Купить комиксы», а не «Купить Комиксы»: название стоит внутри фразы.
+    val thing = goal.title.replaceFirstChar { it.lowercase() }
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = Modifier
@@ -250,24 +262,51 @@ private fun ActiveGoal(goal: GoalView, periodsToGoal: Int?) {
             ),
         )
         if (goal.isReached) {
-            Text(
-                text = stringResource(R.string.main_goal_reached),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary,
+            FinnyButton(
+                text = stringResource(R.string.savings_buy, thing),
+                onClick = { askingBuy = true },
+                enabled = state.canBuy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = BUY_BUTTON_HEIGHT),
             )
         } else {
             LabelledLine(label = stringResource(R.string.main_goal_left), amount = goal.remaining)
+            val periodsToGoal = state.periodsToGoal
             Text(
                 text = when (periodsToGoal) {
                     null -> stringResource(R.string.savings_eta_unknown)
-                    else -> stringResource(R.string.savings_eta, daysText(periodsToGoal))
+                    else -> stringResource(R.string.savings_eta, state.usualDeposit.amount, daysText(periodsToGoal))
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
+
+    // Покупка необратима и опустошает копилку — сначала переспрашиваем.
+    if (askingBuy) {
+        FinnyDialog(
+            title = stringResource(R.string.savings_buy_title, thing),
+            onDismiss = { askingBuy = false },
+            buttons = {
+                FinnyButton(
+                    text = stringResource(R.string.savings_buy_confirm),
+                    onClick = {
+                        askingBuy = false
+                        onBuy()
+                    },
+                )
+                FinnySecondaryButton(text = stringResource(R.string.action_not_now), onClick = { askingBuy = false })
+            },
+        ) {
+            Text(text = stringResource(R.string.savings_buy_text, goal.icon), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
 }
+
+/** Покупка — главное действие цели: кнопка крупнее обычной (раздел 8 плана). */
+private val BUY_BUTTON_HEIGHT = 56.dp
 
 /**
  * Цель в списке — кнопка выбора. Выбранная подписана словом, а не только
@@ -288,7 +327,7 @@ private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(container)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = !goal.isBought, role = Role.Button, onClick = onClick)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
@@ -302,9 +341,9 @@ private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = if (goal.isActive) FontWeight.Bold else FontWeight.Normal,
             )
-            if (goal.isActive) {
+            if (goal.isActive || goal.isBought) {
                 Text(
-                    text = stringResource(R.string.savings_goal_active),
+                    text = stringResource(if (goal.isBought) R.string.savings_goal_bought else R.string.savings_goal_active),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -114,6 +114,42 @@ class SavingsEngine(private val clock: GameClock) {
         )
     }
 
+    /**
+     * Покупка собранной цели (R13): копилка по цели обнуляется, цель
+     * перестаёт быть активной — ребёнок выбирает следующую. Отложенное сверх
+     * цены не пропадает, а возвращается в кошелёк сдачей.
+     */
+    fun buy(
+        currentBalance: Coins,
+        progress: GoalProgress,
+        goal: Goal,
+        periodId: Long,
+    ): GameResult<SavingsOutcome> {
+        require(progress.isReached(goal)) { "Купить можно только собранную цель" }
+
+        val change = progress.saved - goal.price
+        val newBalance = currentBalance + change
+        val newProgress = progress.copy(saved = Coins.ZERO, isActive = false)
+        val key = if (change > Coins.ZERO) KEY_BOUGHT_CHANGE else KEY_BOUGHT
+
+        return GameResult(
+            value = SavingsOutcome(
+                progress = newProgress,
+                balance = newBalance,
+                transaction = transaction(TransactionType.GOAL_PURCHASE, change, key, goal, periodId),
+                goalReached = false,
+            ),
+            explanation = Explanation(
+                key = key,
+                args = mapOf("icon" to goal.icon, "change" to change.amount.toString()),
+            ),
+            changes = listOfNotNull(
+                Change.Balance(from = currentBalance, to = newBalance).takeIf { change > Coins.ZERO },
+                Change.Savings(from = progress.saved, to = Coins.ZERO),
+            ),
+        )
+    }
+
     fun periodsToGoal(progress: GoalProgress, goal: Goal, avgDeposit: Coins): Int? {
         val remaining = progress.remaining(goal)
         if (remaining == Coins.ZERO) return 0
@@ -144,5 +180,7 @@ class SavingsEngine(private val clock: GameClock) {
         const val KEY_DEPOSITED = "savings.deposited"
         const val KEY_REACHED = "savings.goal_reached"
         const val KEY_WITHDRAWN = "savings.withdrawn"
+        const val KEY_BOUGHT = "savings.goal_bought"
+        const val KEY_BOUGHT_CHANGE = "savings.goal_bought_change"
     }
 }

@@ -16,6 +16,8 @@
   "savings.deposited": "Отложили {amount} монет в копилку! Всего накоплено {saved}, а до мечты осталось {remaining}.",
   "savings.goal_reached": "Ура! Цель достигнута! В копилке уже целых {saved} монет!",
   "savings.withdrawn": "Взяли из копилки {amount} монет. Там осталось {saved}, до цели теперь {remaining}.",
+  "savings.goal_bought": "Ура! {icon} теперь рядом со мной. Выбери новую цель.",
+  "savings.goal_bought_change": "Ура! {icon} теперь рядом со мной. Сдача {change} — в кошельке. Выбери новую цель.",
   
   "pet.state_changed": "Питомец радуется твоей заботе!",
   "pet.missed_mandatory": "Питомец немного проголодался — завтра накормим его в первую очередь!",

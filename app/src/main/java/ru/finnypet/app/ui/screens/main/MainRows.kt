@@ -54,7 +54,9 @@ fun walletLines(
     nameOf: (Transaction) -> String?,
 ): List<WalletLine> {
     val carryOver = WalletLine(type = null, delta = startBalance.amount).takeIf { startBalance > Coins.ZERO }
+    // Покупка цели без сдачи монет не двигает: строка «+0» ничего бы не объяснила.
     return listOfNotNull(carryOver) + transactions
+        .filter { it.balanceDelta != 0 }
         .sortedWith(compareBy({ it.createdAt }, { it.id }))
         .map { WalletLine(type = it.type, delta = it.balanceDelta, name = nameOf(it)) }
 }

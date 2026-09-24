@@ -39,4 +39,7 @@ interface SavingsRepository {
      * означает, что пополнений ещё не было и срок посчитать не из чего.
      */
     suspend fun averageDeposit(profileId: ProfileId, goalId: GoalId): Coins
+
+    /** Купленные цели по порядку покупки (R13). */
+    fun observeBought(profileId: ProfileId): Flow<List<GoalId>>
 }

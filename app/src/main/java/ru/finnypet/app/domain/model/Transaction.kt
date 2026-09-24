@@ -12,6 +12,14 @@ enum class TransactionType(
     SAVINGS_DEPOSIT(SpendCategory.SAVINGS, false),
     SAVINGS_WITHDRAW(SpendCategory.SAVINGS, true),
     UNEXPECTED_EXPENSE(SpendCategory.MANDATORY, false),
+
+    /**
+     * Покупка собранной цели (R13). Цена оплачена копилкой, поэтому сумма
+     * операции — только сдача: отложенное сверх цены возвращается в кошелёк.
+     * При точной сумме это ноль, и кошелёк не меняется. По этим операциям
+     * строится коллекция вещей рядом с совой (AD-10).
+     */
+    GOAL_PURCHASE(null, true),
 }
 
 data class Transaction(

@@ -100,6 +100,20 @@ class MainRowsTest {
         assertEquals(listOf(WalletLine(TransactionType.INCOME_PERIOD, 35)), lines)
     }
 
+    /** День 5: комиксы куплены ровно на 40 — сдачи нет, строка «+0» ничего бы не объяснила. */
+    @Test
+    fun `покупка цели без сдачи не попадает в кошелёк, со сдачей — попадает`() {
+        val exact = transaction(5, TransactionType.GOAL_PURCHASE, 0, at = 300, goal = "comics")
+        val change = transaction(6, TransactionType.GOAL_PURCHASE, 8, at = 400, goal = "book")
+
+        val lines = walletLines(Coins.ZERO, listOf(income, exact, change)) { null }
+
+        assertEquals(
+            listOf(WalletLine(TransactionType.INCOME_PERIOD, 35), WalletLine(TransactionType.GOAL_PURCHASE, 8)),
+            lines,
+        )
+    }
+
     /** Демо проживает день за миллисекунды: время операций совпадает, порядок держит номер. */
     @Test
     fun `операции в одну миллисекунду идут по номеру`() {

@@ -94,7 +94,7 @@ class TransactionTest {
     }
 
     @Test
-    fun `доходом считаются только начисления и снятие с накоплений`() {
+    fun `доходом считаются только начисления, снятие с накоплений и сдача с покупки цели`() {
         val income = TransactionType.entries.filter { it.isIncome }
         assertEquals(
             listOf(
@@ -102,9 +102,18 @@ class TransactionTest {
                 TransactionType.INCOME_TASK,
                 TransactionType.INCOME_PARENT,
                 TransactionType.SAVINGS_WITHDRAW,
+                TransactionType.GOAL_PURCHASE,
             ),
             income,
         )
+    }
+
+    /** Цена оплачена копилкой: в кошелёк приходит только сдача, при точной сумме — ноль. */
+    @Test
+    fun `покупка цели двигает кошелёк только на сдачу и не входит в факт плана`() {
+        assertEquals(0, transaction(TransactionType.GOAL_PURCHASE, Coins.ZERO).balanceDelta)
+        assertEquals(8, transaction(TransactionType.GOAL_PURCHASE, Coins(8)).balanceDelta)
+        assertEquals(null, TransactionType.GOAL_PURCHASE.category)
     }
 
     @Test
@@ -121,7 +130,7 @@ class TransactionTest {
                 "INCOME_PERIOD", "INCOME_TASK", "INCOME_PARENT",
                 "PURCHASE_MANDATORY", "PURCHASE_OPTIONAL",
                 "SAVINGS_DEPOSIT", "SAVINGS_WITHDRAW",
-                "UNEXPECTED_EXPENSE",
+                "UNEXPECTED_EXPENSE", "GOAL_PURCHASE",
             ),
             TransactionType.entries.map { it.name },
         )

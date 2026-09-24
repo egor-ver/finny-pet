@@ -970,7 +970,7 @@ class ScreensTest {
         scrollToAny(hasContentDescription("30 монет", substring = true))
         scrollToAny(hasContentDescription("10 монет", substring = true))
         scrollToDescription("20 монет")
-        scrollToText(text(R.string.savings_eta, text(R.string.days_few, 2)))
+        scrollToText(text(R.string.savings_eta, 8, text(R.string.days_few, 2)))
         scrollToText(text(R.string.savings_goal_active))
         scrollToText("Книжка")
     }
@@ -1148,6 +1148,7 @@ class ScreensTest {
         return SavingsState.Ready(
             goals = goals,
             periodsToGoal = if (active) periodsToGoal else null,
+            usualDeposit = Coins(8),
             balance = Coins(80),
             canOperate = canOperate,
             draft = draft,

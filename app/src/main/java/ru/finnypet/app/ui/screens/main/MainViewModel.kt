@@ -102,8 +102,13 @@ sealed interface MainState {
         val savings: SavingsView,
         val task: TaskOfDay?,
         val step: NextStep,
+        /** Купленные цели рядом с совой (R13) по порядку покупки. */
+        val things: List<Thing> = emptyList(),
     ) : MainState
 }
+
+/** Вещь рядом с совой: эмодзи на экране, название — для озвучки. */
+data class Thing(val icon: String, val title: String)
 
 /**
  * Собирает главный экран (ТЗ 2.5.3): питомец, баланс, накопления, цель и
@@ -179,7 +184,8 @@ class MainViewModel @Inject constructor(
                     periods.observeBalance(period),
                     periods.observeTransactions(period.id),
                     periods.observePlan(period.id),
-                ) { wallet, transactions, plan ->
+                    savings.observeBought(profile.id),
+                ) { wallet, transactions, plan, bought ->
                     val task = taskOf(completed, transactions, pet.state)
                     val needs = petState.needsOf(pet.state)
                     val step = nextStep(period.status, needs.isNotEmpty(), wallet, cheapestMandatory)
@@ -206,6 +212,7 @@ class MainViewModel @Inject constructor(
                         savings = savingsOf(progress),
                         task = task,
                         step = step,
+                        things = bought.mapNotNull { id -> goals[id]?.let { Thing(it.icon, texts.textOf(it.titleKey)) } },
                     )
                 }
             }

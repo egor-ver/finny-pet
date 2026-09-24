@@ -43,6 +43,8 @@ data class GoalView(
     val saved: Coins,
     val isActive: Boolean,
     val icon: String,
+    /** Уже куплена (R13): второй раз не выбирается, иначе рядом с совой встанут две одинаковые вещи. */
+    val isBought: Boolean = false,
 ) {
 
     val remaining: Coins get() = saved.shortfallTo(price)
@@ -104,6 +106,8 @@ sealed interface SavingsState {
          * или цели нет, считать не из чего.
          */
         val periodsToGoal: Int?,
+        /** Среднее пополнение — «если откладывать как обычно, по 8». */
+        val usualDeposit: Coins,
         val balance: Coins,
         /**
          * Откладывать и брать можно только когда день идёт: во время
@@ -120,6 +124,8 @@ sealed interface SavingsState {
         val canDeposit: Boolean get() = canOperate && active != null && balance > Coins.ZERO
 
         val canWithdraw: Boolean get() = canOperate && (active?.saved ?: Coins.ZERO) > Coins.ZERO
+
+        val canBuy: Boolean get() = canOperate && active?.isReached == true
     }
 }
 
@@ -188,6 +194,7 @@ class SavingsViewModel @Inject constructor(
         act { profileId ->
             editing.withLock {
                 if (goals.none { it.id == goalId }) return@withLock
+                if (goalId in savings.observeBought(profileId).first()) return@withLock
                 draft.value = null
                 val progress = savings.progress(profileId, goalId)
                 savings.setActive(profileId, progress.copy(isActive = true))
@@ -218,6 +225,24 @@ class SavingsViewModel @Inject constructor(
                 val current = draft.value ?: return@withLock
                 draft.value = null
                 operate(profileId, current.kind, current.amount)
+            }
+        }
+    }
+
+    /** Покупка собранной цели (R13): всё берётся из базы в момент записи, не из экрана. */
+    fun buy() {
+        act { profileId ->
+            editing.withLock {
+                draft.value = null
+                val period = runningPeriod(profileId) ?: return@withLock
+                val (progress, goal) = activeGoal(profileId) ?: return@withLock
+                if (!progress.isReached(goal)) return@withLock
+                val result = engine.buy(periods.balance(period), progress, goal, period.id)
+                recorder.record(
+                    profileId,
+                    ActionOutcome(transaction = result.value.transaction, savings = result.value.progress),
+                )
+                outcome.value = SavingsOutcomeView(text = texts.textOf(result.explanation), goalReached = false)
             }
         }
     }
@@ -320,10 +345,11 @@ class SavingsViewModel @Inject constructor(
                 combine(
                     periods.observeBalance(period),
                     progressWithAverage,
+                    savings.observeBought(profileId),
                     draft,
                     outcome,
-                ) { balance, (progresses, avgDeposit), draft, outcome ->
-                    ready(period, balance, progresses, avgDeposit, draft, outcome)
+                ) { balance, (progresses, avgDeposit), bought, draft, outcome ->
+                    ready(period, balance, progresses, avgDeposit, bought.toSet(), draft, outcome)
                 }
             }
         }
@@ -333,6 +359,7 @@ class SavingsViewModel @Inject constructor(
         balance: Coins,
         progresses: List<GoalProgress>,
         avgDeposit: Coins,
+        bought: Set<GoalId>,
         request: DraftRequest?,
         outcome: SavingsOutcomeView?,
     ): SavingsState.Ready {
@@ -346,6 +373,7 @@ class SavingsViewModel @Inject constructor(
                 saved = progress?.saved ?: Coins.ZERO,
                 isActive = progress?.isActive == true,
                 icon = goal.icon,
+                isBought = goal.id in bought,
             )
         }
         val progress = progresses.firstOrNull { it.isActive }
@@ -354,6 +382,7 @@ class SavingsViewModel @Inject constructor(
         return SavingsState.Ready(
             goals = views,
             periodsToGoal = periodsToGoal,
+            usualDeposit = avgDeposit,
             balance = balance,
             canOperate = period.status == PeriodStatus.RUNNING,
             draft = request?.let { draftOf(it, balance, progress, goal, avgDeposit) },
