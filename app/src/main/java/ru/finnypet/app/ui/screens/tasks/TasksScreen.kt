@@ -26,7 +26,6 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
-import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
@@ -68,7 +67,6 @@ fun TasksContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
                 }
             },
         ) {

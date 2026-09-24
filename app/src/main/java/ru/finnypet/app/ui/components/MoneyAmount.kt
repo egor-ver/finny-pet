@@ -43,7 +43,7 @@ import ru.finnypet.app.ui.theme.Dimens
 fun MoneyAmount(
     amount: Coins,
     modifier: Modifier = Modifier,
-    style: TextStyle = MaterialTheme.typography.titleMedium,
+    style: TextStyle = MaterialTheme.typography.titleLarge,
 ) {
     val spoken = coinsText(amount)
     Row(

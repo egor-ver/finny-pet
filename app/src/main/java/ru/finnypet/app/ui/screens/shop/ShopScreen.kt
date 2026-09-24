@@ -30,17 +30,18 @@ import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.CategoryLabel
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyListScaffold
-import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.StatChangeLine
-import ru.finnypet.app.ui.components.StatEffectLine
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PlanningHint
+import ru.finnypet.app.ui.components.StatChangeLine
+import ru.finnypet.app.ui.components.StatEffectLine
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -91,7 +92,6 @@ fun ShopContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
                 }
             },
         ) {
@@ -219,11 +219,7 @@ private fun ShopItemRow(
             modifier = Modifier.weight(1f),
         ) {
             Text(text = item.title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = stringResource(item.category.label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            CategoryLabel(category = item.category)
             item.effects.forEach { effect -> StatEffectLine(effect = effect) }
         }
         MoneyAmount(amount = item.price)
@@ -259,11 +255,7 @@ private fun ConfirmDialog(
             )
             MoneyAmount(amount = item.price)
         }
-        Text(
-            text = stringResource(item.category.label),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        CategoryLabel(category = item.category)
         if (item.effects.isNotEmpty()) {
             Text(text = stringResource(R.string.shop_pet_change), style = MaterialTheme.typography.titleMedium)
             item.effects.forEach { effect -> StatEffectLine(effect = effect) }

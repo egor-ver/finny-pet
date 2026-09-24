@@ -63,7 +63,6 @@ fun DayContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    BackButton(onBack)
                 }
             },
         ) {
@@ -79,7 +78,6 @@ fun DayContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
-                    BackButton(onBack)
                 }
             },
         ) {
@@ -110,11 +108,6 @@ private fun Screen(
     )
 }
 
-@Composable
-private fun BackButton(onBack: () -> Unit) {
-    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
-}
-
 /**
  * День идёт: видно, к чему ребёнок пришёл, и можно закончить.
  *
@@ -134,7 +127,6 @@ private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> 
                     onClick = { asking = true },
                     enabled = !state.closing,
                 )
-                BackButton(onBack)
             }
         },
     ) {

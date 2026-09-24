@@ -20,7 +20,6 @@ import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
-import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -70,7 +69,6 @@ fun AdultGateContent(riddle: Riddle, onSolved: () -> Unit, onBack: () -> Unit) {
                         if (typed.toIntOrNull() == riddle.answer) onSolved() else wrong = true
                     },
                 )
-                FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
             }
         },
     ) {

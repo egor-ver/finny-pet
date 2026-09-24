@@ -33,9 +33,9 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.CategoryLabel
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
-import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
@@ -89,7 +89,6 @@ fun TaskContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
                 }
             },
         ) {
@@ -159,7 +158,6 @@ private fun Intro(
                     state.rewardAvailable -> FinnyButton(text = stringResource(R.string.task_start), onClick = onStart)
                     else -> FinnyButton(text = stringResource(R.string.task_start_training), onClick = onStart)
                 }
-                FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
             }
         },
     ) {
@@ -250,7 +248,6 @@ private fun Step(
                     onClick = onNext,
                     enabled = stage.step.canProceed && !state.submitting,
                 )
-                FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
             }
         },
     ) {
@@ -399,11 +396,7 @@ private fun ItemCard(
             .padding(Dimens.SpaceMedium),
     ) {
         Text(text = item.title, style = MaterialTheme.typography.titleMedium)
-        Text(
-            text = stringResource(item.category.label),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        CategoryLabel(category = item.category)
         MoneyAmount(amount = item.price)
         Text(
             text = stringResource(

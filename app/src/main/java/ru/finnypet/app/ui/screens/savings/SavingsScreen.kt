@@ -94,7 +94,6 @@ fun SavingsContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
                 }
             },
         ) {

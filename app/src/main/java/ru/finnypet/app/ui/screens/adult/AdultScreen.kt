@@ -92,7 +92,6 @@ fun AdultContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
                 }
             },
         ) {
@@ -131,11 +130,6 @@ private fun Ready(
 
     Screen(
         onBack = onBack,
-        bottomBar = {
-            ButtonColumn {
-                FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
-            }
-        },
     ) {
         About(state.about)
         Topics(state.topics)

@@ -27,7 +27,6 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
-import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.PlanComparison
@@ -76,7 +75,6 @@ fun BudgetContent(
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    BackButton(onBack)
                 }
             },
         ) {
@@ -115,11 +113,6 @@ private fun Screen(
 }
 
 @Composable
-private fun BackButton(onBack: () -> Unit) {
-    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
-}
-
-@Composable
 private fun Planning(
     state: BudgetState.Planning,
     onBack: () -> Unit,
@@ -142,7 +135,6 @@ private fun Planning(
                     onClick = onConfirm,
                     enabled = state.canConfirm,
                 )
-                BackButton(onBack)
             }
         },
     ) {
@@ -174,7 +166,6 @@ private fun Planning(
 private fun Started(state: BudgetState.Started, onBack: () -> Unit) {
     Screen(
         onBack = onBack,
-        bottomBar = { ButtonColumn { BackButton(onBack) } },
     ) {
         Text(
             text = stringResource(R.string.budget_started),

@@ -32,7 +32,6 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
-import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.Explanation
 import ru.finnypet.app.ui.components.Heading
 import ru.finnypet.app.ui.components.GoalProgressBar
@@ -71,7 +70,6 @@ fun ProgressContent(state: ProgressState, onBack: () -> Unit, onRetry: () -> Uni
             bottomBar = {
                 ButtonColumn {
                     FinnyButton(text = stringResource(R.string.action_retry), onClick = onRetry)
-                    FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
                 }
             },
         ) {
@@ -97,11 +95,6 @@ private fun Ready(state: ProgressState.Ready, onBack: () -> Unit) {
     FinnyListScaffold(
         title = stringResource(R.string.progress_title),
         onBack = onBack,
-        bottomBar = {
-            ButtonColumn {
-                FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
-            }
-        },
     ) {
         lastDay(state.lastDay)
         goal(state.goal)

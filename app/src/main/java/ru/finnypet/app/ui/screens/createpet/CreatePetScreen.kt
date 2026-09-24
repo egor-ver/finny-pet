@@ -27,7 +27,6 @@ import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
-import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -96,7 +95,6 @@ fun CreatePetContent(
                     onClick = onCreate,
                     enabled = state.canCreate,
                 )
-                FinnySecondaryButton(text = stringResource(R.string.action_back), onClick = onBack)
             }
         },
     ) {

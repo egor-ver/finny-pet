@@ -9,9 +9,9 @@ import androidx.compose.ui.unit.sp
 /**
  * Размеры текста.
  *
- * ТЗ 3.6 требует основной текст не меньше 16 sp, поэтому всё, что читает
- * ребёнок, начинается с шестнадцати. Мельче только служебные подписи,
- * которые дублируют уже показанную информацию.
+ * ТЗ 3.6 требует основной текст не меньше 16 sp — все стили начинаются с
+ * шестнадцати, мельче в приложении нет ничего. Числа — 22 sp (titleLarge),
+ * чтобы сумма читалась раньше подписи.
  *
  * Размеры заданы в sp, а не в dp: при системном увеличении шрифта они
  * растут вместе с ним, как того же требует ТЗ 3.6.
@@ -41,6 +41,14 @@ val Typography = Typography(
         fontSize = 18.sp,
         lineHeight = 24.sp,
     ),
+    // Мелкие стили Material по умолчанию — 11–14 sp. Задаём их явно, иначе
+    // первый же bodySmall в новом экране нарушил бы ТЗ 3.6.
+    titleSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+    ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
@@ -53,6 +61,12 @@ val Typography = Typography(
         fontSize = 16.sp,
         lineHeight = 24.sp,
     ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+    ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
@@ -62,6 +76,12 @@ val Typography = Typography(
     // Шестнадцать, а не четырнадцать: порог ТЗ 3.6 держится во всех
     // стилях, иначе мелкий размер рано или поздно попадёт на экран.
     labelMedium = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+    ),
+    labelSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
