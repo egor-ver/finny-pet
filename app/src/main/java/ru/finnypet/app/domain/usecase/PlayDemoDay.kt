@@ -30,7 +30,8 @@ import ru.finnypet.app.domain.repository.TaskProgressRepository
 /**
  * Проживает день демонстрации целиком (ТЗ 2.5.13, шаги 5–10 Приложения А):
  * задание, план с копилкой, обязательная и необязательная покупки, закрытие.
- * Эксперт видит пять периодов и три стадии роста за пять нажатий.
+ * Эксперт видит пять периодов и три стадии роста за пять нажатий; второй
+ * день — с ошибкой, чтобы показать разбор (ТЗ 2.5.9).
  *
  * Ничего не имитирует — всё идёт через те же движки и записи, что и действия
  * ребёнка. Играет только тестовый профиль: без него это пустое действие, и
@@ -56,16 +57,24 @@ class PlayDemoDay(
         val period = openPeriod(profileId)
         // Сначала заработай, потом распредели (R7): награда входит в план.
         passTask(profileId, period)
-        // Тот же расчёт, что подсказывает ребёнку главный экран: самый дешёвый
-        // набор, закрывающий потребности. Иначе сова в демо не росла бы (AD-3).
-        val needs = profiles.pet(profileId)
-            ?.let { pet.cheapestCover(it.state, content.pack().shop) }
-            .orEmpty()
-        val plan = planOf(profileId, period, needs.totalPrice())
-
-        // Желаемое покупается одно и после нужного: весь план на него ещё свободен.
-        needs.forEach { buy(profileId, period, it, plan.optional) }
-        cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it, plan.optional) }
+        val wallet = periods.balance(period)
+        if (period.number == MISTAKE_DAY) {
+            // Раздел 4 плана, день 2: самая дорогая игрушка вместо еды. Эксперт
+            // видит день без роста, грустную сову утром и разбор ошибки.
+            val toy = priciest(SpendCategory.OPTIONAL, wallet)
+            val plan = planOf(profileId, period) { mistakePlan(wallet, toy?.price ?: Coins.ZERO) }
+            toy?.let { buy(profileId, period, it, plan.optional) }
+        } else {
+            // Тот же расчёт, что подсказывает ребёнку главный экран: самый дешёвый
+            // набор, закрывающий потребности. Иначе сова в демо не росла бы (AD-3).
+            val needs = profiles.pet(profileId)
+                ?.let { pet.cheapestCover(it.state, content.pack().shop) }
+                .orEmpty()
+            val plan = planOf(profileId, period) { newPlan(wallet, minOf(needs.totalPrice(), wallet)) }
+            // Желаемое покупается одно и после нужного: весь план на него ещё свободен.
+            needs.forEach { buy(profileId, period, it, plan.optional) }
+            cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it, plan.optional) }
+        }
         closeDay(profileId)
     }
 
@@ -74,10 +83,8 @@ class PlayDemoDay(
      * Доля копилки уходит на цель при подтверждении (R6), поэтому без цели
      * демонстрация берёт первую: ребёнок выбирает сам, а жюри важен весь цикл.
      */
-    private suspend fun planOf(profileId: ProfileId, period: GamePeriod, needs: Coins): BudgetPlan {
-        val wallet = periods.balance(period)
-        val plan = periods.plan(period.id)
-            ?: newPlan(wallet, minOf(needs, wallet)).also { periods.savePlan(period.id, it) }
+    private suspend fun planOf(profileId: ProfileId, period: GamePeriod, draft: () -> BudgetPlan): BudgetPlan {
+        val plan = periods.plan(period.id) ?: draft().also { periods.savePlan(period.id, it) }
         if (period.status == PeriodStatus.PLANNING) {
             chooseGoalIfNone(profileId)
             confirmPlan(profileId)
@@ -102,9 +109,21 @@ class PlayDemoDay(
         return BudgetPlan(mandatory = mandatory, optional = rest - savings, savings = savings)
     }
 
-    private fun cheapest(category: SpendCategory, budget: Coins): ShopItem? = content.pack().shop
-        .filter { it.category == category && budget.covers(it.price) }
+    /** Ошибка дня: желаемое — вся игрушка, остаток пополам между копилкой и нужным, на которое не хватит. */
+    private fun mistakePlan(available: Coins, toy: Coins): BudgetPlan {
+        val rest = available - toy
+        val savings = Coins(rest.amount / 2)
+        return BudgetPlan(mandatory = rest - savings, optional = toy, savings = savings)
+    }
+
+    private fun cheapest(category: SpendCategory, budget: Coins): ShopItem? = affordable(category, budget)
         .minByOrNull { it.price.amount }
+
+    private fun priciest(category: SpendCategory, budget: Coins): ShopItem? = affordable(category, budget)
+        .maxByOrNull { it.price.amount }
+
+    private fun affordable(category: SpendCategory, budget: Coins): List<ShopItem> = content.pack().shop
+        .filter { it.category == category && budget.covers(it.price) }
 
     /** Задание дня на верный исход с наибольшей наградой: эксперт видит начисление и объяснение. */
     private suspend fun passTask(profileId: ProfileId, period: GamePeriod) {
@@ -182,5 +201,10 @@ class PlayDemoDay(
             profileId = profileId,
             outcome = ActionOutcome(transaction = result.transaction, effects = result.effects),
         )
+    }
+
+    private companion object {
+        /** Второй день демо — с ошибкой, как в эталонном сценарии (раздел 4 плана). */
+        const val MISTAKE_DAY = 2
     }
 }

@@ -42,6 +42,8 @@ import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.domain.usecase.CloseDay
@@ -239,17 +241,34 @@ class DemoModeTest {
         assertEquals(DEMO_DAYS, tasks.completedIds(demo.id).size)
     }
 
+    /** Раздел 4 плана: второй день с ошибкой — роста нет, сова грустит, утром разбор. */
+    @Test
+    fun второй_день_демо_с_ошибкой_и_разбором_наутро() = runBlocking {
+        val demo = startDemo()
+        playDay()
+        val afterFirst = profiles.pet(demo.id)!!.growth
+
+        playDay()
+
+        val second = periods.lastClosed(demo.id)!!
+        val fact = periodEngine.factOf(periods.transactions(second.id))
+        assertEquals(Coins.ZERO, fact.amountFor(SpendCategory.MANDATORY))
+        assertEquals(afterFirst, profiles.pet(demo.id)!!.growth)
+        assertTrue(profiles.pet(demo.id)!!.state.satiety < Stat(balance.sadThreshold))
+
+        playDay()
+
+        assertTrue(TaskId("review-hungry-owl") in tasks.completedIds(demo.id))
+    }
+
     @Test
     fun прожитый_день_проходит_весь_цикл() = runBlocking {
         val demo = startDemo()
 
-        // Нужное покупается по потребностям совы (R3), а они появляются после
-        // первой ночи: весь цикл виден на втором дне.
-        playDay()
         playDay()
 
-        val second = periods.lastClosed(demo.id)!!
-        val transactions = periods.transactions(second.id)
+        val first = periods.lastClosed(demo.id)!!
+        val transactions = periods.transactions(first.id)
         val fact = periodEngine.factOf(transactions)
         assertTrue("задание не принесло монет", transactions.any { it.type == TransactionType.INCOME_TASK })
         assertTrue("обязательное не куплено", fact.amountFor(SpendCategory.MANDATORY) > Coins.ZERO)
