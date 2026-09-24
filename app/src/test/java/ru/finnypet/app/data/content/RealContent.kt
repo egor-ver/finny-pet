@@ -2,7 +2,6 @@ package ru.finnypet.app.data.content
 
 import org.junit.Assert.assertTrue
 import ru.finnypet.app.domain.content.ContentPack
-import ru.finnypet.app.domain.content.PetImageFiles
 import java.io.File
 
 /**
@@ -35,10 +34,5 @@ object RealContent {
         val file = File("src/main/assets/${ContentPack.FOLDER}/$name")
         assertTrue("Не найден файл контент-пака: ${file.absolutePath}", file.exists())
         return file.readText()
-    }
-
-    /** Папка с картинками питомца. */
-    fun petsDir(): File = File("src/main/assets/${PetImageFiles.DIR}").also {
-        assertTrue("Не найдена папка картинок: ${it.absolutePath}", it.isDirectory)
     }
 }

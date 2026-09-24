@@ -50,7 +50,7 @@ class ContentParserTest {
                 pets = """
                 {
                   "bodies": [{"id":"owl","titleKey":"a"},{"id":"cat","titleKey":"b"}],
-                  "colors": [{"id":"mint","titleKey":"c"},{"id":"rose","titleKey":"d"}],
+                  "colors": [{"id":"mint","titleKey":"c","body":"#FFFFFF","wing":"#FFFFFF","face":"#FFFFFF","ring":"#000000"},{"id":"rose","titleKey":"d","body":"#FFFFFF","wing":"#FFFFFF","face":"#FFFFFF","ring":"#000000"}],
                   "accessories": [{"id":"scarf","titleKey":"e"},{"id":"hat","titleKey":"f"}]
                 }
                 """

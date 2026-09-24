@@ -8,6 +8,7 @@ import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
@@ -233,5 +234,37 @@ class PetStateEngineTest {
     fun `если потребность нечем закрыть — набора нет`() {
         val noCare = shop.filter { it.effects.none { effect -> effect.stat == PetStatKind.CARE } }
         assertNull(engine.cheapestCover(pet(satiety = 90, care = 50), noCare))
+    }
+
+    /** R11, раздел 4 плана: утро дня 3, еда 30 — сова грустит от голода. */
+    @Test
+    fun `после пропущенного дня сова грустит от голода`() {
+        val hungry = pet(satiety = 30, care = 55)
+
+        assertEquals(PetMood.SAD, engine.moodOf(hungry))
+        assertEquals(PetStatKind.SATIETY, engine.sadAbout(hungry))
+    }
+
+    @Test
+    fun `голод называется раньше растрёпанных перьев`() {
+        assertEquals(PetStatKind.SATIETY, engine.sadAbout(pet(satiety = 30, care = 30)))
+        assertEquals(PetStatKind.CARE, engine.sadAbout(pet(satiety = 90, care = 30)))
+    }
+
+    /** Утро с потребностями — повод позаботиться, а не грустить (ТЗ 3.5). */
+    @Test
+    fun `утро с потребностями — сова спокойна`() {
+        assertEquals(PetMood.CALM, engine.moodOf(pet(satiety = 55, care = 70)))
+        assertNull(engine.sadAbout(pet(satiety = 55, care = 70)))
+    }
+
+    @Test
+    fun `сытая и довольная сова радуется`() {
+        assertEquals(PetMood.HAPPY, engine.moodOf(pet(satiety = 90, care = 90, mood = balance.needThreshold)))
+    }
+
+    @Test
+    fun `сытая, но скучающая сова спокойна`() {
+        assertEquals(PetMood.CALM, engine.moodOf(pet(satiety = 90, care = 90, mood = balance.needThreshold - 1)))
     }
 }

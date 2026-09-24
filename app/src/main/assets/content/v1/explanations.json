@@ -40,6 +40,12 @@
   "pet.color.brown": "Коричневый",
   "pet.color.black": "Дымчатый",
   "pet.color.white": "Белый",
+  "pet.color.ginger": "Рыжий",
+  "owl.describe.HAPPY": "Сова {name} радуется",
+  "owl.describe.CALM": "Сова {name} спокойна",
+  "owl.describe.SAD": "Сова {name} грустит: {reason}",
+  "owl.reason.SATIETY": "хочет есть",
+  "owl.reason.CARE": "перья растрепались",
   "pet.accessory.scarf": "Шарфик",
   "pet.accessory.glasses": "Очки",
   

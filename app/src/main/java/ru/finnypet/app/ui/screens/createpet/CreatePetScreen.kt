@@ -24,12 +24,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
-import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
-import ru.finnypet.app.ui.components.PetImage
+import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -102,7 +101,7 @@ fun CreatePetContent(
         },
     ) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            PetImage(appearance = state.appearance, stage = GrowthStage.CUB)
+            Owl(look = state.owl(stringResource(R.string.create_pet_preview)))
         }
 
         Text(

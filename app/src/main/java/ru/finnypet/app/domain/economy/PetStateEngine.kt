@@ -4,6 +4,7 @@ import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GameResult
 import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.RecoveryOption
@@ -25,6 +26,22 @@ class PetStateEngine(private val balance: GameBalance) {
             changes = changesBetween(state, next),
         )
     }
+
+    /**
+     * Настроение (R11): грусть — только после пропущенного дня, когда сытость
+     * или уход ниже порога грусти; радость — когда потребностей нет и радость
+     * не ниже порога потребности. Иначе спокойствие: утро с потребностями —
+     * повод позаботиться, а не грустить (ТЗ 3.5).
+     */
+    fun moodOf(state: PetState): PetMood = when {
+        sadAbout(state) != null -> PetMood.SAD
+        needsOf(state).isEmpty() && state.mood >= Stat(balance.needThreshold) -> PetMood.HAPPY
+        else -> PetMood.CALM
+    }
+
+    /** Из-за чего сова грустит — первым голод, как и в разборе ошибки; `null` — не грустит. */
+    fun sadAbout(state: PetState): PetStatKind? =
+        NEEDS.firstOrNull { state.statFor(it) < Stat(balance.sadThreshold) }
 
     /** Чего сове не хватает прямо сейчас (R2): сытость или уход ниже порога. */
     fun needsOf(state: PetState): List<PetStatKind> =

@@ -17,28 +17,30 @@ import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
 import ru.finnypet.app.domain.model.GamePeriod
-import ru.finnypet.app.domain.model.Pet
-import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
-import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.Pet
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
+import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
-import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
+import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
@@ -79,7 +81,7 @@ sealed interface MainState {
     data class Ready(
         val childName: String,
         val petName: String,
-        val appearance: PetAppearance,
+        val owl: OwlLook,
         val stage: GrowthStage,
         val stats: PetState,
         val balance: Coins,
@@ -115,6 +117,7 @@ class MainViewModel @Inject constructor(
     private val goals: Map<GoalId, Goal> = content.pack().goals.associateBy { it.id }
     private val tasks = content.pack().tasks
     private val shop = content.pack().shop
+    private val pets = content.pack().pets
     private val cheapestMandatory: Coins? = shop
         .filter { it.category == SpendCategory.MANDATORY }
         .minOfOrNull { it.price }
@@ -168,7 +171,7 @@ class MainViewModel @Inject constructor(
                     MainState.Ready(
                         childName = profile.childName,
                         petName = profile.petName,
-                        appearance = profile.appearance,
+                        owl = owlOf(profile, pet),
                         stage = pet.growth.stage,
                         stats = pet.state,
                         balance = balance,
@@ -189,6 +192,18 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+
+    /** Настроение по показателям (R11) и описание для TalkBack: «Сова Пушок грустит: хочет есть». */
+    private fun owlOf(profile: Profile, pet: Pet): OwlLook {
+        val mood = petState.moodOf(pet.state)
+        return owlLook(
+            pets = pets,
+            appearance = profile.appearance,
+            stage = pet.growth.stage,
+            mood = mood,
+            description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+        )
+    }
 
     /** Четыре источника разом: у combine нет Triple на четверых. */
     private data class Sources(

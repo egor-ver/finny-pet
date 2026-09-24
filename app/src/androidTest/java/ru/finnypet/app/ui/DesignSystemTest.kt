@@ -162,7 +162,7 @@ class DesignSystemTest {
         id = TaskId("t"),
         topic = TaskTopic.PAYMENTS,
         intro = "Вступление",
-        appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        owl = testOwl(),
         maxReward = Coins(15),
         rewardAvailable = true,
         stage = TaskStage.Step(index = 0, total = 1, step = step),

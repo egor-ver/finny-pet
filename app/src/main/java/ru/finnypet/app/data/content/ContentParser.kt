@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import ru.finnypet.app.domain.content.ContentOption
 import ru.finnypet.app.domain.content.ContentPack
 import ru.finnypet.app.domain.content.GlossaryTerm
+import ru.finnypet.app.domain.content.PetColor
 import ru.finnypet.app.domain.content.PetOptions
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.model.Coins
@@ -113,7 +114,8 @@ class ContentParser @Inject constructor() {
             // предлагает само, он всегда доступен.
             PetOptions(
                 bodies = dto.bodies.map { ContentOption(it.id, it.titleKey) }.unique(PETS, "тело"),
-                colors = dto.colors.map { ContentOption(it.id, it.titleKey) }.unique(PETS, "окрас"),
+                colors = dto.colors.map(::petColor)
+                    .also { colors -> colors.map { it.id }.requireUnique(PETS, "окрас") },
                 accessories = dto.accessories.map { ContentOption(it.id, it.titleKey) }
                     .unique(PETS, "аксессуар"),
             )
@@ -371,6 +373,20 @@ class ContentParser @Inject constructor() {
         throw ContentParseException("$file, $what: ${error.message}", error)
     }
 
+    private fun petColor(dto: ColorDto) = PetColor(
+        option = ContentOption(dto.id, dto.titleKey),
+        body = hex(dto.id, dto.body),
+        wing = hex(dto.id, dto.wing),
+        face = hex(dto.id, dto.face),
+        ring = hex(dto.id, dto.ring),
+    )
+
+    /** `#RRGGBB` в непрозрачный ARGB. Опечатка в цвете называет окрас, а не роняет рисование. */
+    private fun hex(colorId: String, value: String): Long {
+        require(HEX_COLOR.matches(value)) { "окрас $colorId: цвет \"$value\" должен быть вида #RRGGBB" }
+        return 0xFF000000L or value.drop(1).toLong(16)
+    }
+
     private fun List<ContentOption>.unique(file: String, what: String): List<ContentOption> =
         also { options -> options.map { it.id }.requireUnique(file, what) }
 
@@ -391,5 +407,7 @@ class ContentParser @Inject constructor() {
         const val TASKS = "tasks.json"
         const val GLOSSARY = "glossary.json"
         const val EXPLANATIONS = "explanations.json"
+
+        val HEX_COLOR = Regex("#[0-9A-Fa-f]{6}")
     }
 }

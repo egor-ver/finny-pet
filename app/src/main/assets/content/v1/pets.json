@@ -3,10 +3,11 @@
     { "id": "owl", "titleKey": "pet.body.owl" }
   ],
   "colors": [
-    { "id": "cream", "titleKey": "pet.color.cream" },
-    { "id": "brown", "titleKey": "pet.color.brown" },
-    { "id": "black", "titleKey": "pet.color.black" },
-    { "id": "white", "titleKey": "pet.color.white" }
+    { "id": "cream", "titleKey": "pet.color.cream", "body": "#F0D4AE", "wing": "#D9B488", "face": "#FFF5E6", "ring": "#C8996A" },
+    { "id": "brown", "titleKey": "pet.color.brown", "body": "#A8703F", "wing": "#7C4D27", "face": "#EFD0A6", "ring": "#6A3F1E" },
+    { "id": "black", "titleKey": "pet.color.black", "body": "#7D7885", "wing": "#5A5562", "face": "#DCD7E0", "ring": "#4A4652" },
+    { "id": "white", "titleKey": "pet.color.white", "body": "#F4F5F2", "wing": "#D5DBE2", "face": "#FFFFFF", "ring": "#A9B2BC" },
+    { "id": "ginger", "titleKey": "pet.color.ginger", "body": "#EC9447", "wing": "#C46B2C", "face": "#FFE2BF", "ring": "#A4561F" }
   ],
   "accessories": [
     { "id": "scarf", "titleKey": "pet.accessory.scarf" },

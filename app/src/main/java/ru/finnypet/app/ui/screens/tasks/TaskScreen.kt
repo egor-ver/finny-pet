@@ -31,18 +31,17 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
-import ru.finnypet.app.domain.model.GrowthStage
-import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.StatChangeLine
-import ru.finnypet.app.ui.components.PetImage
+import ru.finnypet.app.ui.components.Owl
+import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -121,7 +120,7 @@ fun TaskContent(
                 onNext = onNext,
             )
 
-            is TaskStage.Done -> Done(outcome = stage.outcome, appearance = state.appearance, onBack = onBack)
+            is TaskStage.Done -> Done(outcome = stage.outcome, owl = state.owl, onBack = onBack)
         }
     }
 }
@@ -169,7 +168,7 @@ private fun Intro(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        PetSpeech(text = state.intro, appearance = state.appearance)
+        PetSpeech(text = state.intro, owl = state.owl)
         // Баланс на главном другой, чем в истории: без этой строки ребёнок
         // принимает монеты задания за свои.
         Text(
@@ -194,13 +193,13 @@ private fun Intro(
 
 /** Сова и её реплика в «пузыре»: задание — это просьба питомца, а не тест. */
 @Composable
-private fun PetSpeech(text: String, appearance: PetAppearance) {
+private fun PetSpeech(text: String, owl: OwlLook) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        PetImage(appearance = appearance, stage = GrowthStage.CUB, size = 96.dp)
+        Owl(look = owl, size = 96.dp)
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
@@ -423,13 +422,13 @@ private fun ItemCard(
 
 /** Итог: объяснение независимо от результата (ТЗ 2.5.8), награда и питомец. */
 @Composable
-private fun Done(outcome: TaskOutcomeView, appearance: PetAppearance, onBack: () -> Unit) {
+private fun Done(outcome: TaskOutcomeView, owl: OwlLook, onBack: () -> Unit) {
     Screen(
         onBack = onBack,
         bottomBar = { ButtonColumn { FinnyButton(text = stringResource(R.string.task_finish), onClick = onBack) } },
     ) {
         Text(text = stringResource(R.string.task_done_title), style = MaterialTheme.typography.titleLarge)
-        PetSpeech(text = outcome.text, appearance = appearance)
+        PetSpeech(text = outcome.text, owl = owl)
         if (outcome.rewardable) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

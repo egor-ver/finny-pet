@@ -249,6 +249,7 @@
     <!-- Создание питомца -->
     <string name="create_pet_title">Твой питомец</string>
     <string name="create_pet_appearance">Каким он будет?</string>
+    <string name="create_pet_preview">Так будет выглядеть твоя сова</string>
     <string name="create_pet_body">Кто это</string>
     <string name="create_pet_color">Окрас</string>
     <string name="create_pet_accessory">Аксессуар</string>
@@ -257,7 +258,6 @@
     <string name="create_pet_child_name">Твоё игровое имя</string>
     <string name="create_pet_pet_name">Имя питомца</string>
     <string name="create_pet_no_real_name">Настоящее имя писать не нужно — придумай любое</string>
-    <string name="create_pet_image_missing">Картинка питомца пока не добавлена</string>
     <string name="create_pet_failed">Не получилось сохранить. Попробуй ещё раз.</string>
 
     <!-- Знакомство с игрой -->

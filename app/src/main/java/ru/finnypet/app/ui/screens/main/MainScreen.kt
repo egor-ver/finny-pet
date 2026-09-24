@@ -35,7 +35,7 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.GoalProgressBar
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
-import ru.finnypet.app.ui.components.PetImage
+import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.StatBar
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.label
@@ -342,7 +342,7 @@ private fun Pet(state: MainState.Ready) {
     ) {
         // Меньше, чем по умолчанию: питомец остаётся главным на экране, но
         // не выталкивает показатели состояния за нижний край.
-        PetImage(appearance = state.appearance, stage = state.stage, size = 140.dp)
+        Owl(look = state.owl, size = 140.dp)
         Text(
             text = state.petName,
             style = MaterialTheme.typography.titleLarge,

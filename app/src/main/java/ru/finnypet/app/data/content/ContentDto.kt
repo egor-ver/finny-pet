@@ -43,10 +43,21 @@ data class OptionDto(
     val titleKey: String,
 )
 
+/** Окрас: цвета тела, крыльев, лица и обводки в виде `#RRGGBB`. */
+@Serializable
+data class ColorDto(
+    val id: String,
+    val titleKey: String,
+    val body: String,
+    val wing: String,
+    val face: String,
+    val ring: String,
+)
+
 @Serializable
 data class PetsDto(
     val bodies: List<OptionDto>,
-    val colors: List<OptionDto>,
+    val colors: List<ColorDto>,
     val accessories: List<OptionDto> = emptyList(),
 )
 

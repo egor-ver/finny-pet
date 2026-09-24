@@ -198,7 +198,7 @@ class DayFlowTest {
             balance = balance,
             pets = PetOptions(
                 bodies = listOf(ContentOption("owl", "pet.body.owl")),
-                colors = listOf(ContentOption("cream", "pet.color.cream")),
+                colors = listOf(testColor()),
                 accessories = emptyList(),
             ),
             shop = emptyList(),

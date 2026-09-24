@@ -891,7 +891,7 @@ class ScreensTest {
         id = TaskId("story"),
         topic = TaskTopic.SAVING,
         intro = "Сова нашла монеты. Что с ними делать?",
-        appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        owl = testOwl(),
         maxReward = Coins(15),
         rewardAvailable = rewardAvailable,
         stage = stage,
@@ -1782,7 +1782,7 @@ class ScreensTest {
     ) = MainState.Ready(
         childName = "Егор",
         petName = "Пушок",
-        appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        owl = testOwl(),
         stage = GrowthStage.CUB,
         stats = PetState(mood = Stat(75), satiety = Stat(80), care = Stat(60)),
         balance = Coins(80),
@@ -1820,6 +1820,7 @@ class ScreensTest {
         accessoryId: String? = null,
         failed: Boolean = false,
     ) = CreatePetState(
+        palette = listOf(testColor("beige")),
         bodies = listOf(AppearanceOption("owl", "Совёнок")),
         colors = listOf(AppearanceOption("beige", "Бежевый")),
         accessories = listOf(AppearanceOption("bow", "Бантик")),

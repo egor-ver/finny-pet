@@ -50,7 +50,7 @@ data class ContentOption(
  */
 data class PetOptions(
     val bodies: List<ContentOption>,
-    val colors: List<ContentOption>,
+    val colors: List<PetColor>,
     val accessories: List<ContentOption>,
 ) {
 
@@ -73,4 +73,20 @@ data class GlossaryTerm(
         require(titleKey.isNotBlank()) { "Ключ названия термина обязателен: $id" }
         require(bodyKey.isNotBlank()) { "Ключ объяснения термина обязателен: $id" }
     }
+}
+
+/**
+ * Окрас совы: вариант выбора и цвета, которыми она рисуется (AD-1). Цвета —
+ * ARGB-числа, а не цвета интерфейса: домен не знает про Compose, а новый
+ * окрас добавляется записью в pets.json без правки кода (ТЗ 2.5.14).
+ */
+data class PetColor(
+    val option: ContentOption,
+    val body: Long,
+    val wing: Long,
+    val face: Long,
+    val ring: Long,
+) {
+
+    val id: String get() = option.id
 }

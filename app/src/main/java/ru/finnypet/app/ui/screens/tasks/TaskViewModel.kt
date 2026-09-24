@@ -24,9 +24,10 @@ import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
+import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.LearningTask
-import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.ShopItem
@@ -46,7 +47,10 @@ import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
+import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanJar
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
 import ru.finnypet.app.ui.navigation.Task
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
@@ -159,7 +163,7 @@ sealed interface TaskState {
         val topic: TaskTopic,
         val intro: String,
         /** Кто просит совета: сова ребёнка, как на главном. */
-        val appearance: PetAppearance,
+        val owl: OwlLook,
         val maxReward: Coins,
         /**
          * Платят ли за это задание сегодня: лимит не выбран и попытка первая
@@ -214,6 +218,7 @@ class TaskViewModel @Inject constructor(
     private val task: LearningTask? = content.pack().tasks.firstOrNull { it.id == taskId }
     private val items: Map<ItemId, ShopItem> = content.pack().shop.associateBy { it.id }
     private val texts: Map<String, String> = content.pack().texts
+    private val pets = content.pack().pets
 
     private val progress = MutableStateFlow(Progress())
 
@@ -406,7 +411,13 @@ class TaskViewModel @Inject constructor(
         id = task.id,
         topic = task.topic,
         intro = texts.textOf(task.introKey),
-        appearance = profile.appearance,
+        owl = owlLook(
+            pets = pets,
+            appearance = profile.appearance,
+            stage = GrowthStage.CUB,
+            mood = PetMood.CALM,
+            description = owlDescription(texts, profile.petName, PetMood.CALM, sadAbout = null),
+        ),
         maxReward = task.outcomes.filter { it.correct }.maxOf { it.reward },
         rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
         stage = stageOf(task, current),

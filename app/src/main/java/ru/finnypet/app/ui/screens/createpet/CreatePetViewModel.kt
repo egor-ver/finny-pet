@@ -9,10 +9,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.finnypet.app.domain.content.ContentOption
+import ru.finnypet.app.domain.content.PetColor
+import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.components.OwlLook
 import javax.inject.Inject
 
 /** Вариант внешности с уже подставленным названием из контент-пака. */
@@ -32,6 +36,8 @@ data class AppearanceOption(
  * переживает поворот, а NavController нет, и переход потерялся бы.
  */
 data class CreatePetState(
+    /** Окрасы с цветами: сова перерисовывается сразу при выборе. */
+    val palette: List<PetColor>,
     val bodies: List<AppearanceOption>,
     val colors: List<AppearanceOption>,
     val accessories: List<AppearanceOption>,
@@ -47,6 +53,15 @@ data class CreatePetState(
 
     val appearance: PetAppearance
         get() = PetAppearance(bodyId = bodyId, colorId = colorId, accessoryId = accessoryId)
+
+    /** Новая сова — детёныш и спокойна: грустить ей пока не из-за чего. */
+    fun owl(description: String): OwlLook = OwlLook(
+        colors = palette.first { it.id == colorId },
+        stage = GrowthStage.CUB,
+        mood = PetMood.CALM,
+        accessoryId = accessoryId,
+        description = description,
+    )
 
     val canCreate: Boolean
         get() = childName.isNotBlank() && petName.isNotBlank() && !saving
@@ -116,8 +131,9 @@ class CreatePetViewModel @Inject constructor(
             // Непустоту списков гарантирует разбор контент-пака: файл без
             // тела или окраса не загрузится вовсе.
             return CreatePetState(
+                palette = pets.colors,
                 bodies = options(pets.bodies),
-                colors = options(pets.colors),
+                colors = options(pets.colors.map { it.option }),
                 accessories = options(pets.accessories),
                 bodyId = pets.bodies.first().id,
                 colorId = pets.colors.first().id,
