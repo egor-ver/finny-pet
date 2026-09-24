@@ -101,6 +101,7 @@ class FivePeriodRunTest {
                 condition = OutcomeCondition.OptionChosen("save"),
                 reward = balance.taskReward,
                 explanationKey = "task.save_01.ok",
+                correct = true,
             ),
             TaskOutcome(
                 id = "chose_spend",

@@ -164,7 +164,7 @@ class MainViewModel @Inject constructor(
                     periods.observeTransactions(period.id),
                     periods.observePlan(period.id),
                 ) { balance, transactions, plan ->
-                    val task = taskOf(completed, transactions)
+                    val task = taskOf(completed, transactions, pet.state)
                     MainState.Ready(
                         childName = profile.childName,
                         petName = profile.petName,
@@ -198,15 +198,15 @@ class MainViewModel @Inject constructor(
         val completed: List<CompletedTask>,
     )
 
-    private fun taskOf(completed: List<CompletedTask>, transactions: List<Transaction>): TaskOfDay? {
-        val task = TaskSchedule.taskOfTheDay(tasks, completed) ?: return null
-        val done = completed.map { it.taskId }.toSet()
+    private fun taskOf(completed: List<CompletedTask>, transactions: List<Transaction>, pet: PetState): TaskOfDay? {
+        val task = TaskSchedule.taskOfTheDay(tasks, completed, transactions, pet, balance) ?: return null
+        val done = TaskSchedule.passed(tasks, completed)
         return TaskOfDay(
             id = task.id,
             topic = task.topic,
             intro = texts.textOf(task.introKey),
-            rewardAvailable = TaskSchedule.rewardAvailable(transactions, this.balance),
-            allDone = tasks.all { it.id in done },
+            rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
+            allDone = TaskSchedule.listed(tasks).all { it.id in done },
         )
     }
 

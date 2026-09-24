@@ -9,7 +9,7 @@ import ru.finnypet.app.domain.model.SpendCategory
 /**
  * Что ребёнку сделать дальше: главная кнопка и подсказка над ней.
  *
- * Порядок — цикл Приложения А ТЗ: план, задание, покупка нужного, копилка,
+ * Порядок — цикл Приложения А ТЗ: задание, план, покупка нужного, копилка,
  * итоги дня. Это подсказка, а не замок: остальные разделы открыты, ребёнок
  * может идти в любом порядке (ТЗ 8.4: без длинной инструкции понятно, что
  * делать сейчас).
@@ -47,8 +47,9 @@ fun nextStep(
     cheapestMandatory: Coins?,
     taskRewardAvailable: Boolean,
 ): NextStep {
-    if (status == PeriodStatus.PLANNING || plan == null) return NextStep.Plan
+    // Сначала заработай, потом распредели (R7): награда входит в план.
     if (taskRewardAvailable) return NextStep.Task
+    if (status == PeriodStatus.PLANNING || plan == null) return NextStep.Plan
 
     val canBuy = cheapestMandatory != null && balance.covers(cheapestMandatory)
     if (needs > Coins.ZERO && canBuy) return NextStep.Shop(needs)

@@ -85,6 +85,7 @@ class ContentParser @Inject constructor() {
                 nightDropMood = dto.nightDropMood,
                 statFloor = dto.statFloor,
                 needThreshold = dto.needThreshold,
+                sadThreshold = dto.sadThreshold,
                 moodBonusPlanFollowed = dto.moodBonusPlanFollowed,
                 growthForMandatoryCovered = dto.growthForMandatoryCovered,
                 growthForPlanFollowed = dto.growthForPlanFollowed,
@@ -157,7 +158,12 @@ class ContentParser @Inject constructor() {
                     introKey = task.titleKey,
                     steps = task.steps.map(::step),
                     outcomes = task.outcomes.mapIndexed { index, it -> outcome(it, index, defaultReward) },
-                ).also { checkReferences(it, knownItems) }
+                    showWhenSadAbout = task.showWhen?.let(::sadAbout),
+                ).also {
+                    checkReferences(it, knownItems)
+                    // Без верного исхода задание нельзя пройти и за него не заплатят (R8).
+                    require(it.outcomes.any { outcome -> outcome.correct }) { "нет ни одного исхода с \"correct\": true" }
+                }
             }
         }.also { tasks -> tasks.map { it.id.value }.requireUnique(TASKS, "задание") }
     }
@@ -293,6 +299,7 @@ class ContentParser @Inject constructor() {
         reward = dto.reward?.let(::Coins) ?: defaultReward,
         explanationKey = dto.explanationKey,
         effects = dto.effects.map(::effect),
+        correct = dto.correct,
     )
 
     private fun condition(dto: ConditionDto): OutcomeCondition = when (dto) {
@@ -324,6 +331,11 @@ class ContentParser @Inject constructor() {
             OutcomeCondition.BasketContains(dto.requiredItemIds)
 
         ConditionDto.Otherwise -> OutcomeCondition.Otherwise
+    }
+
+    private fun sadAbout(dto: ShowWhenDto): PetStatKind {
+        require(dto.type == "PET_SAD") { "условие показа \"${dto.type}\": допустимо только PET_SAD" }
+        return enum<PetStatKind>(dto.stat, "stat")
     }
 
     private fun effect(dto: EffectDto) = PetEffect(

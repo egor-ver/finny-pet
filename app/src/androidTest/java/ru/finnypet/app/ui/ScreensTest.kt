@@ -706,19 +706,17 @@ class ScreensTest {
         assertEquals(TaskId("story"), opened)
     }
 
-    /** ТЗ 2.5.5 и 3.4: пока день планируется, задание не открыть, но дорога в план есть. */
+    /** R7: задания доступны и до плана — нажатие открывает задание, а не зовёт в план. */
     @Test
-    fun `пока_день_планируется_задание_зовёт_в_план`() {
-        var planned = false
+    fun `задание_открывается_без_похода_в_план`() {
         var opened: TaskId? = null
-        showTasks(tasksReady(canStart = false), onPlan = { planned = true }, onOpen = { opened = it })
+        showTasks(tasksReady(), onOpen = { opened = it })
 
         scrollToText("Сова нашла монеты.")
         compose.onNodeWithText("Сова нашла монеты.").performClick()
-        compose.onAllNodesWithText(text(R.string.budget_action_plan))[1].performClick()
 
-        assertTrue(planned)
-        assertEquals(null, opened)
+        compose.onAllNodesWithText(text(R.string.budget_action_plan)).assertCountEquals(0)
+        assertEquals(TaskId("story"), opened)
     }
 
     @Test
@@ -869,7 +867,6 @@ class ScreensTest {
 
     private fun tasksReady(
         rewardAvailable: Boolean = true,
-        canStart: Boolean = true,
     ) = TasksState.Ready(
         groups = listOf(
             TaskGroup(
@@ -883,13 +880,11 @@ class ScreensTest {
         ),
         rewardAvailable = rewardAvailable,
         rewardLimit = 1,
-        canStart = canStart,
     )
 
     private fun taskReady(
         stage: TaskStage,
         rewardAvailable: Boolean = true,
-        canStart: Boolean = true,
     ) = TaskState.Ready(
         id = TaskId("story"),
         topic = TaskTopic.SAVING,
@@ -897,18 +892,16 @@ class ScreensTest {
         appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
         maxReward = Coins(15),
         rewardAvailable = rewardAvailable,
-        canStart = canStart,
         stage = stage,
     )
 
     private fun showTasks(
         state: TasksState,
-        onPlan: () -> Unit = {},
         onOpen: (TaskId) -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
-                TasksContent(state = state, onBack = {}, onPlan = onPlan, onOpen = onOpen)
+                TasksContent(state = state, onBack = {}, onOpen = onOpen)
             }
         }
     }

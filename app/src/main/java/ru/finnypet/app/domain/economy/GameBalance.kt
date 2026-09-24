@@ -25,6 +25,8 @@ data class GameBalance(
      * игра учила бы «потрать всё, что запланировал» (AD-3).
      */
     val needThreshold: Int,
+    /** Сытость или уход ниже этого — сова грустит; тогда задание дня — разбор ошибки (AD-7). */
+    val sadThreshold: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
@@ -73,6 +75,9 @@ data class GameBalance(
         require(needThreshold in Stat.RANGE) {
             "Порог потребности задаётся в пределах ${Stat.RANGE}, задан: $needThreshold"
         }
+        require(sadThreshold in Stat.RANGE) {
+            "Порог грусти задаётся в пределах ${Stat.RANGE}, задан: $sadThreshold"
+        }
         require(growthForMandatoryCovered >= 0 && growthForPlanFollowed >= 0 && growthForSavingsKept >= 0) {
             "Очки роста не могут быть отрицательными"
         }
@@ -102,6 +107,7 @@ data class GameBalance(
             nightDropMood = 10,
             statFloor = 30,
             needThreshold = 70,
+            sadThreshold = 40,
             moodBonusPlanFollowed = 10,
             growthForMandatoryCovered = 2,
             growthForPlanFollowed = 2,

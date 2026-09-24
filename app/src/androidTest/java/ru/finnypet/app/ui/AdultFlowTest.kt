@@ -259,6 +259,7 @@ class AdultFlowTest {
                 condition = OutcomeCondition.SavedAtLeast(Coins(10)),
                 reward = Coins(15),
                 explanationKey = "task.ok",
+                correct = true,
             ),
             TaskOutcome(
                 id = "otherwise",

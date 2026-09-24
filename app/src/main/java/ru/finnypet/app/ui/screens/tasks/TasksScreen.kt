@@ -13,9 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -27,11 +24,9 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
-import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
-import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
@@ -44,7 +39,6 @@ import ru.finnypet.app.ui.theme.Dimens
 @Composable
 fun TasksScreen(
     onBack: () -> Unit,
-    onPlan: () -> Unit,
     onOpen: (TaskId) -> Unit,
     viewModel: TasksViewModel = hiltViewModel(),
 ) {
@@ -53,7 +47,6 @@ fun TasksScreen(
     TasksContent(
         state = state,
         onBack = onBack,
-        onPlan = onPlan,
         onOpen = onOpen,
         onRetry = viewModel::retry,
     )
@@ -63,7 +56,6 @@ fun TasksScreen(
 fun TasksContent(
     state: TasksState,
     onBack: () -> Unit,
-    onPlan: () -> Unit = {},
     onOpen: (TaskId) -> Unit = {},
     onRetry: () -> Unit = {},
 ) {
@@ -87,7 +79,7 @@ fun TasksContent(
             )
         }
 
-        is TasksState.Ready -> Ready(state = state, onBack = onBack, onPlan = onPlan, onOpen = onOpen)
+        is TasksState.Ready -> Ready(state = state, onBack = onBack, onOpen = onOpen)
     }
 }
 
@@ -95,17 +87,10 @@ fun TasksContent(
 private fun Ready(
     state: TasksState.Ready,
     onBack: () -> Unit,
-    onPlan: () -> Unit,
     onOpen: (TaskId) -> Unit,
 ) {
-    // Пока день планируется, нажатие на задание — не тупик, а дорога в план.
-    var askingPlan by rememberSaveable { mutableStateOf(false) }
-
     FinnyListScaffold(title = stringResource(R.string.tasks_title), onBack = onBack) {
         item(key = "header:reward") { RewardNote(available = state.rewardAvailable, limit = state.rewardLimit) }
-        if (!state.canStart) {
-            item(key = "header:planning") { PlanningHint(text = stringResource(R.string.tasks_planning_hint), onPlan = onPlan) }
-        }
         if (state.groups.isEmpty()) {
             item(key = "header:empty") {
                 Text(
@@ -126,28 +111,9 @@ private fun Ready(
             items(group.tasks, key = { "task:${it.id.value}" }) { task ->
                 TaskRowCard(
                     task = task,
-                    onClick = { if (state.canStart) onOpen(task.id) else askingPlan = true },
+                    onClick = { onOpen(task.id) },
                 )
             }
-        }
-    }
-
-    if (askingPlan) {
-        FinnyDialog(
-            title = stringResource(R.string.budget_title),
-            onDismiss = { askingPlan = false },
-            buttons = {
-                FinnyButton(
-                    text = stringResource(R.string.budget_action_plan),
-                    onClick = {
-                        askingPlan = false
-                        onPlan()
-                    },
-                )
-                FinnySecondaryButton(text = stringResource(R.string.action_not_now), onClick = { askingPlan = false })
-            },
-        ) {
-            Text(text = stringResource(R.string.tasks_planning_hint), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

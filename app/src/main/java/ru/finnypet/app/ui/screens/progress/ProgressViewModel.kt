@@ -27,6 +27,7 @@ import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
+import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
@@ -106,7 +107,8 @@ class ProgressViewModel @Inject constructor(
 ) : ProfileViewModel(profiles) {
 
     private val texts: Map<String, String> = content.pack().texts
-    private val taskTopics = content.pack().tasks.associate { it.id to it.topic }
+    private val allTasks = content.pack().tasks
+    private val taskTopics = allTasks.associate { it.id to it.topic }
     private val taskTitles = content.pack().tasks.associate { it.id to texts.textOf(it.introKey) }
     private val goals = content.pack().goals.associateBy { it.id }
 
@@ -202,10 +204,12 @@ class ProgressViewModel @Inject constructor(
      * Одно задание — один пункт списка. Пройти задание можно сколько угодно
      * раз, но монеты даются за одно в день, поэтому повторы встали бы рядом с
      * первым строками с нулём. Награды складываются: «сколько принесло» —
-     * вопрос про задание целиком, а не про попытку.
+     * вопрос про задание целиком, а не про попытку. В списке — только верно
+     * пройденные обычные задания: разбор и ошибки пройденными не считаются.
      */
-    private fun passed(completed: List<CompletedTask>): List<PassedTask> =
-        completed.groupBy { it.taskId }.map { (taskId, passes) ->
+    private fun passed(completed: List<CompletedTask>): List<PassedTask> {
+        val passedIds = TaskSchedule.passed(TaskSchedule.listed(allTasks), completed)
+        return completed.filter { it.taskId in passedIds }.groupBy { it.taskId }.map { (taskId, passes) ->
             PassedTask(
                 id = taskId,
                 title = taskTitles[taskId] ?: taskId.value,
@@ -213,6 +217,7 @@ class ProgressViewModel @Inject constructor(
                 reward = passes.fold(Coins.ZERO) { sum, pass -> sum + pass.reward },
             )
         }
+    }
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

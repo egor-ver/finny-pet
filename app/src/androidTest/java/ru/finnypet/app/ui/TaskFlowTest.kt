@@ -44,6 +44,7 @@ import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ProfileId
@@ -101,6 +102,7 @@ class TaskFlowTest {
                 reward = Coins(15),
                 explanationKey = "task.story.saved",
                 effects = listOf(PetEffect(PetStatKind.MOOD, 5)),
+                correct = true,
             ),
             TaskOutcome(id = "otherwise", condition = OutcomeCondition.Otherwise, reward = Coins(5), explanationKey = "task.story.spent"),
         ),
@@ -113,7 +115,7 @@ class TaskFlowTest {
         introKey = "task.jars.intro",
         steps = listOf(TaskStep.Distribute(promptKey = "task.jars.step", budget = Coins(40))),
         outcomes = listOf(
-            TaskOutcome(id = "saved", condition = OutcomeCondition.SavedAtLeast(Coins(10)), reward = Coins(15), explanationKey = "task.jars.saved"),
+            TaskOutcome(id = "saved", condition = OutcomeCondition.SavedAtLeast(Coins(10)), reward = Coins(15), explanationKey = "task.jars.saved", correct = true),
             TaskOutcome(id = "otherwise", condition = OutcomeCondition.Otherwise, reward = Coins(5), explanationKey = "task.jars.spent"),
         ),
     )
@@ -131,7 +133,7 @@ class TaskFlowTest {
             TaskStep.PickItems(promptKey = "task.scenario.step2", itemIds = listOf(food.id, toy.id), budget = Coins(30)),
         ),
         outcomes = listOf(
-            TaskOutcome(id = "careful", condition = OutcomeCondition.OptionChosen("list"), reward = Coins(15), explanationKey = "task.scenario.careful"),
+            TaskOutcome(id = "careful", condition = OutcomeCondition.OptionChosen("list"), reward = Coins(15), explanationKey = "task.scenario.careful", correct = true),
             TaskOutcome(id = "otherwise", condition = OutcomeCondition.Otherwise, reward = Coins(5), explanationKey = "task.scenario.rushed"),
         ),
     )
@@ -143,7 +145,7 @@ class TaskFlowTest {
         introKey = "task.shelf.intro",
         steps = listOf(TaskStep.PickItems(promptKey = "task.shelf.step", itemIds = listOf(food.id, toy.id, bike.id), budget = Coins(30))),
         outcomes = listOf(
-            TaskOutcome(id = "thrifty", condition = OutcomeCondition.SpentAtMost(Coins(20)), reward = Coins(15), explanationKey = "task.shelf.thrifty"),
+            TaskOutcome(id = "thrifty", condition = OutcomeCondition.SpentAtMost(Coins(20)), reward = Coins(15), explanationKey = "task.shelf.thrifty", correct = true),
             TaskOutcome(id = "otherwise", condition = OutcomeCondition.Otherwise, reward = Coins(5), explanationKey = "task.shelf.full"),
         ),
     )
@@ -191,7 +193,6 @@ class TaskFlowTest {
         assertEquals("Сова нашла монеты. Что с ними делать?", ready.intro)
         assertEquals(Coins(15), ready.maxReward)
         assertTrue(ready.rewardAvailable)
-        assertTrue(ready.canStart)
         assertEquals(TaskStage.Intro, ready.stage)
     }
 
@@ -326,7 +327,8 @@ class TaskFlowTest {
 
         val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
         assertEquals("Потратил больше двадцати — в другой раз посмотри на цены.", done.outcome.text)
-        assertEquals(Coins(5), done.outcome.reward)
+        // R8: объяснение есть, монет за неверный ответ нет, хоть в исходе и записана награда.
+        assertEquals(Coins.ZERO, done.outcome.reward)
     }
 
     @Test
@@ -345,23 +347,21 @@ class TaskFlowTest {
         assertEquals(Coins(15), done.outcome.reward)
     }
 
-    /** ТЗ 2.5.5: пока день планируется, задания не проходятся. */
+    /** R7: задания доступны до плана — награда входит в сумму, которую ребёнок распределит. */
     @Test
-    fun пока_день_планируется_ответить_нельзя() = runBlocking {
+    fun пока_день_планируется_задание_проходится_и_платит() = runBlocking {
         val vm = viewModel(story)
-        val ready = vm.awaitReady()
-        assertFalse(ready.canStart)
+        vm.awaitReady()
 
         vm.start()
         vm.choose("save")
         vm.await { (it.stage as? TaskStage.Step)?.step?.canProceed == true }
         vm.next()
 
-        // Не молчим на шаге, а возвращаем ко вступлению с подсказкой про план.
-        assertEquals(TaskStage.Intro, vm.await { it.stage is TaskStage.Intro }.stage)
+        vm.await { it.stage is TaskStage.Done }
         val period = periods.current(profileId)!!
-        assertTrue(periods.transactions(period.id).none { it.type == TransactionType.INCOME_TASK })
-        assertTrue(progress.completedIds(profileId).isEmpty())
+        assertEquals(PeriodStatus.PLANNING, period.status)
+        assertEquals(1, periods.transactions(period.id).count { it.type == TransactionType.INCOME_TASK })
     }
 
     @Test
@@ -411,6 +411,7 @@ class TaskFlowTest {
         profiles = profiles,
         periods = periods,
         openPeriod = OpenPeriodIfNeeded(periods = periods, wallet = WalletEngine(clock), balance = balance),
+        taskProgress = progress,
         engine = TaskEngine(clock),
         budget = BudgetEngine(),
         recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = progress),

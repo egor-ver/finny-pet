@@ -26,6 +26,7 @@ class GameBalanceTest {
         nightDropMood = 10,
         statFloor = statFloor,
         needThreshold = 70,
+        sadThreshold = 40,
         moodBonusPlanFollowed = 10,
         growthForMandatoryCovered = growthForMandatoryCovered,
         growthForPlanFollowed = 2,

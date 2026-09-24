@@ -27,9 +27,9 @@ class TaskEngine(private val clock: GameClock) {
      * Разбирает попытку: исход, награду, влияние на питомца и объяснение.
      *
      * [rewardable] — можно ли за это прохождение платить: лимит наград в день
-     * (`GameBalance.rewardedTasksPerPeriod`) считает вызывающий по операциям
-     * периода. Когда платить нельзя, исход и объяснение те же, награда — ноль,
-     * операции нет: ребёнок учится, а экономика не раздувается.
+     * и первую попытку дня считает вызывающий ([ru.finnypet.app.domain.usecase.TaskSchedule]).
+     * Когда платить нельзя или ответ неверный, исход и объяснение те же,
+     * награда — ноль, операции нет: ребёнок учится, а экономика не раздувается.
      */
     fun evaluate(
         task: LearningTask,
@@ -41,7 +41,7 @@ class TaskEngine(private val clock: GameClock) {
         checkAnswersMatchSteps(task, attempt)
 
         val outcome = outcomeFor(task, attempt)
-        val reward = if (rewardable) outcome.reward else Coins.ZERO
+        val reward = if (rewardable && outcome.correct) outcome.reward else Coins.ZERO
         val newBalance = currentBalance + reward
         val rewarded = reward > Coins.ZERO
 

@@ -29,7 +29,7 @@ import ru.finnypet.app.domain.repository.TaskProgressRepository
 
 /**
  * Проживает день демонстрации целиком (ТЗ 2.5.13, шаги 5–10 Приложения А):
- * план с копилкой, задание, обязательная и необязательная покупки, закрытие.
+ * задание, план с копилкой, обязательная и необязательная покупки, закрытие.
  * Эксперт видит пять периодов и три стадии роста за пять нажатий.
  *
  * Ничего не имитирует — всё идёт через те же движки и записи, что и действия
@@ -54,6 +54,8 @@ class PlayDemoDay(
     suspend operator fun invoke() {
         val profileId = profiles.testProfile()?.id ?: return
         val period = openPeriod(profileId)
+        // Сначала заработай, потом распредели (R7): награда входит в план.
+        passTask(profileId, period)
         // Тот же расчёт, что подсказывает ребёнку главный экран: самый дешёвый
         // набор, закрывающий потребности. Иначе сова в демо не росла бы (AD-3).
         val needs = profiles.pet(profileId)
@@ -61,7 +63,6 @@ class PlayDemoDay(
             .orEmpty()
         val plan = planOf(profileId, period, needs.totalPrice())
 
-        passTask(profileId, period)
         // Желаемое покупается одно и после нужного: весь план на него ещё свободен.
         needs.forEach { buy(profileId, period, it, plan.optional) }
         cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it, plan.optional) }
@@ -105,16 +106,19 @@ class PlayDemoDay(
         .filter { it.category == category && budget.covers(it.price) }
         .minByOrNull { it.price.amount }
 
-    /** Задание дня на исход с наибольшей наградой: эксперт видит начисление и объяснение. */
+    /** Задание дня на верный исход с наибольшей наградой: эксперт видит начисление и объяснение. */
     private suspend fun passTask(profileId: ProfileId, period: GamePeriod) {
         val pack = content.pack()
-        val task = TaskSchedule.taskOfTheDay(pack.tasks, tasks.observeCompleted(profileId).first()) ?: return
+        val state = profiles.pet(profileId)?.state ?: return
+        val completed = tasks.observeCompleted(profileId).first()
+        val transactions = periods.transactions(period.id)
+        val task = TaskSchedule.taskOfTheDay(pack.tasks, completed, transactions, state, pack.balance) ?: return
         val result = taskEngine.evaluate(
             task = task,
             attempt = bestAttempt(task),
             currentBalance = periods.balance(period),
             periodId = period.id,
-            rewardable = TaskSchedule.rewardAvailable(periods.transactions(period.id), pack.balance),
+            rewardable = TaskSchedule.rewardable(task.id, completed, transactions, pack.balance),
         ).value
         recorder.record(
             profileId = profileId,
@@ -131,7 +135,7 @@ class PlayDemoDay(
     }
 
     private fun bestAttempt(task: LearningTask): TaskAttempt {
-        val goal = task.outcomes.maxBy { it.reward.amount }.condition
+        val goal = task.outcomes.filter { it.correct }.maxBy { it.reward.amount }.condition
         return TaskAttempt(task.steps.map { answerFor(it, goal) })
     }
 

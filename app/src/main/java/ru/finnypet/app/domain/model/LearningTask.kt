@@ -158,12 +158,17 @@ sealed interface OutcomeCondition {
     data object Otherwise : OutcomeCondition
 }
 
+/**
+ * [correct] — верный ли это ответ. Монеты и отметка «пройдено» — только за
+ * верный (R8): иначе ошибиться в задании было бы нельзя, любой ответ платил.
+ */
 data class TaskOutcome(
     val id: String,
     val condition: OutcomeCondition,
     val reward: Coins,
     val explanationKey: String,
     val effects: List<PetEffect> = emptyList(),
+    val correct: Boolean = false,
 ) {
 
     init {
@@ -172,12 +177,17 @@ data class TaskOutcome(
     }
 }
 
+/**
+ * [showWhenSadAbout] — задание-разбор ошибки (AD-7): показывается само, пока
+ * сова грустит из-за этого показателя, и не входит в список заданий.
+ */
 data class LearningTask(
     val id: TaskId,
     val topic: TaskTopic,
     val introKey: String,
     val steps: List<TaskStep>,
     val outcomes: List<TaskOutcome>,
+    val showWhenSadAbout: PetStatKind? = null,
 ) {
 
     init {
@@ -193,4 +203,6 @@ data class LearningTask(
     }
 
     val fallback: TaskOutcome get() = outcomes.first { it.condition is OutcomeCondition.Otherwise }
+
+    val isReview: Boolean get() = showWhenSadAbout != null
 }

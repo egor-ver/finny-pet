@@ -23,7 +23,8 @@
             "minMandatory": 15,
             "minSavings": 5
           },
-          "explanationKey": "task.plan_pocket_money.saved"
+          "explanationKey": "task.plan_pocket_money.saved",
+          "correct": true
         },
         {
           "condition": {
@@ -57,7 +58,8 @@
             "type": "BASKET_CONTAINS_ALL",
             "requiredItemIds": ["notebook", "pens", "ruler"]
           },
-          "explanationKey": "task.plan_school_supplies.success"
+          "explanationKey": "task.plan_school_supplies.success",
+          "correct": true
         },
         {
           "condition": {
@@ -89,7 +91,8 @@
             "type": "JARS_DISTRIBUTION",
             "minSavings": 15
           },
-          "explanationKey": "task.save_gift_coins.success"
+          "explanationKey": "task.save_gift_coins.success",
+          "correct": true
         },
         {
           "condition": {
@@ -120,7 +123,8 @@
             "type": "SELECTED_OPTION",
             "optionIds": ["save_to_goal", "pause_one_day"]
           },
-          "explanationKey": "task.save_fair_temptation.success"
+          "explanationKey": "task.save_fair_temptation.success",
+          "correct": true
         },
         {
           "condition": {
@@ -152,7 +156,8 @@
             "type": "BASKET_CONTAINS",
             "itemId": "juice_big"
           },
-          "explanationKey": "task.pay_smart_pack.success"
+          "explanationKey": "task.pay_smart_pack.success",
+          "correct": true
         },
         {
           "condition": {
@@ -182,13 +187,42 @@
             "type": "SELECTED_OPTION",
             "optionId": "only_ticket"
           },
-          "explanationKey": "task.pay_cinema_cashier.success"
+          "explanationKey": "task.pay_cinema_cashier.success",
+          "correct": true
         },
         {
           "condition": {
             "type": "OTHERWISE"
           },
           "explanationKey": "task.pay_cinema_cashier.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "review-hungry-owl",
+      "topic": "PLANNING",
+      "titleKey": "task.review_hungry.intro",
+      "showWhen": { "type": "PET_SAD", "stat": "SATIETY" },
+      "steps": [
+        {
+          "type": "CHOICE",
+          "promptKey": "task.review_hungry.step1",
+          "options": [
+            { "id": "spent_on_wants", "textKey": "task.review_hungry.opt_wants" },
+            { "id": "dislikes_food", "textKey": "task.review_hungry.opt_taste" },
+            { "id": "shop_empty", "textKey": "task.review_hungry.opt_shop" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "SELECTED_OPTION", "optionId": "spent_on_wants" },
+          "explanationKey": "task.review_hungry.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.review_hungry.otherwise"
         }
       ]
     }

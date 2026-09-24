@@ -165,7 +165,6 @@ class DesignSystemTest {
         appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
         maxReward = Coins(15),
         rewardAvailable = true,
-        canStart = true,
         stage = TaskStage.Step(index = 0, total = 1, step = step),
     )
 

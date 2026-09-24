@@ -150,24 +150,12 @@ fun FinnyNavHost(
         composable<Tasks> {
             TasksScreen(
                 onBack = { navController.popBackStack() },
-                onPlan = {
-                    navController.navigate(Budget) {
-                        popUpTo<Main>()
-                    }
-                },
                 onOpen = { taskId -> navController.navigate(Task(taskId.value)) },
             )
         }
 
         composable<Task> {
-            TaskScreen(
-                onBack = { navController.popBackStack() },
-                onPlan = {
-                    navController.navigate(Budget) {
-                        popUpTo<Main>()
-                    }
-                },
-            )
+            TaskScreen(onBack = { navController.popBackStack() })
         }
 
         composable<Savings> {

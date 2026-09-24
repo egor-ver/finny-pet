@@ -84,6 +84,7 @@ class ProgressFlowTest {
                 condition = OutcomeCondition.SavedAtLeast(Coins(10)),
                 reward = Coins(15),
                 explanationKey = "task.jars.ok",
+                correct = true,
             ),
             TaskOutcome(
                 id = "otherwise",

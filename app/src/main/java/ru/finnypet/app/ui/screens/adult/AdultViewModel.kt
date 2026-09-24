@@ -36,6 +36,7 @@ import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.DeleteGame
 import ru.finnypet.app.domain.usecase.StartDemo
+import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
@@ -118,9 +119,11 @@ class AdultViewModel @Inject constructor(
 
     private val texts: Map<String, String> = content.pack().texts
 
-    /** Сколько заданий в теме — из контент-пака, а не из прохождений. */
+    private val allTasks = content.pack().tasks
+
+    /** Сколько заданий в теме — из контент-пака, а не из прохождений; разбор не в счёт (AD-7). */
     private val topicTasks: Map<TaskTopic, List<TaskId>> =
-        content.pack().tasks.groupBy({ it.topic }, { it.id })
+        TaskSchedule.listed(allTasks).groupBy({ it.topic }, { it.id })
 
     /** Ключа может не быть — тогда строки просто нет, а не «adult.about.4» на экране. */
     private val about: List<String> = ABOUT_KEYS.mapNotNull(texts::get)
@@ -266,7 +269,7 @@ class AdultViewModel @Inject constructor(
      * ещё не касался, а «нет темы в списке» этого не скажет.
      */
     private fun topicsOf(completed: List<CompletedTask>): List<TopicProgress> {
-        val passed = completed.mapTo(mutableSetOf()) { it.taskId }
+        val passed = TaskSchedule.passed(allTasks, completed)
         return TaskTopic.entries.map { topic ->
             val ids = topicTasks[topic].orEmpty()
             TopicProgress(topic = topic, passed = ids.count(passed::contains), total = ids.size)

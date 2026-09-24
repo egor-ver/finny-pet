@@ -9,7 +9,7 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.SpendCategory
 
 /**
- * Следующий шаг идёт по циклу Приложения А: план, задание, нужное, копилка, итоги.
+ * Следующий шаг идёт по циклу Приложения А: задание, план, нужное, копилка, итоги.
  * В магазин зовут потребности совы, а не недотраченный план (R3).
  */
 class NextStepTest {
@@ -18,7 +18,13 @@ class NextStepTest {
 
     @Test
     fun `пока день планируется — план`() {
-        assertEquals(NextStep.Plan, step(PeriodStatus.PLANNING, taskReward = true))
+        assertEquals(NextStep.Plan, step(PeriodStatus.PLANNING))
+    }
+
+    /** R7: сначала заработай, потом распредели — награда входит в план. */
+    @Test
+    fun `утром за задание платят — задание раньше плана`() {
+        assertEquals(NextStep.Task, step(PeriodStatus.PLANNING, taskReward = true))
     }
 
     @Test

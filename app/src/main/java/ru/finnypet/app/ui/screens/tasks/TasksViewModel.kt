@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.model.LearningTask
-import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
@@ -52,8 +51,6 @@ sealed interface TasksState {
         val rewardAvailable: Boolean,
         /** Сколько заданий в день приносят монеты — из чисел экономики, не из строки. */
         val rewardLimit: Int,
-        /** Задания проходятся только когда день идёт — как покупки и копилка. */
-        val canStart: Boolean,
     ) : TasksState
 }
 
@@ -71,7 +68,8 @@ class TasksViewModel @Inject constructor(
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
-    private val tasks: List<LearningTask> = content.pack().tasks
+    private val allTasks: List<LearningTask> = content.pack().tasks
+    private val tasks: List<LearningTask> = TaskSchedule.listed(allTasks)
     private val texts: Map<String, String> = content.pack().texts
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -106,7 +104,7 @@ class TasksViewModel @Inject constructor(
                     periods.observeTransactions(period.id),
                     progress.observeCompleted(profileId),
                 ) { transactions, completed ->
-                    val done = completed.map { it.taskId }.toSet()
+                    val done = TaskSchedule.passed(allTasks, completed)
                     TasksState.Ready(
                         groups = TaskTopic.entries.mapNotNull { topic ->
                             val rows = tasks.filter { it.topic == topic }.map { task ->
@@ -121,7 +119,6 @@ class TasksViewModel @Inject constructor(
                         },
                         rewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
                         rewardLimit = balance.rewardedTasksPerPeriod,
-                        canStart = period.status == PeriodStatus.RUNNING,
                     )
                 }
             }

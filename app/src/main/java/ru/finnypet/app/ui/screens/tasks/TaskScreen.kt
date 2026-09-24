@@ -53,7 +53,6 @@ import ru.finnypet.app.ui.theme.Dimens
 @Composable
 fun TaskScreen(
     onBack: () -> Unit,
-    onPlan: () -> Unit,
     viewModel: TaskViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -61,7 +60,6 @@ fun TaskScreen(
     TaskContent(
         state = state,
         onBack = onBack,
-        onPlan = onPlan,
         onStart = viewModel::start,
         onChoose = viewModel::choose,
         onAdd = viewModel::add,
@@ -76,7 +74,6 @@ fun TaskScreen(
 fun TaskContent(
     state: TaskState,
     onBack: () -> Unit,
-    onPlan: () -> Unit = {},
     onStart: () -> Unit = {},
     onChoose: (String) -> Unit = {},
     onAdd: (SpendCategory) -> Unit = {},
@@ -112,7 +109,7 @@ fun TaskContent(
         }
 
         is TaskState.Ready -> when (val stage = state.stage) {
-            TaskStage.Intro -> Intro(state = state, onBack = onBack, onPlan = onPlan, onStart = onStart)
+            TaskStage.Intro -> Intro(state = state, onBack = onBack, onStart = onStart)
             is TaskStage.Step -> Step(
                 state = state,
                 stage = stage,
@@ -153,7 +150,6 @@ private fun Screen(
 private fun Intro(
     state: TaskState.Ready,
     onBack: () -> Unit,
-    onPlan: () -> Unit,
     onStart: () -> Unit,
 ) {
     Screen(
@@ -161,7 +157,6 @@ private fun Intro(
         bottomBar = {
             ButtonColumn {
                 when {
-                    !state.canStart -> FinnyButton(text = stringResource(R.string.budget_action_plan), onClick = onPlan)
                     state.rewardAvailable -> FinnyButton(text = stringResource(R.string.task_start), onClick = onStart)
                     else -> FinnyButton(text = stringResource(R.string.task_start_training), onClick = onStart)
                 }
@@ -183,7 +178,6 @@ private fun Intro(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         when {
-            !state.canStart -> Note(text = stringResource(R.string.tasks_planning_hint))
             state.rewardAvailable -> Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),

@@ -6,9 +6,11 @@ import org.junit.Test
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.OutcomeCondition
+import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskStep
 import ru.finnypet.app.domain.model.TaskTopic
+import ru.finnypet.app.domain.usecase.TaskSchedule
 
 /**
  * Разбор проверяется на настоящих файлах из ассетов, а не на выдуманных
@@ -106,9 +108,52 @@ class ContentParserTest {
             pack.shop.map { it.category }.toSet(),
         )
         assertTrue("Целей меньше 3", pack.goals.size >= 3)
-        assertTrue("Заданий меньше 6", pack.tasks.size >= 6)
-        assertEquals("Нужны задания по всем трём темам", TaskTopic.entries.toSet(), pack.tasks.map { it.topic }.toSet())
+        // Разбор ошибки в минимум не входит (AD-7): он показывается сам, а не выбирается.
+        val listed = TaskSchedule.listed(pack.tasks)
+        assertTrue("Заданий меньше 6", listed.size >= 6)
+        assertEquals("Нужны задания по всем трём темам", TaskTopic.entries.toSet(), listed.map { it.topic }.toSet())
     }
+
+    @Test
+    fun `в настоящем контенте есть разбор голодной совы`() {
+        val reviews = parser.parse(realContent()).tasks.filter { it.isReview }
+
+        assertEquals(listOf(PetStatKind.SATIETY), reviews.map { it.showWhenSadAbout })
+    }
+
+    @Test
+    fun `признак верного исхода читается, по умолчанию — неверный`() {
+        val outcomes = parser.parse(realContent(tasks = TASK_WITH_ALL_STEPS)).tasks.single().outcomes
+
+        assertEquals(listOf(true, false), outcomes.map { it.correct })
+    }
+
+    /** Без верного исхода задание нельзя пройти, и за него не заплатят (R8). */
+    @Test
+    fun `задание без верного исхода не загружается`() {
+        val error = parseFailure(tasks = TASK_WITH_ALL_STEPS.replace(",\"correct\":true", ""))
+
+        assertTrue(error.message!!.contains("correct"))
+    }
+
+    @Test
+    fun `условие показа читается как разбор ошибки`() {
+        val task = parser.parse(realContent(tasks = reviewTask("PET_SAD"))).tasks.single()
+
+        assertEquals(PetStatKind.SATIETY, task.showWhenSadAbout)
+    }
+
+    @Test
+    fun `незнакомое условие показа не загружается`() {
+        val error = parseFailure(tasks = reviewTask("PET_BORED"))
+
+        assertTrue(error.message!!.contains("PET_BORED"))
+    }
+
+    private fun reviewTask(type: String) = TASK_WITH_ALL_STEPS.replace(
+        "\"titleKey\":\"i\",",
+        "\"titleKey\":\"i\",\"showWhen\":{\"type\":\"$type\",\"stat\":\"SATIETY\"},",
+    )
 
     /** Пропавший текст ребёнок видит сырым ключом вроде «task.….intro» — ловим здесь. */
     @Test
@@ -392,7 +437,7 @@ class ContentParserTest {
             {"type":"PICK_ITEMS","promptKey":"p3","itemIds":["food-porridge"],"budget":30}
           ],
           "outcomes":[
-            {"id":"good","condition":{"type":"OPTION_CHOSEN","optionId":"a"},"reward":10,"explanationKey":"e1"},
+            {"id":"good","condition":{"type":"OPTION_CHOSEN","optionId":"a"},"reward":10,"explanationKey":"e1","correct":true},
             {"id":"other","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e2"}
           ]
         }]}
@@ -406,7 +451,7 @@ class ContentParserTest {
             {"type":"DISTRIBUTE","promptKey":"p2","budget":40}
           ],
           "outcomes":[
-            {"id":"a","condition":{"type":"OPTION_CHOSEN","optionId":"x"},"reward":1,"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"OPTION_CHOSEN","optionId":"x"},"reward":1,"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":2,"explanationKey":"e2"},
             {"id":"c","condition":{"type":"SPENT_AT_MOST","amount":30},"reward":3,"explanationKey":"e3"},
             {"id":"d","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e4"}
@@ -419,7 +464,7 @@ class ContentParserTest {
           "id":"no-fallback","topic":"PLANNING","titleKey":"i",
           "steps":[{"type":"DISTRIBUTE","promptKey":"p","budget":40}],
           "outcomes":[
-            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":1,"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":1,"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"SAVED_AT_LEAST","amount":20},"reward":2,"explanationKey":"e2"}
           ]
         }]}
@@ -431,7 +476,7 @@ class ContentParserTest {
           "id":"typo","topic":"PLANNING","titleKey":"i",
           "steps":[{"type":"CHOICE","promptKey":"p","options":[{"id":"wait","textKey":"l"},{"id":"buy","textKey":"l2"}]}],
           "outcomes":[
-            {"id":"a","condition":{"type":"OPTION_CHOSEN","optionId":"waite"},"reward":1,"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"OPTION_CHOSEN","optionId":"waite"},"reward":1,"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e2"}
           ]
         }]}
@@ -442,7 +487,7 @@ class ContentParserTest {
           "id":"basket","topic":"PAYMENTS","titleKey":"i",
           "steps":[{"type":"PICK_ITEMS","promptKey":"p","itemIds":["no-such-item"],"budget":30}],
           "outcomes":[
-            {"id":"a","condition":{"type":"SPENT_AT_MOST","amount":30},"reward":1,"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"SPENT_AT_MOST","amount":30},"reward":1,"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e2"}
           ]
         }]}
@@ -453,7 +498,7 @@ class ContentParserTest {
           "id":"no-reward","topic":"SAVING","titleKey":"i",
           "steps":[{"type":"DISTRIBUTE","promptKey":"p","budget":40}],
           "outcomes":[
-            {"id":"saved","condition":{"type":"SAVED_AT_LEAST","amount":10},"explanationKey":"e1"},
+            {"id":"saved","condition":{"type":"SAVED_AT_LEAST","amount":10},"explanationKey":"e1","correct":true},
             {"id":"other","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e2"}
           ]
         }]}
@@ -475,7 +520,7 @@ class ContentParserTest {
             ]}
           ],
           "outcomes":[
-            {"condition":{"type":"JARS_DISTRIBUTION","minMandatory":15,"minSavings":5},"explanationKey":"e1"},
+            {"condition":{"type":"JARS_DISTRIBUTION","minMandatory":15,"minSavings":5},"explanationKey":"e1","correct":true},
             {"condition":{"type":"BASKET_CONTAINS","itemId":"juice"},"explanationKey":"e2"},
             {"condition":{"type":"OTHERWISE"},"explanationKey":"e3"}
           ]
@@ -489,7 +534,7 @@ class ContentParserTest {
             {"id":"pocket","labelKey":"l"}
           ]}],
           "outcomes":[
-            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
           ]
         }]}
@@ -504,7 +549,7 @@ class ContentParserTest {
             {"id":"buy","textKey":"l3"}
           ]}],
           "outcomes":[
-            {"id":"patient","condition":{"type":"SELECTED_OPTION","optionIds":["save","pause"]},"explanationKey":"e1"},
+            {"id":"patient","condition":{"type":"SELECTED_OPTION","optionIds":["save","pause"]},"explanationKey":"e1","correct":true},
             {"id":"hasty","condition":{"type":"SELECTED_OPTION","optionId":"buy"},"explanationKey":"e2"},
             {"id":"other","condition":{"type":"OTHERWISE"},"explanationKey":"e3"}
           ]
@@ -519,7 +564,7 @@ class ContentParserTest {
             {"id":"pen","titleKey":"t2","price":12,"isMandatory":true}
           ]}],
           "outcomes":[
-            {"id":"a","condition":{"type":"BASKET_CONTAINS_ALL","requiredItemIds":["notebook","pen"]},"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"BASKET_CONTAINS_ALL","requiredItemIds":["notebook","pen"]},"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
           ]
         }]}
@@ -532,7 +577,7 @@ class ContentParserTest {
             {"id":"notebook","titleKey":"t1","price":10,"isMandatory":true}
           ]}],
           "outcomes":[
-            {"id":"a","condition":{"type":"BASKET_CONTAINS","itemId":"ruler"},"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"BASKET_CONTAINS","itemId":"ruler"},"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
           ]
         }]}
@@ -543,7 +588,7 @@ class ContentParserTest {
           "id":"bad-topic","topic":"SHOPPING","titleKey":"i",
           "steps":[{"type":"DISTRIBUTE","promptKey":"p","budget":40}],
           "outcomes":[
-            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":1,"explanationKey":"e1"},
+            {"id":"a","condition":{"type":"SAVED_AT_LEAST","amount":10},"reward":1,"explanationKey":"e1","correct":true},
             {"id":"b","condition":{"type":"OTHERWISE"},"reward":0,"explanationKey":"e2"}
           ]
         }]}

@@ -125,7 +125,6 @@ class TasksFlowTest {
         assertTrue(ready.groups.flatMap { it.tasks }.none { it.completed })
         assertTrue(ready.rewardAvailable)
         assertEquals(1, ready.rewardLimit)
-        assertTrue(ready.canStart)
     }
 
     /** Пометка «пройдено» и лимит приходят из базы: одно записано прохождение — одно помечено, лимит выбран. */
@@ -237,7 +236,7 @@ class TasksFlowTest {
         introKey = "task.$id.intro",
         steps = listOf(TaskStep.Distribute(promptKey = "task.$id.step", budget = Coins(40))),
         outcomes = listOf(
-            TaskOutcome(id = "ok", condition = OutcomeCondition.SavedAtLeast(Coins(10)), reward = Coins(15), explanationKey = "task.$id.ok"),
+            TaskOutcome(id = "ok", condition = OutcomeCondition.SavedAtLeast(Coins(10)), reward = Coins(15), explanationKey = "task.$id.ok", correct = true),
             TaskOutcome(id = "otherwise", condition = OutcomeCondition.Otherwise, reward = Coins(5), explanationKey = "task.$id.no"),
         ),
     )

@@ -23,10 +23,9 @@ import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
-import ru.finnypet.app.domain.model.GamePeriod
+import ru.finnypet.app.domain.model.CompletedTask
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.LearningTask
-import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
@@ -44,11 +43,12 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
-import ru.finnypet.app.ui.screens.ProfileViewModel
+import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.components.PlanJar
 import ru.finnypet.app.ui.navigation.Task
+import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
@@ -161,10 +161,11 @@ sealed interface TaskState {
         /** Кто просит совета: сова ребёнка, как на главном. */
         val appearance: PetAppearance,
         val maxReward: Coins,
-        /** Остался ли на сегодня лимит наград: сообщается до старта, не после. */
+        /**
+         * Платят ли за это задание сегодня: лимит не выбран и попытка первая
+         * (R8). Сообщается до старта, не после.
+         */
         val rewardAvailable: Boolean,
-        /** Задания проходятся только когда день идёт — как покупки и копилка. */
-        val canStart: Boolean,
         val stage: TaskStage,
         /** Ответ отправлен и разбирается. */
         val submitting: Boolean = false,
@@ -201,6 +202,7 @@ class TaskViewModel @Inject constructor(
     profiles: ProfileRepository,
     private val periods: PeriodRepository,
     private val openPeriod: OpenPeriodIfNeeded,
+    private val taskProgress: TaskProgressRepository,
     private val engine: TaskEngine,
     private val budget: BudgetEngine,
     private val recorder: OutcomeRecorder,
@@ -312,15 +314,15 @@ class TaskViewModel @Inject constructor(
     }
 
     private suspend fun answer(profileId: ProfileId, task: LearningTask, attempt: TaskAttempt) {
-        // День перестал идти, пока задание было открыто: молча вернуть на шаг
-        // нельзя, ребёнок не поймёт. Возвращаемся ко вступлению — там видна
-        // подсказка про план и дорога к нему.
-        val period = periods.current(profileId)?.takeIf { it.status == PeriodStatus.RUNNING }
+        // Задания доступны и до плана (R7): награда входит в сумму, которую
+        // ребёнок потом распределит. Дня нет — только пока он открывается.
+        val period = periods.current(profileId)
         if (period == null) {
             progress.update { Progress() }
             return
         }
-        val rewardable = TaskSchedule.rewardAvailable(periods.transactions(period.id), balance)
+        val completed = taskProgress.observeCompleted(profileId).first()
+        val rewardable = TaskSchedule.rewardable(task.id, completed, periods.transactions(period.id), balance)
         val result = engine.evaluate(task, attempt, periods.balance(period), period.id, rewardable)
         val paid = result.value.transaction?.amount ?: Coins.ZERO
         val changes = recorder.record(
@@ -384,8 +386,12 @@ class TaskViewModel @Inject constructor(
             if (period == null) {
                 flowOf(TaskState.Loading)
             } else {
-                combine(periods.observeTransactions(period.id), progress) { transactions, current ->
-                    ready(profile, task, period, transactions, current)
+                combine(
+                    periods.observeTransactions(period.id),
+                    taskProgress.observeCompleted(profile.id),
+                    progress,
+                ) { transactions, completed, current ->
+                    ready(profile, task, transactions, completed, current)
                 }
             }
         }
@@ -393,17 +399,16 @@ class TaskViewModel @Inject constructor(
     private fun ready(
         profile: Profile,
         task: LearningTask,
-        period: GamePeriod,
         transactions: List<Transaction>,
+        completed: List<CompletedTask>,
         current: Progress,
     ) = TaskState.Ready(
         id = task.id,
         topic = task.topic,
         intro = texts.textOf(task.introKey),
         appearance = profile.appearance,
-        maxReward = task.outcomes.maxOf { it.reward },
-        rewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
-        canStart = period.status == PeriodStatus.RUNNING,
+        maxReward = task.outcomes.filter { it.correct }.maxOf { it.reward },
+        rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
         stage = stageOf(task, current),
         submitting = current.submitting,
     )

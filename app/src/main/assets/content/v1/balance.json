@@ -8,6 +8,7 @@
   "nightDropMood": 10,
   "statFloor": 30,
   "needThreshold": 70,
+  "sadThreshold": 40,
   "moodBonusPlanFollowed": 15,
   "growthForMandatoryCovered": 2,
   "growthForPlanFollowed": 2,

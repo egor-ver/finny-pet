@@ -37,6 +37,7 @@ class TaskEngineTest {
         reward = Coins(15),
         explanationKey = "task.saved",
         effects = listOf(PetEffect(PetStatKind.MOOD, 5)),
+        correct = true,
     )
 
     private val fallback = TaskOutcome(
@@ -77,6 +78,17 @@ class TaskEngineTest {
         assertEquals("0", result.explanation.args["reward"])
         assertEquals("60", result.explanation.args["balance"])
         assertEquals(savedEnough.effects, result.value.effects)
+    }
+
+    /** R8: ошибиться можно, но монет за ошибку нет — объяснение то же. */
+    @Test
+    fun `неверный ответ монет не приносит даже с наградой в исходе`() {
+        val result = engine.evaluate(task(), allocated(55, 5, 0), Coins(60), periodId = 1)
+
+        assertEquals("spent_all", result.value.outcome.id)
+        assertEquals(Coins(60), result.value.newBalance)
+        assertNull(result.value.transaction)
+        assertEquals("task.spent_all", result.explanation.key)
     }
 
     @Test

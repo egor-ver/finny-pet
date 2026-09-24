@@ -24,6 +24,7 @@ data class BalanceDto(
     val nightDropMood: Int,
     val statFloor: Int,
     val needThreshold: Int,
+    val sadThreshold: Int,
     val moodBonusPlanFollowed: Int,
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
@@ -228,10 +229,19 @@ data class OutcomeDto(
     val reward: Int? = null,
     val explanationKey: String,
     val effects: List<EffectDto> = emptyList(),
+    /** Не указан — ответ неверный: монеты случайно не раздаются. */
+    val correct: Boolean = false,
 )
 
 @Serializable
 data class TasksDto(val tasks: List<TaskDto>)
+
+/** Когда задание показывается само: пока `type` — только PET_SAD. */
+@Serializable
+data class ShowWhenDto(
+    val type: String,
+    val stat: String,
+)
 
 @Serializable
 data class TaskDto(
@@ -241,4 +251,6 @@ data class TaskDto(
     val titleKey: String,
     val steps: List<TaskStepDto>,
     val outcomes: List<OutcomeDto>,
+    /** Есть — это разбор ошибки, а не обычное задание (AD-7). */
+    val showWhen: ShowWhenDto? = null,
 )
