@@ -63,7 +63,18 @@ class NextStepTest {
 
     @Test
     fun `нужного в магазине нет — спать, а не магазин`() {
-        assertEquals(NextStep.Sleep, nextStep(PeriodStatus.RUNNING, hasNeeds = true, Coins(50), cheapestMandatory = null))
+        assertEquals(NextStep.Sleep, nextStep(PeriodStatus.RUNNING, hasNeeds = true, Coins(50), cheapestNeeded = null))
+    }
+
+    /**
+     * Б6: сове нужен только уход, самое дешёвое нужное для него — 15
+     * (эталон `PetStateEngineTest`), а не 8 за воду, которая ухода не
+     * поднимает. На 10 монет не хватает даже на уход — кнопка ведёт спать,
+     * а не в магазин, где нужный товар всё равно не купить.
+     */
+    @Test
+    fun `хватает на воду, но нужен только уход — спать, а не магазин`() {
+        assertEquals(NextStep.Sleep, nextStep(PeriodStatus.RUNNING, hasNeeds = true, Coins(10), cheapestNeeded = Coins(15)))
     }
 
     /** Днём награда за задание не перебивает голод: сначала сова. */
@@ -154,7 +165,7 @@ class NextStepTest {
         status: PeriodStatus = PeriodStatus.RUNNING,
         hasNeeds: Boolean = false,
         wallet: Int = 50,
-    ) = nextStep(status, hasNeeds, Coins(wallet), CHEAPEST_MANDATORY)
+    ) = nextStep(status, hasNeeds, Coins(wallet), CHEAPEST_NEEDED)
 
     private fun phrase(
         step: NextStep,
@@ -174,6 +185,6 @@ class NextStepTest {
     )
 
     private companion object {
-        val CHEAPEST_MANDATORY = Coins(8)
+        val CHEAPEST_NEEDED = Coins(8)
     }
 }

@@ -27,7 +27,6 @@ import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ShopItem
-import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.model.Transaction
@@ -136,9 +135,6 @@ class MainViewModel @Inject constructor(
     private val shop = content.pack().shop
     private val shopItems: Map<ItemId, ShopItem> = shop.associateBy { it.id }
     private val pets = content.pack().pets
-    private val cheapestMandatory: Coins? = shop
-        .filter { it.category == SpendCategory.MANDATORY }
-        .minOfOrNull { it.price }
     private val texts: Map<String, String> = content.pack().texts
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -188,7 +184,7 @@ class MainViewModel @Inject constructor(
                 ) { wallet, transactions, plan, bought ->
                     val task = taskOf(completed, transactions, pet.state)
                     val needs = petState.needsOf(pet.state)
-                    val step = nextStep(period.status, needs.isNotEmpty(), wallet, cheapestMandatory)
+                    val step = nextStep(period.status, needs.isNotEmpty(), wallet, petState.cheapestNeeded(pet.state, shop))
                     val phrase = owlPhrase(
                         step = step,
                         needs = needs,

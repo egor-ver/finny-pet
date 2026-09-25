@@ -8,7 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -53,23 +55,23 @@ fun FinnyNavHost(
     ) {
         composable<Onboarding> {
             OnboardingScreen(
-                onDone = { navController.navigate(CreatePet) },
+                onDone = { navController.navigateOnce(CreatePet) },
             )
         }
 
         composable<Help> {
             OnboardingScreen(
-                onDone = { navController.popBackStack() },
-                onBack = { navController.popBackStack() },
+                onDone = { navController.popOnce() },
+                onBack = { navController.popOnce() },
                 doneText = stringResource(R.string.action_ok),
             )
         }
 
         composable<CreatePet> {
             CreatePetScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popOnce() },
                 onCreated = {
-                    navController.navigate(Main) {
+                    navController.navigateOnce(Main) {
                         popUpTo(Onboarding) { inclusive = true }
                     }
                 },
@@ -78,25 +80,25 @@ fun FinnyNavHost(
 
         composable<Main> {
             MainScreen(
-                onPlan = { navController.navigate(Budget) },
-                onShop = { navController.navigate(Shop) },
-                onSavings = { navController.navigate(Savings) },
-                onTask = { taskId -> navController.navigate(Task(taskId.value)) },
-                onTasks = { navController.navigate(Tasks) },
-                onFinishDay = { navController.navigate(Day) },
-                onProgress = { navController.navigate(Progress) },
-                onHelp = { navController.navigate(Help) },
-                onAdult = { navController.navigate(AdultGate) },
+                onPlan = { navController.navigateOnce(Budget) },
+                onShop = { navController.navigateOnce(Shop) },
+                onSavings = { navController.navigateOnce(Savings) },
+                onTask = { taskId -> navController.navigateOnce(Task(taskId.value)) },
+                onTasks = { navController.navigateOnce(Tasks) },
+                onFinishDay = { navController.navigateOnce(Day) },
+                onProgress = { navController.navigateOnce(Progress) },
+                onHelp = { navController.navigateOnce(Help) },
+                onAdult = { navController.navigateOnce(AdultGate) },
                 banner = {
                     DemoBanner(onNeedsOnboarding = {
-                        navController.navigate(Onboarding) { popUpTo(Main) { inclusive = true } }
+                        navController.navigateOnce(Onboarding) { popUpTo(Main) { inclusive = true } }
                     })
                 },
             )
         }
 
         composable<Progress> {
-            ProgressScreen(onBack = { navController.popBackStack() })
+            ProgressScreen(onBack = { navController.popOnce() })
         }
 
         composable<AdultGate> {
@@ -104,85 +106,108 @@ fun FinnyNavHost(
                 // Пример убирается из стека: «назад» из раздела должен вести
                 // на главный экран, а не снова спрашивать пример.
                 onSolved = {
-                    navController.navigate(Adult) { popUpTo(AdultGate) { inclusive = true } }
+                    navController.navigateOnce(Adult) { popUpTo(AdultGate) { inclusive = true } }
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popOnce() },
             )
         }
 
         composable<Adult> {
             AdultScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popOnce() },
                 // Демонстрация начинается на главном: стек раздела взрослого
                 // за спиной привёл бы «назад» в чужую уже страницу.
                 onDemoStarted = {
-                    navController.navigate(Main) { popUpTo(Main) { inclusive = true } }
+                    navController.navigateOnce(Main) { popUpTo(Main) { inclusive = true } }
                 },
                 onGameDeleted = {
-                    navController.navigate(Onboarding) { popUpTo(navController.graph.id) { inclusive = true } }
+                    navController.navigateOnce(Onboarding) { popUpTo(navController.graph.id) { inclusive = true } }
                 },
             )
         }
 
         composable<Day> {
             DayScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popOnce() },
                 onPlan = {
                     // Из «день ещё планируется» дорога одна — в план, и итоги
-                    // в стеке не нужны: закрывать пока нечего.
-                    navController.popBackStack()
-                    navController.navigate(Budget)
+                    // в стеке не нужны: закрывать пока нечего. Один переход,
+                    // а не pop + navigate: после pop запись Main ещё в
+                    // переходе (STARTED, не RESUMED), и второй шаг не
+                    // сработал бы (замечание ревью L3).
+                    navController.navigateOnce(Budget) { popUpTo<Day> { inclusive = true } }
                 },
             )
         }
 
         composable<Budget> {
             BudgetScreen(
-                onBack = { navController.popBackStack() },
-                onShop = { navController.navigate(Shop) },
-                onSavings = { navController.navigate(Savings) },
+                onBack = { navController.popOnce() },
+                onShop = { navController.navigateOnce(Shop) },
+                onSavings = { navController.navigateOnce(Savings) },
             )
         }
 
         composable<Shop> {
             ShopScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popOnce() },
                 // Из магазина в план — не поверх магазина, а вместо него:
                 // после плана ребёнок вернётся на главный, а не в магазин,
                 // где ещё минуту назад покупать было нельзя.
                 onPlan = {
-                    navController.navigate(Budget) {
+                    navController.navigateOnce(Budget) {
                         popUpTo<Main>()
                     }
                 },
                 // А копилка и задания — поверх: взял монеты, вернулся и купил.
-                onSavings = { navController.navigate(Savings) },
-                onTasks = { navController.navigate(Tasks) },
+                onSavings = { navController.navigateOnce(Savings) },
+                onTasks = { navController.navigateOnce(Tasks) },
             )
         }
 
         composable<Tasks> {
             TasksScreen(
-                onBack = { navController.popBackStack() },
-                onOpen = { taskId -> navController.navigate(Task(taskId.value)) },
+                onBack = { navController.popOnce() },
+                onOpen = { taskId -> navController.navigateOnce(Task(taskId.value)) },
             )
         }
 
         composable<Task> {
-            TaskScreen(onBack = { navController.popBackStack() })
+            TaskScreen(onBack = { navController.popOnce() })
         }
 
         composable<Savings> {
             SavingsScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popOnce() },
                 onPlan = {
-                    navController.navigate(Budget) {
+                    navController.navigateOnce(Budget) {
                         popUpTo<Main>()
                     }
                 },
             )
         }
     }
+}
+
+/**
+ * Один переход на одно нажатие (Б14): экран смены (`screenExit`) ещё
+ * принимает нажатия, пока идёт анимация, и двойное нажатие открывает
+ * следующий экран дважды или дважды закрывает текущий. У текущей записи
+ * стека `RESUMED` пропадает сразу после первого перехода и возвращается,
+ * только если он не состоялся, — так второе нажатие до этого момента
+ * ничего не делает. Проверка одна и та же для входа и для «назад»
+ * (замечание ревью L3: второе «назад» иначе снимало бы уже следующий экран).
+ */
+private fun NavHostController.navigateOnce(route: Any) {
+    if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) navigate(route)
+}
+
+private fun NavHostController.navigateOnce(route: Any, builder: NavOptionsBuilder.() -> Unit) {
+    if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) navigate(route, builder)
+}
+
+private fun NavHostController.popOnce() {
+    if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) popBackStack()
 }
 
 /**

@@ -235,6 +235,32 @@ class PetStateEngineTest {
         assertFalse(engine.neededNow(pet(satiety = 30, care = 30), candy))
     }
 
+    /**
+     * Б6: нужен только уход — самая дешёвая покупка для решения «в магазин»
+     * не должна быть водой (8), которая поднимает только сытость и уходу
+     * не поможет. Ответ — вода дороже цены самого дешёвого ухода (15).
+     */
+    @Test
+    fun `нужен только уход — самое дешёвое нужное по цене ухода, а не воды`() {
+        assertEquals(Coins(15), engine.cheapestNeeded(pet(satiety = 90, care = 30), shop))
+    }
+
+    @Test
+    fun `нужна только сытость — самое дешёвое нужное — вода`() {
+        assertEquals(Coins(8), engine.cheapestNeeded(pet(satiety = 30, care = 90), shop))
+    }
+
+    @Test
+    fun `потребностей нет — самого дешёвого нужного нет`() {
+        assertNull(engine.cheapestNeeded(pet(satiety = 90, care = 90), shop))
+    }
+
+    @Test
+    fun `потребность нечем закрыть — самого дешёвого нужного нет`() {
+        val noCare = shop.filter { it.effects.none { effect -> effect.stat == PetStatKind.CARE } }
+        assertNull(engine.cheapestNeeded(pet(satiety = 90, care = 30), noCare))
+    }
+
     @Test
     fun `две воды дешевле каши с водой`() {
         val cover = engine.cheapestCover(pet(satiety = 40, care = 90), shop)!!

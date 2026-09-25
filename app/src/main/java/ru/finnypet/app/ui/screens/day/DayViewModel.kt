@@ -27,7 +27,6 @@ import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
-import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
@@ -122,9 +121,6 @@ class DayViewModel @Inject constructor(
 
     private val pack = content.pack()
     private val texts: Map<String, String> = pack.texts
-    private val cheapestMandatory: Coins? = pack.shop
-        .filter { it.category == SpendCategory.MANDATORY }
-        .minOfOrNull { it.price }
 
     /** Закрытие идёт по одному: второй запуск закрыл бы уже следующий день. */
     private val closing = Mutex()
@@ -254,7 +250,8 @@ class DayViewModel @Inject constructor(
                     summary,
                     working,
                 ) { plan, transactions, wallet, done, isWorking ->
-                    val canBuy = cheapestMandatory != null && wallet.covers(cheapestMandatory)
+                    val cheapestNeeded = petState.cheapestNeeded(pet.state, pack.shop)
+                    val canBuy = cheapestNeeded != null && wallet.covers(cheapestNeeded)
                     val warning = sleepWarning(petState.needsOf(pet.state), canBuy)?.let(texts::textOf)
                     stateOf(period, plan, transactions, done, isWorking, warning)
                 }
