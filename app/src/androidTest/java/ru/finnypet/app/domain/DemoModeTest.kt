@@ -44,6 +44,7 @@ import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.domain.usecase.CloseDay
@@ -274,6 +275,30 @@ class DemoModeTest {
         assertTrue("обязательное не куплено", fact.amountFor(SpendCategory.MANDATORY) > Coins.ZERO)
         assertTrue("желаемое не куплено", fact.amountFor(SpendCategory.OPTIONAL) > Coins.ZERO)
         assertTrue("в копилку не отложено", savings.activeProgress(demo.id)!!.saved > Coins.ZERO)
+    }
+
+    /** L5, Б8: если первая цель уже куплена, демо копит на следующую, а не переизбирает купленную. */
+    @Test
+    fun демо_обходит_купленную_цель_и_берёт_следующую() = runBlocking {
+        val demo = startDemo()
+        val goals = content.pack().goals
+        val bought = goals.first()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        periods.addTransaction(
+            Transaction(
+                id = 0,
+                periodId = period.id,
+                type = TransactionType.GOAL_PURCHASE,
+                amount = Coins.ZERO,
+                reasonKey = "savings.goal_bought",
+                createdAt = FIXED_TIME,
+                goalId = bought.id,
+            )
+        )
+
+        playDay()
+
+        assertNotEquals(bought.id, savings.activeProgress(demo.id)?.goalId)
     }
 
     /** День уже идёт, а плана нет: демонстрация доигрывает его, а не падает. */

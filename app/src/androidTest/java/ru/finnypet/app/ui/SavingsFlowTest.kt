@@ -333,6 +333,87 @@ class SavingsFlowTest {
     }
 
     /**
+     * Цели без тупика (L5, Б7): пока самокат не куплен, вернуться к купленной
+     * книжке нельзя; когда куплено всё — это единственный способ копить
+     * дальше. Повторная покупка не плодит книжку в списке купленных (Б8) и
+     * возвращает сдачу в кошелёк, а выбор цели переживает перезапуск.
+     */
+    @Test
+    fun цели_без_тупика_повторный_выбор_и_повторная_покупка() = runBlocking {
+        startDay()
+        awaitReady()
+
+        // Книжка куплена, самокат — ещё нет.
+        viewModel.choose(book.id)
+        await { it.active?.id == book.id }
+        deposit(Coins(15))
+        await { it.active?.isReached == true }
+        buy()
+
+        // Некупленный самокат есть — вернуться к книжке нельзя.
+        viewModel.choose(scooter.id)
+        await { it.active?.id == scooter.id }
+        viewModel.choose(book.id)
+        assertEquals(
+            "самокат ещё не куплен — выбор не должен смениться на книжку",
+            scooter.id,
+            settle().active?.id,
+        )
+
+        // Купить и самокат — некупленных больше нет.
+        deposit(Coins(30))
+        await { it.active?.isReached == true }
+        buy()
+
+        // Книжку снова можно выбрать — свежий прогресс, а не тупик.
+        viewModel.choose(book.id)
+        val repeat = await { it.active?.id == book.id }
+        assertEquals(Coins.ZERO, repeat.active?.saved)
+
+        // Перезапуск: новая вьюмодель на той же базе видит тот же выбор.
+        val restarted = SavingsViewModel(
+            profiles = profiles,
+            periods = periods,
+            savings = savings,
+            openPeriod = OpenPeriodIfNeeded(periods = periods, wallet = WalletEngine(clock), balance = balance),
+            engine = SavingsEngine(clock),
+            recorder = OutcomeRecorderImpl(
+                database = db,
+                petState = PetStateEngine(balance),
+                taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock),
+            ),
+            content = content(),
+        )
+        val restartedReady = withTimeout(TIMEOUT_MS) {
+            restarted.state.first { it is SavingsState.Ready } as SavingsState.Ready
+        }
+        assertEquals(book.id, restartedReady.active?.id)
+        restarted.viewModelScope.cancel()
+        restarted.viewModelScope.coroutineContext[Job]?.join()
+
+        // Отложить до цены, снять часть, доложить с запасом и купить второй раз.
+        deposit(Coins(15))
+        await { it.active?.saved == Coins(15) && it.outcome == null }
+        withdraw(Coins(5))
+        await { it.active?.saved == Coins(10) && it.outcome == null }
+        deposit(Coins(10))
+        val readyToBuy = await { it.active?.saved == Coins(20) && it.outcome == null }
+
+        val afterBuy = buy()
+
+        assertEquals("сдача 5 монет вернулась в кошелёк", readyToBuy.balance + Coins(5), afterBuy.balance)
+        val period = periods.current(profileId)!!
+        val bookPurchases = periods.transactions(period.id)
+            .filter { it.type == TransactionType.GOAL_PURCHASE && it.goalId == book.id }
+        assertEquals("в истории — обе покупки книжки", 2, bookPurchases.size)
+        assertEquals(
+            "в списке купленных книжка — одна вещь, а не дубль",
+            listOf(book.id, scooter.id),
+            savings.observeBought(profileId).first(),
+        )
+    }
+
+    /**
      * Набирает сумму по лесенке, подтверждает и закрывает итог. Возвращает
      * состояние с итогом: прогресс в нём может быть ещё старым — итог приходит
      * из вьюмодели сразу, а прогресс из базы чуть позже, и его ждут отдельно.
@@ -346,6 +427,30 @@ class SavingsFlowTest {
         }
         viewModel.confirm()
         val done = await { it.outcome != null }
+        viewModel.dismissOutcome()
+        await { it.outcome == null }
+        return done
+    }
+
+    /** То же самое, что [deposit], но для снятия — с тем же превью-подтверждением. */
+    private suspend fun withdraw(amount: Coins): SavingsState.Ready {
+        viewModel.startWithdraw()
+        var current = await { it.draft is SavingsDraft.Withdraw }.draft!!.amount
+        while (current < amount) {
+            viewModel.add()
+            current = await { it.draft != null && it.draft!!.amount > current }.draft!!.amount
+        }
+        viewModel.confirm()
+        val done = await { it.outcome != null }
+        viewModel.dismissOutcome()
+        await { it.outcome == null }
+        return done
+    }
+
+    /** Покупает собранную цель и закрывает итог, дожидаясь, чтобы прогресс в базе уже сбросился. */
+    private suspend fun buy(): SavingsState.Ready {
+        viewModel.buy()
+        val done = await { it.outcome != null && it.active == null }
         viewModel.dismissOutcome()
         await { it.outcome == null }
         return done

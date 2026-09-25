@@ -203,7 +203,7 @@ private fun Ready(
             )
         }
         state.goals.forEach { goal ->
-            GoalRow(goal = goal, onClick = { onChoose(goal.id) })
+            GoalRow(goal = goal, selectable = state.canChoose(goal), onClick = { onChoose(goal.id) })
         }
     }
 
@@ -312,9 +312,14 @@ private val BUY_BUTTON_HEIGHT = 56.dp
  * Цель в списке — кнопка выбора. Выбранная подписана словом, а не только
  * выделена цветом (ТЗ 3.6). Накопленное показывается у каждой: отложенное на
  * прежнюю цель не пропадает из виду при смене.
+ *
+ * Купленную цель нельзя выбрать снова, пока есть некупленная (`selectable`
+ * приходит из [SavingsState.Ready.canChoose]) — иначе один клик стирал бы
+ * выбор ещё не собранной цели. Когда куплены все, тот же ряд снова кликабелен:
+ * это единственный путь копить дальше (L5).
  */
 @Composable
-private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
+private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
     val container = if (goal.isActive) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -327,7 +332,7 @@ private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(container)
-            .clickable(enabled = !goal.isBought, role = Role.Button, onClick = onClick)
+            .clickable(enabled = selectable, role = Role.Button, onClick = onClick)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
@@ -342,8 +347,14 @@ private fun GoalRow(goal: GoalView, onClick: () -> Unit) {
                 fontWeight = if (goal.isActive) FontWeight.Bold else FontWeight.Normal,
             )
             if (goal.isActive || goal.isBought) {
+                val labelRes = when {
+                    // Активна и куплена — значит копит на ещё один экземпляр (L5).
+                    goal.isActive && goal.isBought -> R.string.savings_goal_repeat
+                    goal.isBought -> R.string.savings_goal_bought
+                    else -> R.string.savings_goal_active
+                }
                 Text(
-                    text = stringResource(if (goal.isBought) R.string.savings_goal_bought else R.string.savings_goal_active),
+                    text = stringResource(labelRes),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -315,6 +315,17 @@ class StorageTest {
         assertEquals(listOf(GoalId("book")), savings.observeBought(second.id).first())
     }
 
+    /** L5, Б8: повторная покупка той же цели не должна поставить рядом с совой дубль. */
+    @Test
+    fun `повторная_покупка_цели_не_дублирует_её_в_списке_купленных`() = runTest {
+        val profile = profiles.create("Егор", "Финни", PetAppearance("owl", "mint", null))
+        val period = periods.open(runningPeriod(profile.id))
+        periods.addTransaction(deposit(period.id, 0, GoalId("comics")).copy(type = TransactionType.GOAL_PURCHASE))
+        periods.addTransaction(deposit(period.id, 0, GoalId("comics")).copy(type = TransactionType.GOAL_PURCHASE))
+
+        assertEquals(listOf(GoalId("comics")), savings.observeBought(profile.id).first())
+    }
+
     @Test
     fun `активной_целью_остаётся_только_последняя_выбранная`() = runTest {
         val profile = profiles.create("Егор", "Финни", PetAppearance("owl", "mint", null))

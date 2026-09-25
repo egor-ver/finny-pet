@@ -64,5 +64,5 @@ class SavingsRepositoryImpl @Inject constructor(
 
     override fun observeBought(profileId: ProfileId): Flow<List<GoalId>> =
         transactions.observeGoalsOfType(profileId.value, TransactionType.GOAL_PURCHASE)
-            .map { ids -> ids.map(::GoalId) }
+            .map { ids -> ids.map(::GoalId).distinct() }
 }

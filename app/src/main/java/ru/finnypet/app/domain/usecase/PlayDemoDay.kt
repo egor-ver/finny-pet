@@ -92,9 +92,18 @@ class PlayDemoDay(
         return plan
     }
 
+    /**
+     * Без активной цели демонстрация берёт первую некупленную (L5, Б8):
+     * иначе после покупки первой же цели демо выбрало бы её опять, и рядом
+     * с совой встал бы дубль. Некупленных не осталось — копим ещё один
+     * экземпляр первой, как и на настоящем экране копилки.
+     */
     private suspend fun chooseGoalIfNone(profileId: ProfileId) {
         if (savings.activeProgress(profileId) != null) return
-        val goal = content.pack().goals.firstOrNull() ?: return
+        val goals = content.pack().goals
+        if (goals.isEmpty()) return
+        val bought = savings.observeBought(profileId).first().toSet()
+        val goal = goals.firstOrNull { it.id !in bought } ?: goals.first()
         savings.setActive(profileId, savings.progress(profileId, goal.id).copy(isActive = true))
     }
 

@@ -238,6 +238,7 @@
     <string name="savings_goal_none">Выбери цель — и копилка заработает.</string>
     <string name="savings_goal_active">Выбрана</string>
     <string name="savings_goal_bought">Уже куплено</string>
+    <string name="savings_goal_repeat">Копим на ещё один экземпляр</string>
     <string name="savings_price">Стоит</string>
     <string name="savings_eta">Если откладывать как обычно, по %1$d, — через %2$s</string>
     <string name="savings_buy">Собрано! Купить %1$s</string>

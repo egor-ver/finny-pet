@@ -126,8 +126,21 @@ sealed interface SavingsState {
         val canWithdraw: Boolean get() = canOperate && (active?.saved ?: Coins.ZERO) > Coins.ZERO
 
         val canBuy: Boolean get() = canOperate && active?.isReached == true
+
+        /** Цели без тупика (L5): доступна, если не куплена, либо куплены уже все. */
+        fun canChoose(goal: GoalView): Boolean =
+            canChooseGoal(goal.id, goals.filter { it.isBought }.map { it.id }.toSet(), goals.map { it.id })
     }
 }
+
+/**
+ * Цели без тупика (L5, Б7): единственное место, где решается, можно ли
+ * выбрать цель. И экран (через [SavingsState.Ready.canChoose]), и запись в
+ * базу (в [SavingsViewModel.choose]) зовут именно эту функцию, а не
+ * пересчитывают правило каждый по-своему.
+ */
+private fun canChooseGoal(goalId: GoalId, bought: Set<GoalId>, allGoalIds: Collection<GoalId>): Boolean =
+    goalId !in bought || allGoalIds.all { it in bought }
 
 /** Что ребёнок набирает: вид операции и сумма. Границы и превью досчитывает состояние. */
 private data class DraftRequest(
@@ -189,12 +202,17 @@ class SavingsViewModel @Inject constructor(
      * Выбор цели денег не двигает, поэтому разрешён и во время планирования.
      * Открытый черновик закрывается: его границы и превью считались по
      * прежней цели.
+     *
+     * Купленную цель второй раз не выбрать, пока есть некупленная — иначе
+     * ребёнок обойдёт коллекцию стороной. Но когда некупленных не осталось,
+     * это единственный способ продолжать копить (L5, Б7).
      */
     fun choose(goalId: GoalId) {
         act { profileId ->
             editing.withLock {
                 if (goals.none { it.id == goalId }) return@withLock
-                if (goalId in savings.observeBought(profileId).first()) return@withLock
+                val bought = savings.observeBought(profileId).first().toSet()
+                if (!canChooseGoal(goalId, bought, goals.map { it.id })) return@withLock
                 draft.value = null
                 val progress = savings.progress(profileId, goalId)
                 savings.setActive(profileId, progress.copy(isActive = true))

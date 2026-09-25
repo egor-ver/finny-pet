@@ -40,6 +40,11 @@ interface SavingsRepository {
      */
     suspend fun averageDeposit(profileId: ProfileId, goalId: GoalId): Coins
 
-    /** Купленные цели по порядку покупки (R13). */
+    /**
+     * Купленные цели по порядку первой покупки (R13). Цель без некупленных
+     * соседей можно собирать повторно (L5) — тогда в истории окажется
+     * несколько операций покупки одной цели, но в списке она одна: иначе
+     * рядом с совой встали бы две одинаковые вещи.
+     */
     fun observeBought(profileId: ProfileId): Flow<List<GoalId>>
 }
