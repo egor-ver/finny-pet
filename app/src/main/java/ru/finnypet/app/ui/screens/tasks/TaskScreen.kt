@@ -34,7 +34,6 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
-import ru.finnypet.app.ui.components.CategoryLabel
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
@@ -382,6 +381,7 @@ private fun Shelf(step: StepView.Pick, onToggle: (String) -> Unit) {
     }
 }
 
+/** Без подписи направления — в отличие от магазина, здесь она бы выдавала верный ответ (ТЗ 2.5.8). */
 @Composable
 private fun ItemCard(
     item: PickItemView,
@@ -401,7 +401,6 @@ private fun ItemCard(
             .padding(Dimens.SpaceMedium),
     ) {
         Text(text = item.title, style = MaterialTheme.typography.titleMedium)
-        CategoryLabel(category = item.category)
         MoneyAmount(amount = item.price)
         Text(
             text = stringResource(

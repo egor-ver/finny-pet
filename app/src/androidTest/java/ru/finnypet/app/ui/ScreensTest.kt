@@ -832,9 +832,9 @@ class ScreensTest {
             prompt = "Что возьмём?",
             budget = Coins(30),
             items = listOf(
-                PickItemView("food", "Каша", Coins(12), SpendCategory.MANDATORY),
-                PickItemView("toy", "Мячик", Coins(18), SpendCategory.OPTIONAL),
-                PickItemView("bike", "Велосипед", Coins(25), SpendCategory.OPTIONAL),
+                PickItemView("food", "Каша", Coins(12)),
+                PickItemView("toy", "Мячик", Coins(18)),
+                PickItemView("bike", "Велосипед", Coins(25)),
             ),
             picked = setOf("toy"),
         )

@@ -264,37 +264,20 @@
           "type": "CHOICE",
           "promptKey": "task.review_hungry.step1",
           "options": [
-            { "id": "spent_on_wants", "textKey": "task.review_hungry.opt_wants" },
-            { "id": "dislikes_food", "textKey": "task.review_hungry.opt_taste" },
-            { "id": "shop_empty", "textKey": "task.review_hungry.opt_shop" }
+            { "id": "feed_first", "textKey": "task.review_hungry.opt_feed_first" },
+            { "id": "toy_first", "textKey": "task.review_hungry.opt_toy_first" }
           ]
         }
       ],
       "outcomes": [
         {
-          "condition": { "type": "SELECTED_OPTION", "optionId": "spent_on_wants" },
+          "condition": { "type": "SELECTED_OPTION", "optionId": "feed_first" },
           "explanationKey": "task.review_hungry.success",
           "correct": true
         },
         {
           "condition": { "type": "OTHERWISE" },
           "explanationKey": "task.review_hungry.otherwise"
-        },
-        {
-          "id": "taste",
-          "condition": {
-            "type": "SELECTED_OPTION",
-            "optionId": "dislikes_food"
-          },
-          "explanationKey": "task.review_hungry.taste"
-        },
-        {
-          "id": "shop",
-          "condition": {
-            "type": "SELECTED_OPTION",
-            "optionId": "shop_empty"
-          },
-          "explanationKey": "task.review_hungry.shop"
         }
       ]
     }

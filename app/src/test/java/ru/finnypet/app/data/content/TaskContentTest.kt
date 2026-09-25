@@ -75,10 +75,9 @@ class TaskContentTest {
     }
 
     @Test
-    fun `разбор — на каждый неверный вариант своё объяснение`() {
-        assertEquals("task.review_hungry.success" to true, explain("review-hungry-owl", StepAnswer.Chosen("spent_on_wants")))
-        assertEquals("task.review_hungry.taste" to false, explain("review-hungry-owl", StepAnswer.Chosen("dislikes_food")))
-        assertEquals("task.review_hungry.shop" to false, explain("review-hungry-owl", StepAnswer.Chosen("shop_empty")))
+    fun `разбор — предлагает начать с еды, без выдуманной причины`() {
+        assertEquals("task.review_hungry.success" to true, explain("review-hungry-owl", StepAnswer.Chosen("feed_first")))
+        assertEquals("task.review_hungry.otherwise" to false, explain("review-hungry-owl", StepAnswer.Chosen("toy_first")))
     }
 
     /** Новые исходы дописаны в конец: имена прежних по месту в списке не сдвинулись, прохождения в базе верны. */

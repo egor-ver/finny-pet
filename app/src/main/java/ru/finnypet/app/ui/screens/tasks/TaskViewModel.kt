@@ -24,9 +24,9 @@ import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
-import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.LearningTask
+import ru.finnypet.app.domain.model.Pet
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
@@ -66,7 +66,6 @@ data class PickItemView(
     val id: String,
     val title: String,
     val price: Coins,
-    val category: SpendCategory,
 )
 
 /** Текущий шаг вместе с тем, что ребёнок уже набрал на нём. */
@@ -388,24 +387,26 @@ class TaskViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun forProfile(profile: Profile, task: LearningTask): Flow<TaskState> =
-        periods.observeCurrent(profile.id).flatMapLatest { period ->
-            if (period == null) {
-                flowOf(TaskState.Loading)
-            } else {
-                combine(
-                    periods.observeBalance(period),
-                    periods.observeTransactions(period.id),
-                    taskProgress.observeCompleted(profile.id),
-                    progress,
-                ) { wallet, transactions, completed, current ->
-                    ready(profile, task, wallet, transactions, completed, current)
+        combine(profiles.observePet(profile.id), periods.observeCurrent(profile.id)) { pet, period -> pet to period }
+            .flatMapLatest { (pet, period) ->
+                if (pet == null || period == null) {
+                    flowOf(TaskState.Loading)
+                } else {
+                    combine(
+                        periods.observeBalance(period),
+                        periods.observeTransactions(period.id),
+                        taskProgress.observeCompleted(profile.id),
+                        progress,
+                    ) { wallet, transactions, completed, current ->
+                        ready(profile, task, pet, wallet, transactions, completed, current)
+                    }
                 }
             }
-        }
 
     private fun ready(
         profile: Profile,
         task: LearningTask,
+        pet: Pet,
         wallet: Coins,
         transactions: List<Transaction>,
         completed: List<CompletedTask>,
@@ -419,7 +420,9 @@ class TaskViewModel @Inject constructor(
             owl = owlLook(
                 pets = pets,
                 appearance = profile.appearance,
-                stage = GrowthStage.CUB,
+                // Сова задания — тот же питомец, что на главном: подросший
+                // ребёнок не должен видеть себя вечным птенцом (Б9).
+                stage = pet.growth.stage,
                 mood = mood,
                 description = owlDescription(texts, profile.petName, mood, sadAbout = null),
             ),
@@ -465,7 +468,6 @@ class TaskViewModel @Inject constructor(
                         id = it.id.value,
                         title = texts.textOf(it.titleKey),
                         price = it.price,
-                        category = it.category,
                     )
                 }
             },
@@ -480,7 +482,6 @@ class TaskViewModel @Inject constructor(
                     id = it.id,
                     title = texts.textOf(it.titleKey),
                     price = it.price,
-                    category = it.category,
                 )
             },
             picked = (draft as? Draft.Picked)?.ids ?: emptySet(),
