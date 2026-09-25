@@ -1,10 +1,13 @@
 package ru.finnypet.app.ui.screens.shop
 
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.ui.screens.main.JarsLeft
 
 /** Метка на карточке товара (раздел 8 плана). Цвет не единственный признак — метка словами. */
@@ -37,16 +40,25 @@ fun overPlanOf(price: Coins, category: SpendCategory, jars: JarsLeft?): Coins? {
 }
 
 /**
- * Не хватит ли после покупки на нужное (раздел 3 плана, «доступность
- * нужного»): [needsCost] — цена самого дешёвого набора, закрывающего
- * потребности совы после этой покупки (`PetStateEngine.cheapestCover` на
- * состоянии с применёнными эффектами товара). `null` — покупка недоступна
+ * Цена самого дешёвого набора, закрывающего потребности совы, если этот
+ * товар уже куплен (раздел 3 плана, «доступность нужного»): эффекты
+ * применяются раньше `cheapestCover`, поэтому сама еда, закрывшая голод, не
+ * предупреждает о нехватке на голод. Ноль — закрывать нечего.
+ */
+fun needsCostAfter(petState: PetStateEngine, state: PetState, item: ShopItem, shop: List<ShopItem>): Coins {
+    val projected = petState.apply(state, item.effects).value
+    return petState.cheapestCover(projected, shop)?.totalPrice() ?: Coins.ZERO
+}
+
+/**
+ * Насколько после покупки не хватит на нужное (раздел 3 плана, «доступность
+ * нужного»): [needsCost] — из [needsCostAfter]. `null` — покупка недоступна
  * (об этом скажет отказ, не это предупреждение), потребностей после неё не
- * остаётся, или денег хватает и на неё, и на остальное нужное.
+ * остаётся, или на них хватает и так.
  */
 fun needsShortfallOf(balanceAfter: Coins?, needsCost: Coins): Coins? {
     if (balanceAfter == null || needsCost == Coins.ZERO) return null
-    return needsCost.takeIf { !balanceAfter.covers(it) }
+    return balanceAfter.shortfallTo(needsCost).takeIf { it > Coins.ZERO }
 }
 
 /** Что сова говорит в магазине: о первой потребности — еда раньше ухода, как везде. */

@@ -5,10 +5,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.data.content.ContentParser
 import ru.finnypet.app.data.content.RealContent
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.screens.main.JarsLeft
 
 /**
@@ -21,6 +24,14 @@ class ShopAdviceTest {
     private val porridge = pack.shop.single { it.id.value == "food-porridge" }
     private val ball = pack.shop.single { it.id.value == "toy-ball" }
     private val sticker = pack.shop.single { it.id.value == "sticker-star" }
+    private val petState = PetStateEngine(pack.balance)
+
+    /** Голодна, остальное в порядке: только сытость ниже порога. */
+    private val hungry = PetState(
+        mood = Stat(90),
+        satiety = Stat(pack.balance.needThreshold - 1),
+        care = Stat(90),
+    )
 
     @Test
     fun `нужное закрывает потребность — нужно сейчас`() {
@@ -76,12 +87,13 @@ class ShopAdviceTest {
     }
 
     /**
-     * Раздел 3 плана, «доступность нужного»: эталон дня 2 — в кошельке 27,
-     * мячик за 24, на еду после него не остаётся ни на что.
+     * Раздел 3 плана, «доступность нужного»: показываем именно недостающую
+     * сумму, а не цену нужного целиком — как и «Не хватает» при отказе.
+     * В кошельке 3, нужное стоит 14 — не хватает 11, а не 14.
      */
     @Test
-    fun `после покупки не хватает на нужное`() {
-        assertEquals(Coins(14), needsShortfallOf(balanceAfter = Coins(3), needsCost = Coins(14)))
+    fun `после покупки не хватает на нужное — считаем именно нехватку`() {
+        assertEquals(Coins(11), needsShortfallOf(balanceAfter = Coins(3), needsCost = Coins(14)))
     }
 
     @Test
@@ -99,6 +111,29 @@ class ShopAdviceTest {
     @Test
     fun `предупреждения нет, если покупка недоступна`() {
         assertEquals(null, needsShortfallOf(balanceAfter = null, needsCost = Coins(14)))
+    }
+
+    /**
+     * На настоящем контент-паке: голодная сова, мячик её не кормит — цена
+     * закрытия голода (самая дешёвая вода, 8) остаётся, и денег в 3 монеты
+     * на неё не хватает ровно на 5.
+     */
+    @Test
+    fun `мячик не кормит — предупреждение с точной нехваткой`() {
+        val needsCost = needsCostAfter(petState, hungry, ball, pack.shop)
+        assertEquals(Coins(8), needsCost)
+        assertEquals(Coins(5), needsShortfallOf(balanceAfter = Coins(3), needsCost = needsCost))
+    }
+
+    /**
+     * Еда сама закрывает голод раньше, чем считается набор для предупреждения
+     * (`PetStateEngine.apply` до `cheapestCover`) — ложного предупреждения нет.
+     */
+    @Test
+    fun `каша кормит — предупреждения о нехватке на еду нет`() {
+        val needsCost = needsCostAfter(petState, hungry, porridge, pack.shop)
+        assertEquals(Coins.ZERO, needsCost)
+        assertEquals(null, needsShortfallOf(balanceAfter = Coins(3), needsCost = needsCost))
     }
 
     @Test

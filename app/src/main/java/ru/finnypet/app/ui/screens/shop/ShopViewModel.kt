@@ -31,7 +31,6 @@ import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
-import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
@@ -302,10 +301,6 @@ class ShopViewModel @Inject constructor(
 
     private fun viewOf(item: ShopItem, state: PetState, jars: JarsLeft?): ShopItemView {
         val mark = markOf(item, petState.neededNow(state, item), jars?.optional)
-        // Что останется нужным, если этот товар уже куплен: у самой еды или
-        // ухода это нередко ноль, а у желаемого — обычно ровно то, что не закрыто сейчас.
-        val projected = petState.apply(state, item.effects).value
-        val needsCostAfter = petState.cheapestCover(projected, items)?.totalPrice() ?: Coins.ZERO
         return ShopItemView(
             id = item.id,
             title = texts.textOf(item.titleKey),
@@ -315,7 +310,7 @@ class ShopViewModel @Inject constructor(
             icon = item.icon,
             mark = mark,
             warning = notNeededPhrase(item)?.takeIf { mark == ItemMark.NOT_NEEDED }?.let(texts::textOf),
-            needsCostAfter = needsCostAfter,
+            needsCostAfter = needsCostAfter(petState, state, item, items),
         )
     }
 
