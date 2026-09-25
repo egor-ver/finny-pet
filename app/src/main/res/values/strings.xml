@@ -163,10 +163,10 @@
     <!-- Строки итогов для TalkBack: знак ✓ или ✗ читается словом -->
     <string name="day_check_done">Выполнено</string>
     <string name="day_check_missed">Не выполнено</string>
-    <!-- «+6 очков роста»: склонение по русскому правилу, как у монет -->
-    <string name="day_growth_one">+%1$d очко роста</string>
-    <string name="day_growth_few">+%1$d очка роста</string>
-    <string name="day_growth_many">+%1$d очков роста</string>
+    <!-- «+3 звезды»: склонение по русскому правилу, как у монет (AD-3) -->
+    <string name="day_growth_one">+%1$d звезда</string>
+    <string name="day_growth_few">+%1$d звезды</string>
+    <string name="day_growth_many">+%1$d звёзд</string>
     <string name="day_failed">Не получилось закончить день. Попробуй ещё раз.</string>
 
     <!-- План личного бюджета -->
@@ -194,7 +194,11 @@
     <string name="budget_started">План подтверждён. Смотри, как он сходится.</string>
     <string name="budget_planned">План</string>
     <string name="budget_fact">Потрачено</string>
-    <string name="budget_line">%1$s: по плану %2$d, потрачено %3$d</string>
+    <string name="budget_saved">Отложено</string>
+    <string name="budget_line">%1$s: по плану %2$d, %3$s %4$d. %5$s</string>
+    <string name="budget_status_ok">По плану</string>
+    <string name="budget_status_short">Не хватает %1$s</string>
+    <string name="budget_status_over">Сверх плана на %1$s</string>
     <string name="budget_failed">Не получилось сохранить план. Попробуй ещё раз.</string>
 
     <!-- Магазин (ТЗ 2.5.6) -->

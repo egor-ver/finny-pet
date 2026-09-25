@@ -138,7 +138,7 @@ class DayFlowTest {
         assertEquals(1, closed.summary.number)
         assertEquals(2, closed.summary.nextNumber)
         assertTrue("объяснение обязано быть", closed.summary.headline.isNotBlank())
-        // Три строки итогов — те же три условия, за которые даются очки роста (R10).
+        // Три строки итогов — три звезды дня, за которые растёт сова (AD-3).
         assertEquals(3, closed.summary.checks.size)
         assertTrue("у каждой строки обязано быть пояснение", closed.summary.checks.all { it.text.isNotBlank() })
     }

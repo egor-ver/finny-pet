@@ -98,31 +98,21 @@ class PetStateEngine(private val balance: GameBalance) {
     }
 
     /**
-     * Сначала итоги дня, потом ночь (AD-2): бонус за план не отменяет
-     * завтрашних потребностей, а упирается в тот же потолок шкалы.
+     * Конец дня — только ночь (AD-2). Бонуса радости за план нет (AD-13):
+     * радость растит желаемое, как в определении необязательных расходов
+     * ТЗ. С бонусом радость сама доходила до потолка, и желаемое теряло смысл.
      */
-    fun onPeriodClosed(state: PetState, report: PlanFactReport): GameResult<PetState> {
-        var next = state
-        if (report.planFollowed) {
-            next = next.with(PetStatKind.MOOD, next.mood + balance.moodBonusPlanFollowed)
-        }
-        next = night(next)
+    fun onPeriodClosed(state: PetState): GameResult<PetState> {
+        val next = night(state)
         return GameResult(
             value = next,
-            explanation = explanationFor(needsMet = needsOf(state).isEmpty(), report = report),
+            explanation = if (needsOf(state).isEmpty()) {
+                Explanation(key = KEY_PERIOD_CLOSED)
+            } else {
+                Explanation(key = KEY_MISSED_MANDATORY, nextStep = RecoveryOption.ADJUST_NEXT_PLAN)
+            },
             changes = changesBetween(state, next),
         )
-    }
-
-    private fun explanationFor(needsMet: Boolean, report: PlanFactReport): Explanation = when {
-        !needsMet -> Explanation(
-            key = KEY_MISSED_MANDATORY,
-            nextStep = RecoveryOption.ADJUST_NEXT_PLAN,
-        )
-
-        report.planFollowed -> Explanation(key = KEY_PLAN_FOLLOWED)
-
-        else -> Explanation(key = KEY_PERIOD_CLOSED)
     }
 
     private fun night(state: PetState): PetState =
@@ -152,7 +142,6 @@ class PetStateEngine(private val balance: GameBalance) {
 
         const val KEY_CHANGED = "pet.state_changed"
         const val KEY_MISSED_MANDATORY = "pet.missed_mandatory"
-        const val KEY_PLAN_FOLLOWED = "pet.plan_followed"
         const val KEY_PERIOD_CLOSED = "pet.period_closed"
     }
 }

@@ -25,23 +25,6 @@ class PetStateEngineTest {
 
     private val state = PetState(mood = Stat(50), satiety = Stat(50), care = Stat(50))
 
-    private fun report(
-        mandatoryOk: Boolean = true,
-        optionalOk: Boolean = true,
-        savingsOk: Boolean = true,
-    ): PlanFactReport {
-        val lines = listOf(
-            PlanFactLine(SpendCategory.MANDATORY, Coins(40), if (mandatoryOk) Coins(40) else Coins(50)),
-            PlanFactLine(SpendCategory.OPTIONAL, Coins(20), if (optionalOk) Coins(20) else Coins(30)),
-            PlanFactLine(SpendCategory.SAVINGS, Coins(10), if (savingsOk) Coins(10) else Coins(5)),
-        )
-        return PlanFactReport(
-            lines = lines,
-            planTotal = Coins(70),
-            factTotal = lines.fold(Coins.ZERO) { acc, line -> acc + line.actual },
-        )
-    }
-
     @Test
     fun `положительный эффект поднимает показатель`() {
         val result = engine.apply(state, listOf(PetEffect(PetStatKind.SATIETY, 15)))
@@ -95,25 +78,26 @@ class PetStateEngineTest {
 
     @Test
     fun `ночь снижает сытость уход и настроение на свои величины`() {
-        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+        val result = engine.onPeriodClosed(fed)
         assertEquals(Stat(90 - balance.nightDropSatiety), result.value.satiety)
         assertEquals(Stat(90 - balance.nightDropCare), result.value.care)
         assertEquals(Stat(90 - balance.nightDropMood), result.value.mood)
     }
 
-    /** Штраф заменён ночью: сверх неё за незакрытое нужное ничего не снимается. */
+    /** Штраф заменён ночью: голодная сова за ночь теряет столько же, сколько сытая. */
     @Test
     fun `незакрытые обязательные расходы не снижают показатели сверх ночи`() {
-        val missed = engine.onPeriodClosed(fed, report(mandatoryOk = false, optionalOk = false))
-        val ordinary = engine.onPeriodClosed(fed, report(optionalOk = false))
-        assertEquals(ordinary.value, missed.value)
+        val hungry = fed.copy(satiety = Stat(balance.needThreshold - 1))
+        val result = engine.onPeriodClosed(hungry)
+        assertEquals(Stat(balance.needThreshold - 1 - balance.nightDropSatiety), result.value.satiety)
+        assertEquals(Stat(90 - balance.nightDropCare), result.value.care)
     }
 
     /** Раздел 4 плана, ночь после дня 2: еда 55 → 30, уход 70 → 55. */
     @Test
     fun `ночь не опускает показатель ниже предела`() {
         val evening = PetState(mood = Stat(90), satiety = Stat(55), care = Stat(70))
-        val result = engine.onPeriodClosed(evening, report(optionalOk = false))
+        val result = engine.onPeriodClosed(evening)
         assertEquals(Stat(balance.statFloor), result.value.satiety)
         assertEquals(Stat(55), result.value.care)
     }
@@ -121,27 +105,30 @@ class PetStateEngineTest {
     @Test
     fun `показатель уже ниже предела ночь не трогает`() {
         val low = PetState(mood = Stat(90), satiety = Stat(20), care = Stat(90))
-        val result = engine.onPeriodClosed(low, report(optionalOk = false))
+        val result = engine.onPeriodClosed(low)
         assertEquals(Stat(20), result.value.satiety)
     }
 
+    /**
+     * AD-13: бонуса радости за план нет. С ним радость сама доходила до
+     * потолка (+15 за план против −10 за ночь), и желаемое теряло смысл.
+     */
     @Test
-    fun `выполненный план поднимает настроение до ночи`() {
-        val result = engine.onPeriodClosed(state, report())
-        assertEquals(Stat(50 + balance.moodBonusPlanFollowed - balance.nightDropMood), result.value.mood)
+    fun `выполненный план не поднимает настроение — радость только от желаемого`() {
+        val result = engine.onPeriodClosed(state)
+        assertEquals(Stat(50 - balance.nightDropMood), result.value.mood)
     }
 
-    /** Бонус упирается в потолок раньше ночи, иначе сова с полной радостью её бы не теряла. */
     @Test
-    fun `бонус за план упирается в потолок до ночи`() {
+    fun `радость у потолка ночью падает на обычную величину`() {
         val happy = fed.copy(mood = Stat.MAX)
-        val result = engine.onPeriodClosed(happy, report())
+        val result = engine.onPeriodClosed(happy)
         assertEquals(Stat(Stat.MAX.value - balance.nightDropMood), result.value.mood)
     }
 
     @Test
-    fun `превышение необязательных меняет показатели только ночью`() {
-        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+    fun `конец дня меняет показатели только ночью`() {
+        val result = engine.onPeriodClosed(fed)
         assertEquals(
             PetState(
                 mood = Stat(90 - balance.nightDropMood),
@@ -154,27 +141,28 @@ class PetStateEngineTest {
 
     @Test
     fun `ночь сообщает изменения показателей`() {
-        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+        val result = engine.onPeriodClosed(fed)
         assertEquals(PetStatKind.entries.toSet(), result.changes.map { (it as Change.PetStat).kind }.toSet())
     }
 
-    /** Итог дня решают потребности, а не план: план выполнен, а сова голодна. */
+    /** Итог дня решают потребности, а не план: сова голодна — об этом и речь. */
     @Test
     fun `незакрытые потребности объясняются и предлагают поправить план`() {
         val hungry = fed.copy(satiety = Stat(balance.needThreshold - 1))
-        val result = engine.onPeriodClosed(hungry, report())
+        val result = engine.onPeriodClosed(hungry)
         assertEquals("pet.missed_mandatory", result.explanation.key)
         assertEquals(RecoveryOption.ADJUST_NEXT_PLAN, result.explanation.nextStep)
     }
 
+    /** Сова больше не радуется плану (AD-13), поэтому и отдельного «план сошёлся» у ночи нет. */
     @Test
-    fun `выполненный план объясняется своим ключом`() {
-        assertEquals("pet.plan_followed", engine.onPeriodClosed(fed, report()).explanation.key)
+    fun `выполненный план не меняет объяснение ночи`() {
+        assertEquals("pet.period_closed", engine.onPeriodClosed(fed).explanation.key)
     }
 
     @Test
     fun `обычный период объясняется нейтрально и без подсказки`() {
-        val result = engine.onPeriodClosed(fed, report(optionalOk = false))
+        val result = engine.onPeriodClosed(fed)
         assertEquals("pet.period_closed", result.explanation.key)
         assertNull(result.explanation.nextStep)
     }

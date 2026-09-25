@@ -1248,7 +1248,7 @@ class ScreensTest {
         showBudget(
             BudgetState.Started(
                 lines = listOf(
-                    BudgetLine(SpendCategory.MANDATORY, Coins(40), Coins(35), followed = false),
+                    BudgetLine(SpendCategory.MANDATORY, Coins(40), Coins(45), followed = false),
                     BudgetLine(SpendCategory.OPTIONAL, Coins(20), Coins(20), followed = true),
                     BudgetLine(SpendCategory.SAVINGS, Coins(20), Coins(20), followed = true),
                 ),
@@ -1256,10 +1256,12 @@ class ScreensTest {
         )
 
         scrollToText(text(R.string.budget_started))
+        // Итог строки словами, а не жирностью (ТЗ 3.6); копилка — «отложено».
         scrollToDescription(
-            text(R.string.category_mandatory) + ": по плану 40, потрачено 35",
+            text(R.string.category_mandatory) + ": по плану 40, потрачено 45. Сверх плана на 5 монет",
         )
-        scrollToDescription("75 монет")
+        scrollToDescription(text(R.string.category_savings) + ": по плану 20, отложено 20. По плану")
+        scrollToDescription("85 монет")
     }
 
     // --- Прогресс и справочник (ТЗ 2.5.11) ---

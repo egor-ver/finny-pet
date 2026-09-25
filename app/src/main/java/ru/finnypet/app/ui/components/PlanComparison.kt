@@ -16,11 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.font.FontWeight
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.theme.Dimens
+import kotlin.math.abs
 
 /** Строка сравнения: сколько задумали и сколько вышло на самом деле. */
 data class BudgetLine(
@@ -49,17 +49,23 @@ fun ColumnScope.PlanComparison(
 }
 
 /**
- * Соблюдение плана показано не цветом, а словами «по плану» и «потрачено» с
- * числами: ТЗ 3.6 запрещает передавать смысл одним цветом.
+ * Соблюдение плана сказано словами — «по плану», «не хватает», «сверх плана»,
+ * — а не цветом или жирностью: ТЗ 3.6 запрещает передавать смысл только видом.
  */
 @Composable
 private fun ComparisonRow(line: BudgetLine) {
     val title = stringResource(line.category.label)
+    val factLabel = stringResource(
+        if (line.category == SpendCategory.SAVINGS) R.string.budget_saved else R.string.budget_fact,
+    )
+    val status = statusOf(line)
     val spoken = stringResource(
         R.string.budget_line,
         title,
         line.planned.amount,
+        factLabel.lowercase(),
         line.actual.amount,
+        status,
     )
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
@@ -72,18 +78,33 @@ private fun ComparisonRow(line: BudgetLine) {
             )
             .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (line.followed) FontWeight.SemiBold else FontWeight.Normal,
-        )
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
         Row(
             horizontalArrangement = Arrangement.spacedBy(Dimens.Space),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Labelled(label = stringResource(R.string.budget_planned), amount = line.planned)
-            Labelled(label = stringResource(R.string.budget_fact), amount = line.actual)
+            Labelled(label = factLabel, amount = line.actual)
         }
+        Text(
+            text = status,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Траты не соблюдены, только когда потрачено больше плана (R3), — это «сверх
+ * плана». Копилку, наоборот, надо добрать до плана — там «не хватает».
+ */
+@Composable
+private fun statusOf(line: BudgetLine): String {
+    val gap = Coins(abs(line.actual.amount - line.planned.amount))
+    return when {
+        line.followed -> stringResource(R.string.budget_status_ok)
+        line.category == SpendCategory.SAVINGS -> stringResource(R.string.budget_status_short, coinsText(gap))
+        else -> stringResource(R.string.budget_status_over, coinsText(gap))
     }
 }
 

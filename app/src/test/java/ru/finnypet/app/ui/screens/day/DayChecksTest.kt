@@ -7,9 +7,11 @@ import org.junit.Test
 import ru.finnypet.app.data.content.ContentParser
 import ru.finnypet.app.data.content.RealContent
 import ru.finnypet.app.domain.economy.BudgetEngine
+import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PetMood
@@ -19,8 +21,8 @@ import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.ui.text.textOf
 
 /**
- * Итоги дня на эталонном сценарии (раздел 4 плана): три строки ✓/✗ ставятся
- * ровно там, где рост дал очки, а сова грустит только в голодный день.
+ * Итоги дня на эталонном сценарии (раздел 4 плана): три строки ✓/✗ — ровно
+ * три звезды дня (AD-3), а сова грустит только в голодный день.
  */
 class DayChecksTest {
 
@@ -47,16 +49,46 @@ class DayChecksTest {
         assertEquals(PetMood.HAPPY, dayMood(checks))
     }
 
-    /** День 2 — ошибка: мячик за 24 куплен, каша нет. Желаемое и копилка по плану, а сова грустит. */
+    /**
+     * День 2 — ошибка: мячик за 24 куплен, каша нет. Желаемое и копилка по
+     * плану, но в голодный день звёзд нет — строки так и говорят (AD-3).
+     */
     @Test
-    fun `день 2 — потребности не закрыты, сова грустит`() {
+    fun `день 2 — потребности не закрыты, звёзд нет, сова грустит`() {
         val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = null, goalLeft = null)
 
-        assertEquals(listOf(false, true, true), checks.map { it.done })
+        assertEquals(listOf(false, false, false), checks.map { it.done })
         assertEquals(Explanation("day.needs.missed"), checks[0].text)
-        assertEquals(Explanation("day.optional.kept", mapOf("spent" to "24", "planned" to "24")), checks[1].text)
-        assertEquals(Explanation("day.savings.kept", mapOf("saved" to "8")), checks[2].text)
+        assertEquals(Explanation("day.optional.hungry"), checks[1].text)
+        assertEquals(Explanation("day.savings.hungry", mapOf("saved" to "8")), checks[2].text)
         assertEquals(PetMood.SAD, dayMood(checks))
+    }
+
+    /** Находка ревью (Б3): нужного купили больше плана — это забота о сове, а не промах. */
+    @Test
+    fun `нужное сверх плана — все три звезды`() {
+        val checks = dayChecks(needsMet = true, report = report(plan(15, 5, 5), fact(23, 5, 5)), goalTitle = null, goalLeft = null)
+
+        assertEquals(listOf(true, true, true), checks.map { it.done })
+        assertEquals(PetMood.HAPPY, dayMood(checks))
+    }
+
+    /** Итоги и рост считают по одним звёздам: ✓ ровно там, где звезда. */
+    @Test
+    fun `галочки итогов — ровно звёзды роста`() {
+        val days = listOf(
+            plan(30, 5, 0) to fact(30, 12, 0),
+            plan(30, 5, 10) to fact(30, 0, 4),
+            plan(30, 5, 10) to fact(45, 5, 10),
+            plan(3, 24, 8) to fact(0, 24, 8),
+        )
+        listOf(true, false).forEach { needsMet ->
+            days.forEach { (p, f) ->
+                val stars = GrowthEngine.starsFor(report(p, f), needsMet)
+                val done = dayChecks(needsMet, report(p, f), null, null).map { it.done }
+                assertEquals(listOf(GrowthStar.FED, GrowthStar.PLAN, GrowthStar.SAVED).map { it in stars }, done)
+            }
+        }
     }
 
     /** Нулевой план копилки выполняется сам собой, но очков за него нет — и ✓ тоже. */

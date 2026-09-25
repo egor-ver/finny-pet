@@ -1,8 +1,10 @@
 package ru.finnypet.app.ui.screens.day
 
+import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.economy.PlanFactReport
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ShopItem
@@ -13,20 +15,26 @@ import ru.finnypet.app.domain.model.Transaction
 data class DayCheck(val done: Boolean, val text: Explanation)
 
 /**
- * Три строки итогов — те же три условия, за которые даются очки роста
- * (R10): потребности закрыты, желаемое по плану, копилка пополнена. Поэтому
- * ✓ ставится ровно там, где рост дал очки, и итоги не спорят с ростом.
+ * Три строки итогов — три звезды дня (AD-3): «Сыт», «По плану», «Отложил».
+ * ✓ ставится ровно по [GrowthEngine.starsFor] — тем же звёздам, что растят
+ * сову, поэтому итоги не спорят с ростом.
+ *
+ * В голодный день звёзд нет. Желаемое и копилка при этом могли быть по плану
+ * — тогда строка так и говорит, но объясняет, почему без звезды.
  *
  * [goalTitle] и [goalLeft] — цель и сколько до неё осталось после этого дня;
  * `null` — цели нет.
  */
 fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goalLeft: Coins?): List<DayCheck> {
+    val stars = GrowthEngine.starsFor(report, needsMet)
+    // Звёзды, будь сова сыта: так видно, что было по плану и в голодный день.
+    val kept = GrowthEngine.starsFor(report, needsMet = true)
     val mandatory = report.line(SpendCategory.MANDATORY)
     val optional = report.line(SpendCategory.OPTIONAL)
     val savings = report.line(SpendCategory.SAVINGS)
     return listOf(
         DayCheck(
-            done = needsMet,
+            done = GrowthStar.FED in stars,
             text = if (needsMet) {
                 Explanation("day.needs.done", mapOf("spent" to "${mandatory.actual.amount}"))
             } else {
@@ -34,9 +42,10 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
             },
         ),
         DayCheck(
-            done = optional.followed,
+            done = GrowthStar.PLAN in stars,
             text = when {
-                !optional.followed -> Explanation("day.optional.over", mapOf("over" to "${optional.actual.amount - optional.planned.amount}"))
+                GrowthStar.PLAN !in kept -> Explanation("day.optional.over", mapOf("over" to "${optional.actual.amount - optional.planned.amount}"))
+                !needsMet -> Explanation("day.optional.hungry")
                 optional.actual == Coins.ZERO -> Explanation("day.optional.none")
                 else -> Explanation(
                     "day.optional.kept",
@@ -44,16 +53,15 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
                 )
             },
         ),
-        // Нулевой план копилки выполняется сам собой, но очков за него нет:
-        // и ✓ за него ставить нечестно.
         DayCheck(
-            done = savings.planned > Coins.ZERO && savings.followed,
+            done = GrowthStar.SAVED in stars,
             text = when {
                 savings.planned == Coins.ZERO -> Explanation("day.savings.none")
-                !savings.followed -> Explanation(
+                GrowthStar.SAVED !in kept -> Explanation(
                     "day.savings.missed",
                     mapOf("saved" to "${savings.actual.amount}", "planned" to "${savings.planned.amount}"),
                 )
+                !needsMet -> Explanation("day.savings.hungry", mapOf("saved" to "${savings.actual.amount}"))
                 goalTitle != null && goalLeft != null -> Explanation(
                     "day.savings.kept_goal",
                     mapOf("saved" to "${savings.actual.amount}", "goal" to goalTitle, "left" to "${goalLeft.amount}"),

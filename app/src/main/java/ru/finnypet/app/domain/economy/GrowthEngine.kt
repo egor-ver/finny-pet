@@ -5,29 +5,21 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GameResult
 import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.PetGrowth
 import ru.finnypet.app.domain.model.SpendCategory
 
 class GrowthEngine(private val balance: GameBalance) {
 
-    /**
-     * В день, когда потребности не закрыты, очков нет совсем (AD-3): сова не
-     * растёт, если её не кормят, а прогресс при этом не отнимается (ТЗ 2.2).
-     */
-    fun pointsFor(report: PlanFactReport, needsMet: Boolean): Int {
-        if (!needsMet) return 0
-        return balance.growthForMandatoryCovered +
-            (if (report.planFollowed) balance.growthForPlanFollowed else 0) +
-            (if (report.savingsEarnGrowth()) balance.growthForSavingsKept else 0)
-    }
-
-    /**
-     * Копилка приносит очки, только если в неё было что откладывать. Нулевой
-     * план выполняется тривиально (0 >= 0), и награждать за него значит
-     * платить ребёнку за направление, которого он не касался.
-     */
-    private fun PlanFactReport.savingsEarnGrowth(): Boolean =
-        line(SpendCategory.SAVINGS).let { it.planned > Coins.ZERO && it.followed }
+    /** Звезда стоит столько очков, сколько задано в balance.json: звёзды и очки — одно и то же. */
+    fun pointsFor(report: PlanFactReport, needsMet: Boolean): Int =
+        starsFor(report, needsMet).sumOf { star ->
+            when (star) {
+                GrowthStar.FED -> balance.growthForMandatoryCovered
+                GrowthStar.PLAN -> balance.growthForPlanFollowed
+                GrowthStar.SAVED -> balance.growthForSavingsKept
+            }
+        }
 
     fun stageFor(points: Int): GrowthStage {
         require(points >= 0) { "Очки роста не могут быть отрицательными: $points" }
@@ -61,9 +53,30 @@ class GrowthEngine(private val balance: GameBalance) {
         )
     }
 
-    private companion object {
-        const val KEY_STAGE_UP = "growth.stage_up"
-        const val KEY_POINTS_ADDED = "growth.points_added"
-        const val KEY_NO_POINTS = "growth.no_points"
+    companion object {
+
+        /**
+         * Какие звёзды принёс день (AD-3). В голодный день — ни одной: сова не
+         * растёт, если её не кормят, а прогресс не отнимается (ТЗ 2.2).
+         *
+         * «По плану» — желаемого куплено не больше плана. Нужное сверх плана
+         * звезду не отнимает: заботу о сове план не ограничивает (AD-4).
+         * «Отложил» — копилка пополнена по плану; нулевой план выполняется сам
+         * собой, и звезда за него платила бы за направление, которого ребёнок
+         * не касался.
+         */
+        fun starsFor(report: PlanFactReport, needsMet: Boolean): Set<GrowthStar> {
+            if (!needsMet) return emptySet()
+            val savings = report.line(SpendCategory.SAVINGS)
+            return buildSet {
+                add(GrowthStar.FED)
+                if (report.line(SpendCategory.OPTIONAL).followed) add(GrowthStar.PLAN)
+                if (savings.planned > Coins.ZERO && savings.followed) add(GrowthStar.SAVED)
+            }
+        }
+
+        private const val KEY_STAGE_UP = "growth.stage_up"
+        private const val KEY_POINTS_ADDED = "growth.points_added"
+        private const val KEY_NO_POINTS = "growth.no_points"
     }
 }

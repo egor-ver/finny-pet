@@ -131,10 +131,25 @@ class PeriodEngineTest {
         assertEquals(balance.maxGrowthPerPeriod, outcome.growth.points)
     }
 
+    /** AD-13: план радость не поднимает — меняет только ночь. */
     @Test
-    fun `закрытие меняет состояние питомца по отчёту и ночи`() {
+    fun `закрытие меняет состояние питомца ночью`() {
         val outcome = engine().close(period, plan, onPlan, state, PetGrowth.INITIAL).value
-        assertEquals(Stat(90 + balance.moodBonusPlanFollowed - balance.nightDropMood), outcome.state.mood)
+        assertEquals(Stat(90 - balance.nightDropMood), outcome.state.mood)
+    }
+
+    /** Б3: нужное сверх плана — все три звезды, а заголовок честно не говорит «точно по плану». */
+    @Test
+    fun `нужное сверх плана не отнимает звёзд`() {
+        val overFed = listOf(
+            transaction(TransactionType.INCOME_PERIOD, Coins(60)),
+            transaction(TransactionType.PURCHASE_MANDATORY, Coins(45)),
+            transaction(TransactionType.PURCHASE_OPTIONAL, Coins(20)),
+            transaction(TransactionType.SAVINGS_DEPOSIT, Coins(10)),
+        )
+        val result = engine().close(period, plan, overFed, state, PetGrowth.INITIAL)
+        assertEquals(balance.maxGrowthPerPeriod, result.value.growth.points)
+        assertEquals("period.closed", result.explanation.key)
     }
 
     @Test

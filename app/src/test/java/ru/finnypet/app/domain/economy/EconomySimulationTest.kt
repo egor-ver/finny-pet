@@ -128,6 +128,21 @@ class EconomySimulationTest {
     /** Раздел 4 плана, день 2: нужное 3, желаемое 24, копилка 8, куплен только мячик. */
     private fun mistake(): Choice = Choice(BudgetPlan(Coins(3), ball.price, Coins(8)), listOf(ball))
 
+    /** Нужное, а весь остаток — в копилку: желаемое не покупается совсем. */
+    private fun allSavings(morning: Morning): Choice {
+        val sensible = sensible(morning)
+        return Choice(BudgetPlan(sensible.plan.mandatory, Coins.ZERO, morning.wallet - sensible.plan.mandatory), sensible.buys)
+    }
+
+    /** Нужное и каждый день звёздочка-наклейка на радость, остаток пополам. */
+    private fun withSticker(morning: Morning): Choice {
+        val sticker = pack.shop.single { it.id == ItemId("sticker-star") }
+        val sensible = sensible(morning)
+        val rest = morning.wallet - sensible.plan.mandatory - sticker.price
+        val saved = Coins(rest.amount / 2)
+        return Choice(BudgetPlan(sensible.plan.mandatory, sticker.price + rest - saved, saved), sensible.buys + sticker)
+    }
+
     /** Всё на самое дорогое желаемое, еды нет вовсе. */
     private fun allWants(morning: Morning): Choice {
         val toy = pack.shop.filter { it.category == SpendCategory.OPTIONAL && morning.wallet.covers(it.price) }
@@ -135,11 +150,12 @@ class EconomySimulationTest {
         return Choice(BudgetPlan(Coins.ZERO, toy.price, Coins.ZERO), listOf(toy))
     }
 
+    /** AD-3: звезда — очко, подросток с 4, взрослый с 10. */
     @Test
-    fun `эталонный сценарий с днём ошибки даёт 6 6 12 18 24`() {
+    fun `эталонный сценарий с днём ошибки даёт 3 3 6 9 12`() {
         val days = play(5) { if (it.number == 2) mistake() else sensible(it) }
 
-        assertEquals(listOf(6, 6, 12, 18, 24), days.map { it.growth.points })
+        assertEquals(listOf(3, 3, 6, 9, 12), days.map { it.growth.points })
         assertEquals(
             listOf(GrowthStage.CUB, GrowthStage.CUB, GrowthStage.YOUNG, GrowthStage.YOUNG, GrowthStage.GROWN),
             days.map { it.growth.stage },
@@ -172,6 +188,32 @@ class EconomySimulationTest {
         val days = play(5, choose = ::sensible)
 
         assertTrue("Отложено ${days.last().saved.amount} из ${goal.price.amount}", days.last().saved.covers(goal.price))
+    }
+
+    /**
+     * Термины ТЗ: отказ от необязательной покупки — не ошибка. Кто всё
+     * откладывает, растёт так же, как тот, кто радует сову: звёзды за
+     * желаемое не даются (AD-3).
+     */
+    @Test
+    fun `отказ от желаемого не стоит звёзд`() {
+        val saver = play(5, choose = ::allSavings)
+
+        assertEquals((1..5).map { it * balance.maxGrowthPerPeriod }, saver.map { it.growth.points })
+    }
+
+    /**
+     * Находка ревью (Б1): бонус за план поднимал радость сам, и желаемое было
+     * бесполезно. Теперь без желаемого радость только падает за ночь, а
+     * наклейка каждый день держит её.
+     */
+    @Test
+    fun `радость растёт только от желаемого`() {
+        val without = play(5, choose = ::sensible).map { it.morning.state.mood }
+        val withToy = play(5, choose = ::withSticker).map { it.morning.state.mood }
+
+        without.zipWithNext().forEach { (before, after) -> assertTrue("радость выросла сама: $before → $after", after <= before) }
+        assertTrue("наклейка не подняла радость: $withToy против $without", withToy.last() > without.last())
     }
 
     /** Желаемое вместо еды не растит сову, а грусть не превращается в голодание (ТЗ 3.5). */

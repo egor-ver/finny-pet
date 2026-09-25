@@ -7,6 +7,7 @@ import org.junit.Test
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.PetGrowth
 import ru.finnypet.app.domain.model.SpendCategory
 
@@ -76,9 +77,57 @@ class GrowthEngineTest {
             planTotal = Coins(35),
             factTotal = Coins(32),
         )
-        val result = engine.apply(PetGrowth(points = 6, stage = GrowthStage.CUB), dayTwo, needsMet = false)
-        assertEquals(6, result.value.points)
+        val result = engine.apply(PetGrowth(points = 3, stage = GrowthStage.CUB), dayTwo, needsMet = false)
+        assertEquals(3, result.value.points)
         assertEquals("growth.no_points", result.explanation.key)
+    }
+
+    // --- Звёзды дня (AD-3) ---
+
+    @Test
+    fun `безупречный день даёт все три звезды`() {
+        assertEquals(
+            setOf(GrowthStar.FED, GrowthStar.PLAN, GrowthStar.SAVED),
+            GrowthEngine.starsFor(report(), needsMet = true),
+        )
+    }
+
+    /** AD-3: сова не растёт, если её не кормят, — ни одной звезды, как бы ни прошёл план. */
+    @Test
+    fun `в голодный день звёзд нет`() {
+        assertEquals(emptySet<GrowthStar>(), GrowthEngine.starsFor(report(), needsMet = false))
+    }
+
+    /**
+     * Находка ревью (Б3): купили нужного больше плана — итоги показывали ✓✓✓,
+     * а рост давал меньше. Забота о сове план не ограничивает (AD-4).
+     */
+    @Test
+    fun `нужное сверх плана не отнимает звезду «по плану»`() {
+        val overFed = report(mandatoryOk = false)
+        assertEquals(setOf(GrowthStar.FED, GrowthStar.PLAN, GrowthStar.SAVED), GrowthEngine.starsFor(overFed, needsMet = true))
+        assertEquals(balance.maxGrowthPerPeriod, engine.pointsFor(overFed, needsMet = true))
+    }
+
+    @Test
+    fun `желаемое сверх плана отнимает только звезду «по плану»`() {
+        assertEquals(
+            setOf(GrowthStar.FED, GrowthStar.SAVED),
+            GrowthEngine.starsFor(report(optionalOk = false), needsMet = true),
+        )
+    }
+
+    @Test
+    fun `нулевой план копилки звезды «отложил» не даёт`() {
+        assertEquals(setOf(GrowthStar.FED, GrowthStar.PLAN), GrowthEngine.starsFor(onlyMandatoryPlanned(), needsMet = true))
+    }
+
+    @Test
+    fun `очки дня — сумма звёзд по их весам`() {
+        assertEquals(
+            balance.growthForMandatoryCovered + balance.growthForSavingsKept,
+            engine.pointsFor(report(optionalOk = false), needsMet = true),
+        )
     }
 
     @Test

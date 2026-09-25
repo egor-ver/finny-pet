@@ -57,7 +57,7 @@ class PeriodEngine(
 
         val report = budget.compare(plan, factOf(transactions))
         val needsMet = pet.needsOf(state).isEmpty()
-        val petResult = pet.onPeriodClosed(state, report)
+        val petResult = pet.onPeriodClosed(state)
         val growthResult = growth.apply(currentGrowth, report, needsMet)
         val carryOver = carryOverOf(period, transactions)
         val stageChanged = growthResult.changes.any { it is Change.Stage }

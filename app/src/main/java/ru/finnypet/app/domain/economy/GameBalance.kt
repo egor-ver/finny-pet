@@ -34,7 +34,7 @@ data class GameBalance(
      * «всё в нужное» оставалась бы незамеченной (раздел 3 плана).
      */
     val needSlack: Int,
-    val moodBonusPlanFollowed: Int,
+    /** Очки за звёзды дня (AD-3): «сыт», «по плану», «отложил». */
     val growthForMandatoryCovered: Int,
     val growthForPlanFollowed: Int,
     val growthForSavingsKept: Int,
@@ -73,7 +73,7 @@ data class GameBalance(
         require(initialStat in Stat.RANGE) {
             "Стартовый показатель питомца задаётся в пределах ${Stat.RANGE}, задан: $initialStat"
         }
-        require(nightDropSatiety >= 0 && nightDropCare >= 0 && nightDropMood >= 0 && moodBonusPlanFollowed >= 0) {
+        require(nightDropSatiety >= 0 && nightDropCare >= 0 && nightDropMood >= 0) {
             "Изменения показателей задаются неотрицательными величинами"
         }
         require(statFloor in Stat.RANGE) {
@@ -119,7 +119,6 @@ data class GameBalance(
             needThreshold = 70,
             sadThreshold = 40,
             needSlack = 9,
-            moodBonusPlanFollowed = 10,
             growthForMandatoryCovered = 2,
             growthForPlanFollowed = 2,
             growthForSavingsKept = 1,
