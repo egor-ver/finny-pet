@@ -19,16 +19,14 @@ data class DayCheck(val done: Boolean, val text: Explanation)
  * ✓ ставится ровно по [GrowthEngine.starsFor] — тем же звёздам, что растят
  * сову, поэтому итоги не спорят с ростом.
  *
- * В голодный день звёзд нет. Желаемое и копилка при этом могли быть по плану
- * — тогда строка так и говорит, но объясняет, почему без звезды.
+ * В день с незакрытой потребностью звёзд нет. Соблюдённые части плана и
+ * реальные накопления при этом называются отдельно от награды за рост.
  *
  * [goalTitle] и [goalLeft] — цель и сколько до неё осталось после этого дня;
  * `null` — цели нет.
  */
 fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goalLeft: Coins?): List<DayCheck> {
     val stars = GrowthEngine.starsFor(report, needsMet)
-    // Звёзды, будь сова сыта: так видно, что было по плану и в голодный день.
-    val kept = GrowthEngine.starsFor(report, needsMet = true)
     val mandatory = report.line(SpendCategory.MANDATORY)
     val optional = report.line(SpendCategory.OPTIONAL)
     val savings = report.line(SpendCategory.SAVINGS)
@@ -44,20 +42,25 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
         DayCheck(
             done = GrowthStar.PLAN in stars,
             text = when {
-                GrowthStar.PLAN !in kept -> Explanation("day.optional.over", mapOf("over" to "${optional.actual.amount - optional.planned.amount}"))
-                !needsMet -> Explanation("day.optional.hungry")
-                optional.actual == Coins.ZERO -> Explanation("day.optional.none")
-                else -> Explanation(
-                    "day.optional.kept",
-                    mapOf("spent" to "${optional.actual.amount}", "planned" to "${optional.planned.amount}"),
-                )
+                !mandatory.followed && !optional.followed -> Explanation("day.plan.over_both", mapOf(
+                    "mandatoryOver" to "${mandatory.deviation}", "optionalOver" to "${optional.deviation}",
+                ))
+                !mandatory.followed -> Explanation("day.plan.over_mandatory", mapOf("over" to "${mandatory.deviation}"))
+                !optional.followed -> Explanation("day.plan.over_optional", mapOf("over" to "${optional.deviation}"))
+                !needsMet -> Explanation("day.plan.no_growth")
+                optional.actual == Coins.ZERO -> Explanation("day.plan.no_optional")
+                else -> Explanation("day.plan.kept")
             },
         ),
         DayCheck(
             done = GrowthStar.SAVED in stars,
             text = when {
+                savings.planned == Coins.ZERO && savings.actual > Coins.ZERO -> Explanation(
+                    "day.savings.unplanned",
+                    mapOf("saved" to "${savings.actual.amount}"),
+                )
                 savings.planned == Coins.ZERO -> Explanation("day.savings.none")
-                GrowthStar.SAVED !in kept -> Explanation(
+                !savings.followed -> Explanation(
                     "day.savings.missed",
                     mapOf("saved" to "${savings.actual.amount}", "planned" to "${savings.planned.amount}"),
                 )
@@ -93,7 +96,7 @@ fun dayTip(checks: List<DayCheck>, foodSpent: Coins, shop: List<ShopItem>): Expl
     val usual = prices.maxOrNull()
     return when {
         !needs.done -> Explanation("day.tip.needs_first")
-        !optional.done -> Explanation("day.tip.optional")
+        !optional.done -> Explanation("day.tip.plan")
         !savings.done -> Explanation("day.tip.savings")
         usual != null && foodSpent > usual -> Explanation(
             "day.tip.feed_daily",

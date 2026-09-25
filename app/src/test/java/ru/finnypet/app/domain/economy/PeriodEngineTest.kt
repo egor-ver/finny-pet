@@ -138,9 +138,9 @@ class PeriodEngineTest {
         assertEquals(Stat(90 - balance.nightDropMood), outcome.state.mood)
     }
 
-    /** Б3: нужное сверх плана — все три звезды, а заголовок честно не говорит «точно по плану». */
+    /** Б3: нужное сверх плана не закрывает звезду расходов, даже когда сова сыта. */
     @Test
-    fun `нужное сверх плана не отнимает звёзд`() {
+    fun `нужное сверх плана оставляет звёзды потребностей и копилки`() {
         val overFed = listOf(
             transaction(TransactionType.INCOME_PERIOD, Coins(60)),
             transaction(TransactionType.PURCHASE_MANDATORY, Coins(45)),
@@ -148,7 +148,7 @@ class PeriodEngineTest {
             transaction(TransactionType.SAVINGS_DEPOSIT, Coins(10)),
         )
         val result = engine().close(period, plan, overFed, state, PetGrowth.INITIAL)
-        assertEquals(balance.maxGrowthPerPeriod, result.value.growth.points)
+        assertEquals(balance.growthForMandatoryCovered + balance.growthForSavingsKept, result.value.growth.points)
         assertEquals("period.closed", result.explanation.key)
     }
 

@@ -98,15 +98,12 @@ class GrowthEngineTest {
         assertEquals(emptySet<GrowthStar>(), GrowthEngine.starsFor(report(), needsMet = false))
     }
 
-    /**
-     * Находка ревью (Б3): купили нужного больше плана — итоги показывали ✓✓✓,
-     * а рост давал меньше. Забота о сове план не ограничивает (AD-4).
-     */
+    /** Потребности могут быть закрыты, но превышение плана нужного лишает звезды расходов. */
     @Test
-    fun `нужное сверх плана не отнимает звезду «по плану»`() {
+    fun `нужное сверх плана отнимает только звезду «по плану»`() {
         val overFed = report(mandatoryOk = false)
-        assertEquals(setOf(GrowthStar.FED, GrowthStar.PLAN, GrowthStar.SAVED), GrowthEngine.starsFor(overFed, needsMet = true))
-        assertEquals(balance.maxGrowthPerPeriod, engine.pointsFor(overFed, needsMet = true))
+        assertEquals(setOf(GrowthStar.FED, GrowthStar.SAVED), GrowthEngine.starsFor(overFed, needsMet = true))
+        assertEquals(balance.growthForMandatoryCovered + balance.growthForSavingsKept, engine.pointsFor(overFed, needsMet = true))
     }
 
     @Test
@@ -114,6 +111,36 @@ class GrowthEngineTest {
         assertEquals(
             setOf(GrowthStar.FED, GrowthStar.SAVED),
             GrowthEngine.starsFor(report(optionalOk = false), needsMet = true),
+        )
+    }
+
+    @Test
+    fun `оба расходных направления сверх плана не отнимают звезду копилки`() {
+        assertEquals(
+            setOf(GrowthStar.FED, GrowthStar.SAVED),
+            GrowthEngine.starsFor(report(mandatoryOk = false, optionalOk = false), needsMet = true),
+        )
+    }
+
+    @Test
+    fun `экономия на расходах и отказ от желаемого не штрафуются`() {
+        val economical = PlanFactReport(
+            lines = listOf(
+                PlanFactLine(SpendCategory.MANDATORY, Coins(40), Coins(25)),
+                PlanFactLine(SpendCategory.OPTIONAL, Coins(20), Coins.ZERO),
+                PlanFactLine(SpendCategory.SAVINGS, Coins(10), Coins(10)),
+            ),
+            planTotal = Coins(70),
+            factTotal = Coins(35),
+        )
+        assertEquals(setOf(GrowthStar.FED, GrowthStar.PLAN, GrowthStar.SAVED), GrowthEngine.starsFor(economical, needsMet = true))
+    }
+
+    @Test
+    fun `снятие накоплений ниже плана не влияет на звезду расходов`() {
+        assertEquals(
+            setOf(GrowthStar.FED, GrowthStar.PLAN),
+            GrowthEngine.starsFor(report(savingsOk = false), needsMet = true),
         )
     }
 

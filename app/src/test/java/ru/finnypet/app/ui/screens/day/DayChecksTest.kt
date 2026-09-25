@@ -41,7 +41,7 @@ class DayChecksTest {
         assertEquals(
             listOf(
                 DayCheck(true, Explanation("day.needs.done", mapOf("spent" to "37"))),
-                DayCheck(true, Explanation("day.optional.none")),
+                DayCheck(true, Explanation("day.plan.no_optional")),
                 DayCheck(true, Explanation("day.savings.kept_goal", mapOf("saved" to "8", "goal" to "Набор комиксов", "left" to "16"))),
             ),
             checks,
@@ -50,8 +50,8 @@ class DayChecksTest {
     }
 
     /**
-     * День 2 — ошибка: мячик за 24 куплен, каша нет. Желаемое и копилка по
-     * плану, но в голодный день звёзд нет — строки так и говорят (AD-3).
+     * День 2 — ошибка: мячик за 24 куплен, каша нет. Оба направления расходов
+     * и копилка по плану, но при незакрытой потребности звёзд нет (AD-3).
      */
     @Test
     fun `день 2 — потребности не закрыты, звёзд нет, сова грустит`() {
@@ -59,18 +59,19 @@ class DayChecksTest {
 
         assertEquals(listOf(false, false, false), checks.map { it.done })
         assertEquals(Explanation("day.needs.missed"), checks[0].text)
-        assertEquals(Explanation("day.optional.hungry"), checks[1].text)
+        assertEquals(Explanation("day.plan.no_growth"), checks[1].text)
         assertEquals(Explanation("day.savings.hungry", mapOf("saved" to "8")), checks[2].text)
         assertEquals(PetMood.SAD, dayMood(checks))
     }
 
-    /** Находка ревью (Б3): нужного купили больше плана — это забота о сове, а не промах. */
+    /** Нужное можно купить сверх плана, но отклонение должно быть видно и в росте. */
     @Test
-    fun `нужное сверх плана — все три звезды`() {
+    fun `нужное сверх плана — без звезды расходов`() {
         val checks = dayChecks(needsMet = true, report = report(plan(15, 5, 5), fact(23, 5, 5)), goalTitle = null, goalLeft = null)
 
-        assertEquals(listOf(true, true, true), checks.map { it.done })
-        assertEquals(PetMood.HAPPY, dayMood(checks))
+        assertEquals(listOf(true, false, true), checks.map { it.done })
+        assertEquals(Explanation("day.plan.over_mandatory", mapOf("over" to "8")), checks[1].text)
+        assertEquals(PetMood.CALM, dayMood(checks))
     }
 
     /** Итоги и рост считают по одним звёздам: ✓ ровно там, где звезда. */
@@ -101,6 +102,22 @@ class DayChecksTest {
     }
 
     @Test
+    fun `пополнение без плана видно в итогах без звезды при любых потребностях`() {
+        val budget = report(plan(30, 5, 0), fact(30, 5, 5))
+        listOf(true, false).forEach { needsMet ->
+            val checks = dayChecks(needsMet, budget, goalTitle = null, goalLeft = null)
+
+            assertEquals(false, checks[2].done)
+            assertEquals(Explanation("day.savings.unplanned", mapOf("saved" to "5")), checks[2].text)
+            assertEquals(
+                "Копилка +5. Пополнение не планировали, поэтому звезды «Отложил» нет.",
+                texts.textOf(checks[2].text),
+            )
+            assertEquals(false, GrowthStar.SAVED in GrowthEngine.starsFor(budget, needsMet))
+        }
+    }
+
+    @Test
     fun `копилку пополнили меньше плана`() {
         val checks = dayChecks(needsMet = true, report = report(plan(30, 0, 10), fact(30, 0, 4)), goalTitle = null, goalLeft = null)
 
@@ -111,7 +128,24 @@ class DayChecksTest {
     fun `желаемое сверх плана`() {
         val checks = dayChecks(needsMet = true, report = report(plan(30, 5, 0), fact(30, 12, 0)), goalTitle = null, goalLeft = null)
 
-        assertEquals(DayCheck(false, Explanation("day.optional.over", mapOf("over" to "7"))), checks[1])
+        assertEquals(DayCheck(false, Explanation("day.plan.over_optional", mapOf("over" to "7"))), checks[1])
+    }
+
+    @Test
+    fun `оба направления сверх плана показаны отдельно`() {
+        val checks = dayChecks(true, report(plan(15, 5, 5), fact(23, 12, 5)), null, null)
+        assertEquals(
+            DayCheck(false, Explanation("day.plan.over_both", mapOf("mandatoryOver" to "8", "optionalOver" to "7"))),
+            checks[1],
+        )
+    }
+
+    @Test
+    fun `в день без роста соблюдённое желаемое названо даже при перерасходе нужного`() {
+        val checks = dayChecks(false, report(plan(15, 5, 5), fact(23, 0, 5)), null, null)
+        assertEquals(listOf(false, false, false), checks.map { it.done })
+        assertEquals(Explanation("day.plan.over_mandatory", mapOf("over" to "8")), checks[1].text)
+        assertEquals(Explanation("day.savings.hungry", mapOf("saved" to "5")), checks[2].text)
     }
 
     /** R14: голодна, а на нужное монеты есть — сова переспрашивает перед сном. */
@@ -126,7 +160,14 @@ class DayChecksTest {
     @Test
     fun `у каждой строки итогов и фразы перед сном есть текст`() {
         val keys = listOf(true, false).flatMap { needsMet ->
-            listOf(plan(30, 5, 0) to fact(30, 12, 0), plan(30, 5, 10) to fact(30, 0, 4), plan(30, 5, 10) to fact(30, 5, 10))
+            listOf(
+                plan(30, 5, 0) to fact(30, 12, 0),
+                plan(30, 5, 10) to fact(30, 0, 4),
+                plan(30, 5, 10) to fact(30, 5, 10),
+                plan(15, 5, 5) to fact(23, 12, 5),
+                plan(15, 5, 5) to fact(23, 5, 5),
+                plan(30, 5, 0) to fact(30, 5, 5),
+            )
                 .flatMap { (p, f) ->
                     dayChecks(needsMet, report(p, f), "Цель", Coins(5)) + dayChecks(needsMet, report(p, f), null, null)
                 }
@@ -167,7 +208,7 @@ class DayChecksTest {
         val noSavings = dayChecks(true, report(plan(30, 5, 0), fact(30, 5, 0)), null, null)
 
         assertEquals("day.tip.needs_first", dayTip(hungry, Coins(8), shop).key)
-        assertEquals("day.tip.optional", dayTip(over, Coins(8), shop).key)
+        assertEquals("day.tip.plan", dayTip(over, Coins(8), shop).key)
         assertEquals("day.tip.savings", dayTip(noSavings, Coins(8), shop).key)
     }
 
@@ -179,7 +220,7 @@ class DayChecksTest {
 
     @Test
     fun `у каждого совета есть текст`() {
-        val keys = listOf("day.tip.needs_first", "day.tip.optional", "day.tip.savings", "day.tip.feed_daily", "day.tip.keep")
+        val keys = listOf("day.tip.needs_first", "day.tip.plan", "day.tip.savings", "day.tip.feed_daily", "day.tip.keep")
         val missing = keys.filterNot(texts::containsKey)
         assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
     }

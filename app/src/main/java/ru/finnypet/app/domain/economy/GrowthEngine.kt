@@ -59,8 +59,8 @@ class GrowthEngine(private val balance: GameBalance) {
          * Какие звёзды принёс день (AD-3). В голодный день — ни одной: сова не
          * растёт, если её не кормят, а прогресс не отнимается (ТЗ 2.2).
          *
-         * «По плану» — желаемого куплено не больше плана. Нужное сверх плана
-         * звезду не отнимает: заботу о сове план не ограничивает (AD-4).
+         * «По плану» — ни нужное, ни желаемое не превысили свои суммы.
+         * Экономия допустима; потребности и расходы по плану оцениваются отдельно.
          * «Отложил» — копилка пополнена по плану; нулевой план выполняется сам
          * собой, и звезда за него платила бы за направление, которого ребёнок
          * не касался.
@@ -70,7 +70,9 @@ class GrowthEngine(private val balance: GameBalance) {
             val savings = report.line(SpendCategory.SAVINGS)
             return buildSet {
                 add(GrowthStar.FED)
-                if (report.line(SpendCategory.OPTIONAL).followed) add(GrowthStar.PLAN)
+                if (report.line(SpendCategory.MANDATORY).followed &&
+                    report.line(SpendCategory.OPTIONAL).followed
+                ) add(GrowthStar.PLAN)
                 if (savings.planned > Coins.ZERO && savings.followed) add(GrowthStar.SAVED)
             }
         }
