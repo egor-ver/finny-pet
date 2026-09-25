@@ -9,6 +9,7 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.ui.screens.main.JarsLeft
 
 /**
  * Метки карточек и фразы совы в магазине — на настоящем контент-паке и
@@ -48,6 +49,30 @@ class ShopAdviceTest {
     @Test
     fun `до подтверждения плана желаемое без метки`() {
         assertEquals(ItemMark.NONE, markOf(ball, neededNow = false, optionalLeft = null))
+    }
+
+    /**
+     * L2/AD-4: план мягкий — превышение только цифра для подтверждения
+     * покупки, эталон дня 3 (раздел 4 плана), на желаемое осталось 2.
+     */
+    @Test
+    fun `превышение плана — цена минус остаток по своему направлению`() {
+        val jars = JarsLeft(mandatory = Coins(9), optional = Coins(2))
+        assertEquals(Coins(22), overPlanOf(ball.price, SpendCategory.OPTIONAL, jars))
+        assertEquals(Coins(5), overPlanOf(porridge.price, SpendCategory.MANDATORY, jars))
+    }
+
+    @Test
+    fun `цена в пределах плана — превышения нет`() {
+        val jars = JarsLeft(mandatory = Coins(14), optional = Coins(10))
+        assertEquals(null, overPlanOf(porridge.price, SpendCategory.MANDATORY, jars))
+        assertEquals(null, overPlanOf(sticker.price, SpendCategory.OPTIONAL, jars))
+    }
+
+    /** Пока план не подтверждён, показывать превышение не по чему. */
+    @Test
+    fun `до подтверждения плана превышения нет`() {
+        assertEquals(null, overPlanOf(ball.price, SpendCategory.OPTIONAL, jars = null))
     }
 
     @Test

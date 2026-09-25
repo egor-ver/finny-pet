@@ -88,11 +88,9 @@ class EconomySimulationTest {
                 progress = deposited.progress
                 transactions += deposited.transaction
             }
-            var optionalLeft = choice.plan.optional
             choice.buys.forEach { item ->
-                val bought = wallet.purchase(item, cash, period.id, optionalLeft) as PurchaseResult.Success
+                val bought = wallet.purchase(item, cash, period.id) as PurchaseResult.Success
                 cash = bought.newBalance
-                if (item.category == SpendCategory.OPTIONAL) optionalLeft -= item.price
                 transactions += bought.transaction
                 state = pet.apply(state, bought.effects).value
             }

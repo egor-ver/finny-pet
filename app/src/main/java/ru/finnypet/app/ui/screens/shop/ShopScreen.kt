@@ -45,6 +45,7 @@ import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.ItemIcon
+import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
@@ -180,11 +181,7 @@ private fun Ready(
                     row.forEach { item ->
                         ShopCard(
                             item = item,
-                            // «Не в плане» — сразу объяснение, без окна покупки: купить
-                            // всё равно нельзя, а домен скажет почему (R4).
-                            onClick = {
-                                if (state.canBuy && item.mark == ItemMark.NOT_IN_PLAN) onBuy(item.id) else pendingId = item.id.value
-                            },
+                            onClick = { pendingId = item.id.value },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -209,6 +206,8 @@ private fun Ready(
 
         else -> ConfirmDialog(
             item = pending,
+            jars = state.jars,
+            balance = state.balance,
             onConfirm = {
                 pendingId = null
                 onBuy(pending.id)
@@ -335,13 +334,24 @@ private val ItemMark.label: Int?
 
 private const val DIMMED = 0.6f
 
-/** Подтверждение: что покупаем, за сколько и что от этого изменится. */
+/**
+ * Подтверждение: что покупаем, за сколько и что от этого изменится.
+ *
+ * Покупка сверх плана не блокируется отдельным окном (AD-4): здесь же, без
+ * упрёка, видно, насколько это больше плана и что останется в кошельке —
+ * ребёнок решает сам, а не получает стену вместо покупки.
+ */
 @Composable
 private fun ConfirmDialog(
     item: ShopItemView,
+    jars: JarsLeft?,
+    balance: Coins,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val overPlan = overPlanOf(item.price, item.category, jars)
+    val balanceAfter = balance.takeIf { it.covers(item.price) }?.let { it - item.price }
+
     FinnyDialog(
         title = item.title,
         onDismiss = onDismiss,
@@ -371,6 +381,9 @@ private fun ConfirmDialog(
         }
         // Нужное, которое сове пока не нужно: купить можно, но сова спрашивает (R12).
         item.warning?.let { Text(text = it, style = MaterialTheme.typography.bodyLarge) }
+        // Сверх плана — не запрет, а честная цифра рядом с ценой (AD-4, ТЗ 8.4).
+        if (overPlan != null) LabelledLine(label = stringResource(R.string.shop_over_plan), amount = overPlan)
+        if (balanceAfter != null) LabelledLine(label = stringResource(R.string.shop_balance_after), amount = balanceAfter)
     }
 }
 
@@ -391,17 +404,6 @@ private fun OutcomeDialog(
             onSavings = onSavings,
             onTasks = onTasks,
         )
-
-        is PurchaseOutcome.NotInPlan -> FinnyDialog(
-            title = stringResource(R.string.shop_not_in_plan_title),
-            onDismiss = onDismiss,
-            buttons = {
-                FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
-            },
-        ) {
-            Text(text = outcome.title, style = MaterialTheme.typography.titleMedium)
-            Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
-        }
     }
 }
 

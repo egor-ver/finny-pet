@@ -209,7 +209,6 @@ class CloseDayTest {
             item = food,
             currentBalance = periods.balance(current),
             periodId = periodId,
-            optionalLeft = Coins.ZERO,
         )
         val success = result as PurchaseResult.Success
         periods.addTransaction(success.transaction)

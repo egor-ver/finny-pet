@@ -34,45 +34,45 @@ class WalletEngineTest {
 
     @Test
     fun `покупка при достатке уменьшает баланс`() {
-        val result = engine.purchase(item(), currentBalance = Coins(100), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(), currentBalance = Coins(100), periodId = 1)
         assertEquals(Coins(75), (result as PurchaseResult.Success).newBalance)
     }
 
     @Test
     fun `покупка ровно на весь баланс проходит и обнуляет его`() {
-        val result = engine.purchase(item(price = Coins(100)), currentBalance = Coins(100), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(price = Coins(100)), currentBalance = Coins(100), periodId = 1)
         assertEquals(Coins.ZERO, (result as PurchaseResult.Success).newBalance)
     }
 
     @Test
     fun `нехватка одной монеты отклоняет покупку`() {
-        val result = engine.purchase(item(price = Coins(100)), currentBalance = Coins(99), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(price = Coins(100)), currentBalance = Coins(99), periodId = 1)
         assertEquals(Coins(1), (result as PurchaseResult.Rejected).shortfall)
     }
 
     @Test
     fun `отказ сообщает точную нехватку`() {
-        val result = engine.purchase(item(price = Coins(100)), currentBalance = Coins(60), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(price = Coins(100)), currentBalance = Coins(60), periodId = 1)
         assertEquals(Coins(40), (result as PurchaseResult.Rejected).shortfall)
     }
 
     @Test
     fun `обязательная покупка порождает транзакцию своего типа`() {
-        val result = engine.purchase(item(SpendCategory.MANDATORY), Coins(100), periodId = 7, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(SpendCategory.MANDATORY), Coins(100), periodId = 7)
         val transaction = (result as PurchaseResult.Success).transaction
         assertEquals(TransactionType.PURCHASE_MANDATORY, transaction.type)
     }
 
     @Test
     fun `необязательная покупка порождает транзакцию своего типа`() {
-        val result = engine.purchase(item(SpendCategory.OPTIONAL), Coins(100), periodId = 7, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(SpendCategory.OPTIONAL), Coins(100), periodId = 7)
         val transaction = (result as PurchaseResult.Success).transaction
         assertEquals(TransactionType.PURCHASE_OPTIONAL, transaction.type)
     }
 
     @Test
     fun `транзакция помнит период товар и сумму`() {
-        val result = engine.purchase(item(), Coins(100), periodId = 7, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(), Coins(100), periodId = 7)
         val transaction = (result as PurchaseResult.Success).transaction
         assertEquals(7L, transaction.periodId)
         assertEquals(ItemId("apple"), transaction.itemId)
@@ -81,20 +81,20 @@ class WalletEngineTest {
 
     @Test
     fun `транзакция берёт время из часов`() {
-        val result = engine.purchase(item(), Coins(100), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(), Coins(100), periodId = 1)
         assertEquals(now, (result as PurchaseResult.Success).transaction.createdAt)
     }
 
     @Test
     fun `эффекты товара переносятся в результат`() {
         val effects = listOf(PetEffect(PetStatKind.MOOD, 10), PetEffect(PetStatKind.CARE, 5))
-        val result = engine.purchase(item(effects = effects), Coins(100), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(effects = effects), Coins(100), periodId = 1)
         assertEquals(effects, (result as PurchaseResult.Success).effects)
     }
 
     @Test
     fun `объяснение покупки несёт цену и новый баланс`() {
-        val result = engine.purchase(item(), Coins(100), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(), Coins(100), periodId = 1)
         val args = (result as PurchaseResult.Success).explanation.args
         assertEquals("25", args["price"])
         assertEquals("75", args["balance"])
@@ -102,13 +102,13 @@ class WalletEngineTest {
 
     @Test
     fun `объяснение отказа несёт нехватку`() {
-        val result = engine.purchase(item(price = Coins(100)), Coins(60), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(price = Coins(100)), Coins(60), periodId = 1)
         assertEquals("40", (result as PurchaseResult.Rejected).explanation.args["shortfall"])
     }
 
     @Test
     fun `отказ всегда предлагает выполнить задание и выбрать дешевле`() {
-        val result = engine.purchase(item(price = Coins(100)), Coins(10), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(price = Coins(100)), Coins(10), periodId = 1)
         val options = (result as PurchaseResult.Rejected).options
         assertTrue(options.contains(RecoveryOption.DO_TASK))
         assertTrue(options.contains(RecoveryOption.CHOOSE_CHEAPER))
@@ -121,7 +121,6 @@ class WalletEngineTest {
             item(price = Coins(100)),
             currentBalance = Coins(60),
             periodId = 1,
-            optionalLeft = PLAN_LEFT,
             taskRewardAvailable = false,
         )
 
@@ -132,13 +131,13 @@ class WalletEngineTest {
 
     @Test
     fun `необязательную покупку предлагают отложить`() {
-        val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(100)), Coins(10), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(100)), Coins(10), periodId = 1)
         assertTrue((result as PurchaseResult.Rejected).options.contains(RecoveryOption.POSTPONE_PURCHASE))
     }
 
     @Test
     fun `обязательную покупку отложить не предлагают`() {
-        val result = engine.purchase(item(SpendCategory.MANDATORY, Coins(100)), Coins(10), periodId = 1, optionalLeft = PLAN_LEFT)
+        val result = engine.purchase(item(SpendCategory.MANDATORY, Coins(100)), Coins(10), periodId = 1)
         assertFalse((result as PurchaseResult.Rejected).options.contains(RecoveryOption.POSTPONE_PURCHASE))
     }
 
@@ -148,7 +147,6 @@ class WalletEngineTest {
             item(SpendCategory.MANDATORY, Coins(100)),
             currentBalance = Coins(60),
             periodId = 1,
-            optionalLeft = PLAN_LEFT,
             savings = Coins(40),
         )
         assertTrue((result as PurchaseResult.Rejected).options.contains(RecoveryOption.WITHDRAW_FROM_SAVINGS))
@@ -160,7 +158,6 @@ class WalletEngineTest {
             item(SpendCategory.MANDATORY, Coins(100)),
             currentBalance = Coins(60),
             periodId = 1,
-            optionalLeft = PLAN_LEFT,
             savings = Coins(39),
         )
         assertFalse((result as PurchaseResult.Rejected).options.contains(RecoveryOption.WITHDRAW_FROM_SAVINGS))
@@ -172,7 +169,6 @@ class WalletEngineTest {
             item(SpendCategory.OPTIONAL, Coins(100)),
             currentBalance = Coins(60),
             periodId = 1,
-            optionalLeft = PLAN_LEFT,
             savings = Coins(500),
         )
         assertFalse((result as PurchaseResult.Rejected).options.contains(RecoveryOption.WITHDRAW_FROM_SAVINGS))
@@ -180,7 +176,7 @@ class WalletEngineTest {
 
     @Test
     fun `следующий шаг в объяснении совпадает с первым вариантом`() {
-        val result = engine.purchase(item(price = Coins(100)), Coins(10), periodId = 1, optionalLeft = PLAN_LEFT) as PurchaseResult.Rejected
+        val result = engine.purchase(item(price = Coins(100)), Coins(10), periodId = 1) as PurchaseResult.Rejected
         assertEquals(result.options.first(), result.explanation.nextStep)
     }
 
@@ -227,36 +223,21 @@ class WalletEngineTest {
         }
     }
 
-    /** Раздел 4 плана, день 2: на желаемое осталось 2, а мячик стоит 24. */
+    /**
+     * AD-4/L2: план расходов мягкий — движок вообще не знает о нём и решает
+     * только по кошельку. И желаемое, и нужное сверх привычной суммы
+     * покупаются, пока хватает денег; превышение плана считает и показывает
+     * экран покупки, а не [WalletEngine].
+     */
     @Test
-    fun `желаемое сверх остатка по плану не в плане даже когда денег хватает`() {
-        val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(24)), Coins(27), periodId = 1, optionalLeft = Coins(2))
-        assertEquals(Coins(2), (result as PurchaseResult.NotInPlan).left)
-        assertEquals("purchase.not_in_plan", result.explanation.key)
-        assertEquals("2", result.explanation.args["left"])
-    }
-
-    @Test
-    fun `желаемое ровно на остаток по плану покупается`() {
-        val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(12)), Coins(20), periodId = 1, optionalLeft = Coins(12))
-        assertTrue(result is PurchaseResult.Success)
-    }
-
-    /** AD-4: забота о питомце не зависит от плана. */
-    @Test
-    fun `нужное планом не ограничено`() {
-        val result = engine.purchase(item(SpendCategory.MANDATORY, Coins(14)), Coins(20), periodId = 1, optionalLeft = Coins.ZERO)
+    fun `желаемое дороже обычного покупается при достаточном балансе`() {
+        val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(24)), Coins(27), periodId = 1)
         assertTrue(result is PurchaseResult.Success)
     }
 
     @Test
-    fun `лимит плана проверяется раньше денег`() {
-        val result = engine.purchase(item(SpendCategory.OPTIONAL, Coins(100)), Coins(10), periodId = 1, optionalLeft = Coins(2))
-        assertTrue(result is PurchaseResult.NotInPlan)
-    }
-
-    private companion object {
-        /** Остаток по плану с запасом: проверки денег не должны упираться в план. */
-        val PLAN_LEFT = Coins(1_000)
+    fun `нужное сверх обычной суммы покупается при достаточном балансе`() {
+        val result = engine.purchase(item(SpendCategory.MANDATORY, Coins(24)), Coins(27), periodId = 1)
+        assertTrue(result is PurchaseResult.Success)
     }
 }

@@ -62,8 +62,8 @@ class PlayDemoDay(
             // Раздел 4 плана, день 2: самая дорогая игрушка вместо еды. Эксперт
             // видит день без роста, грустную сову утром и разбор ошибки.
             val toy = priciest(SpendCategory.OPTIONAL, wallet)
-            val plan = planOf(profileId, period) { mistakePlan(wallet, toy?.price ?: Coins.ZERO) }
-            toy?.let { buy(profileId, period, it, plan.optional) }
+            planOf(profileId, period) { mistakePlan(wallet, toy?.price ?: Coins.ZERO) }
+            toy?.let { buy(profileId, period, it) }
         } else {
             // Тот же расчёт, что подсказывает ребёнку главный экран: самый дешёвый
             // набор, закрывающий потребности. Иначе сова в демо не росла бы (AD-3).
@@ -72,8 +72,8 @@ class PlayDemoDay(
                 .orEmpty()
             val plan = planOf(profileId, period) { newPlan(wallet, minOf(needs.totalPrice(), wallet)) }
             // Желаемое покупается одно и после нужного: весь план на него ещё свободен.
-            needs.forEach { buy(profileId, period, it, plan.optional) }
-            cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it, plan.optional) }
+            needs.forEach { buy(profileId, period, it) }
+            cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it) }
         }
         closeDay(profileId)
     }
@@ -189,12 +189,11 @@ class PlayDemoDay(
             else -> emptyList()
         }
 
-    private suspend fun buy(profileId: ProfileId, period: GamePeriod, item: ShopItem, optionalLeft: Coins) {
+    private suspend fun buy(profileId: ProfileId, period: GamePeriod, item: ShopItem) {
         val result = wallet.purchase(
             item = item,
             currentBalance = periods.balance(period),
             periodId = period.id,
-            optionalLeft = optionalLeft,
         )
         if (result !is PurchaseResult.Success) return
         recorder.record(

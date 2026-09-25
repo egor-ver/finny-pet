@@ -1,6 +1,5 @@
 {
   "purchase.done": "Отличная покупка! В кошельке осталось: {coins:balance}.",
-  "purchase.not_in_plan": "Сегодня не в плане: на желаемое осталось {left}. Можно запланировать на завтра.",
   "purchase.rejected": "Не хватает: {coins:shortfall}. Ничего страшного, давай решим, как поступить:",
   "word.coins.ONE": "монета",
   "word.coins.FEW": "монеты",

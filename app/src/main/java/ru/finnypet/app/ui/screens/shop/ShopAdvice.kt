@@ -5,6 +5,7 @@ import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.ui.screens.main.JarsLeft
 
 /** Метка на карточке товара (раздел 8 плана). Цвет не единственный признак — метка словами. */
 enum class ItemMark { NEEDED_NOW, NOT_NEEDED, NOT_IN_PLAN, NONE }
@@ -18,6 +19,21 @@ fun markOf(item: ShopItem, neededNow: Boolean, optionalLeft: Coins?): ItemMark =
     item.category == SpendCategory.MANDATORY -> if (neededNow) ItemMark.NEEDED_NOW else ItemMark.NOT_NEEDED
     optionalLeft != null && !optionalLeft.covers(item.price) -> ItemMark.NOT_IN_PLAN
     else -> ItemMark.NONE
+}
+
+/**
+ * Насколько цена больше того, что осталось по плану на направление товара
+ * (AD-4): план мягкий, поэтому это только цифра для честного подтверждения
+ * покупки, а не запрет. `null` — план ещё не подтверждён или цена в него
+ * укладывается, показывать нечего.
+ */
+fun overPlanOf(price: Coins, category: SpendCategory, jars: JarsLeft?): Coins? {
+    val left = when (category) {
+        SpendCategory.MANDATORY -> jars?.mandatory
+        SpendCategory.OPTIONAL -> jars?.optional
+        SpendCategory.SAVINGS -> null
+    } ?: return null
+    return left.shortfallTo(price).takeIf { it > Coins.ZERO }
 }
 
 /** Что сова говорит в магазине: о первой потребности — еда раньше ухода, как везде. */

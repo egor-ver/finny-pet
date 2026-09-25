@@ -25,16 +25,6 @@ sealed interface PurchaseResult {
         val options: List<RecoveryOption>,
         val explanation: Explanation,
     ) : PurchaseResult
-
-    /**
-     * Желаемое сверх остатка по плану (R4). Выхода вроде «взять из копилки»
-     * нет намеренно: необязательная покупка переносится на завтра без
-     * наказания, а не добывается любой ценой (AD-4).
-     */
-    data class NotInPlan(
-        val left: Coins,
-        val explanation: Explanation,
-    ) : PurchaseResult
 }
 
 data class CreditOutcome(
@@ -45,9 +35,9 @@ data class CreditOutcome(
 class WalletEngine(private val clock: GameClock) {
 
     /**
-     * [optionalLeft] — сколько по плану ещё можно потратить на желаемое.
-     * Лимит проверяется раньше денег: полный кошелёк не делает мячик сверх
-     * плана доступным. Нужное планом не ограничено никогда (AD-4).
+     * План расходов мягкий (AD-4): при достаточном кошельке нужное и
+     * желаемое можно купить сверх плана. Только кошелёк — жёсткое
+     * ограничение; превышение плана показывает экран покупки, а не движок.
      *
      * [taskRewardAvailable] — есть ли сегодня ещё задание с монетами: когда
      * лимит дня выбран, «выполнить задание» не предлагается — это было бы
@@ -57,19 +47,9 @@ class WalletEngine(private val clock: GameClock) {
         item: ShopItem,
         currentBalance: Coins,
         periodId: Long,
-        optionalLeft: Coins,
         savings: Coins = Coins.ZERO,
         taskRewardAvailable: Boolean = true,
     ): PurchaseResult {
-        if (item.category == SpendCategory.OPTIONAL && !optionalLeft.covers(item.price)) {
-            return PurchaseResult.NotInPlan(
-                left = optionalLeft,
-                explanation = Explanation(
-                    key = KEY_NOT_IN_PLAN,
-                    args = mapOf("left" to optionalLeft.amount.toString()),
-                ),
-            )
-        }
         if (!currentBalance.covers(item.price)) {
             return rejected(item, currentBalance, savings, taskRewardAvailable)
         }
@@ -192,7 +172,6 @@ class WalletEngine(private val clock: GameClock) {
         )
         const val KEY_DONE = "purchase.done"
         const val KEY_REJECTED = "purchase.rejected"
-        const val KEY_NOT_IN_PLAN = "purchase.not_in_plan"
         const val KEY_CREDITED = "balance.credited"
     }
 }
