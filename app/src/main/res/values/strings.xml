@@ -173,6 +173,7 @@
     <string name="budget_title">План на день</string>
     <string name="budget_action_plan">Спланировать день</string>
     <string name="budget_choose_goal">Выбрать цель</string>
+    <string name="budget_fill_mandatory">Положить %1$s на нужное</string>
     <!-- Банки после подтверждения: «потрачено 14, осталось 24» -->
     <string name="budget_jar_spent_left">потрачено %1$d, осталось %2$d</string>
     <string name="budget_jar_left">осталось %1$d</string>

@@ -1,8 +1,6 @@
 package ru.finnypet.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,8 +12,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,20 +71,31 @@ fun PlanEditor(
      * цели (раздел 8 плана). `null` — цель есть или копилка задания.
      */
     onChooseGoal: (() -> Unit)? = null,
+    /**
+     * Сколько стоит закрыть все непокрытые потребности — кнопка «Положить N на
+     * нужное» подставляет ровно эту сумму, не трогая другие банки. `null` —
+     * банка задания (свои [jars]) или считать нечего.
+     */
+    mandatoryCover: Coins? = null,
 ) {
     val rows = jars.ifEmpty { SpendCategory.entries.map { PlanJar(it, label = null) } }
     rows.forEach { jar ->
         val category = jar.category
         val amount = plan.amountFor(category)
+        val max = amount + remainder
         CategoryRow(
             category = category,
             title = jar.label ?: stringResource(category.label),
             amount = amount,
-            max = amount + remainder,
+            max = max,
             available = available,
             hint = hints[category],
             onSet = { onSet(category, it) },
             onChooseGoal = onChooseGoal.takeIf { category == SpendCategory.SAVINGS },
+            // Не обязательна: видна, только пока не хватает и остатка хватит
+            // без урезания — иначе кнопка обещала бы сумму, которую не даст.
+            fillAmount = mandatoryCover
+                ?.takeIf { category == SpendCategory.MANDATORY && it > amount && it <= max },
         )
     }
 
@@ -127,6 +137,7 @@ private fun CategoryRow(
     hint: String?,
     onSet: (Coins) -> Unit,
     onChooseGoal: (() -> Unit)?,
+    fillAmount: Coins?,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
@@ -165,6 +176,12 @@ private fun CategoryRow(
         } else {
             AmountSlider(category = category, title = title, amount = amount, max = max, available = available, onSet = onSet)
         }
+        if (fillAmount != null) {
+            FinnySecondaryButton(
+                text = stringResource(R.string.budget_fill_mandatory, coinsText(fillAmount)),
+                onClick = { onSet(fillAmount) },
+            )
+        }
         if (hint != null) {
             Text(
                 text = hint,
@@ -176,10 +193,12 @@ private fun CategoryRow(
 }
 
 /**
- * Пока палец тянет, ползунок показывает своё значение: база отстаёт на
- * время записи, и без этого бегунок прыгал бы назад. Дальше [max] бегунок
- * не идёт, но запрошенная сумма уходит наверх целиком — по ней сова узнаёт,
- * что монеты кончились.
+ * Пока палец тянет, банка показывает значение сама и в базу не пишет: запись
+ * под замком на каждый шаг — это ~45 обращений на одно движение (Б11).
+ * Уходит в базу только итог — когда палец отпущен или шаг сделан кнопкой
+ * TalkBack (для неё отдельного жеста отпускания нет, и колбэк срабатывает
+ * сразу). Дальше [max] бегунок не идёт, но запрошенная сумма уходит целиком —
+ * по ней сова узнаёт, что монеты кончились.
  *
  * TalkBack читает сумму монетами, а не процентами, как по умолчанию.
  */
@@ -192,21 +211,25 @@ private fun AmountSlider(
     available: Coins,
     onSet: (Coins) -> Unit,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val dragging by interaction.collectIsDraggedAsState()
-    var held by remember { mutableFloatStateOf(amount.amount.toFloat()) }
+    var pending by remember { mutableStateOf<Coins?>(null) }
+    // База прислала своё значение — правка дошла (или её обогнало что-то
+    // другое) — своё больше не нужно. Сама база могла остаться прежней,
+    // если запрос обрезался до уже сохранённой суммы (потянули за предел):
+    // тогда стейт-флоу не пришлёт новое значение, и без ключа на [max]
+    // обрезанный остаток из pending пережил бы освобождение места в другой
+    // банке и показал бы сумму, которой в плане уже нет.
+    LaunchedEffect(amount, max) { pending = null }
+    val requested = pending ?: amount
+    val shown = requested.coerceAtMost(max)
     val top = available.amount.coerceAtLeast(1)
-    val spoken = coinsText(amount)
+    val spoken = coinsText(shown)
     Slider(
-        value = if (dragging) held else amount.amount.toFloat(),
-        onValueChange = { value ->
-            held = value.coerceAtMost(max.amount.toFloat())
-            onSet(Coins(value.roundToInt()))
-        },
+        value = shown.amount.toFloat(),
+        onValueChange = { value -> pending = Coins(value.roundToInt()) },
+        onValueChangeFinished = { pending?.let(onSet) },
         enabled = available > Coins.ZERO,
         valueRange = 0f..top.toFloat(),
         steps = top - 1,
-        interactionSource = interaction,
         colors = SliderDefaults.colors(thumbColor = category.color, activeTrackColor = category.color),
         modifier = Modifier
             .fillMaxWidth()

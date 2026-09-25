@@ -199,6 +199,7 @@ private fun Planning(
             onSet = onSet,
             hints = state.hints,
             onChooseGoal = onSavings.takeUnless { state.hasGoal },
+            mandatoryCover = state.mandatoryCover,
         )
 
         // Остаток — не ошибка: он переходит на завтра (R5).

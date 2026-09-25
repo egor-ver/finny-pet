@@ -32,6 +32,12 @@ fun planOwl(
     hitLimit -> PlanOwl(PetMood.CALM, Explanation("owl.plan.limit"))
     // Утро без грусти: пока ребёнок ничего не разложил, сова не судит план.
     plan.total == Coins.ZERO -> PlanOwl(PetMood.CALM, Explanation("owl.plan.start", mapOf("wallet" to "${wallet.amount}")))
+    // Нужное не тронуто, но разложить ещё есть что (в плане осталось место) —
+    // рано грустить: ребёнок мог начать с копилки и вернуться к нужному
+    // следующим ходом (Б15). Но и молчать нельзя: план уже можно подтвердить,
+    // и о нехватке на еду и уход сова предупреждает сразу, только спокойно.
+    cover != null && cover > Coins.ZERO && plan.mandatory == Coins.ZERO && plan.total < wallet ->
+        PlanOwl(PetMood.CALM, Explanation("owl.plan.not_enough", mapOf("need" to "${cover.amount}")))
     cover != null && plan.mandatory < cover ->
         PlanOwl(PetMood.SAD, Explanation("owl.plan.not_enough", mapOf("need" to "${cover.amount}")))
     // Лазейка «всё в нужное»: план соблюдён, а выбора не было (раздел 3 плана).

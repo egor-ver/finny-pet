@@ -64,6 +64,8 @@ sealed interface BudgetState {
      * [hasGoal] — без цели копилку не разложить: вместо ползунка «Выбрать цель».
      * [owl] и [phrase] — сова отвечает на каждое движение ползунка;
      * [hints] — строка пояснения под банкой, `null` — пояснять нечего.
+     * [mandatoryCover] — сколько стоит закрыть все непокрытые потребности,
+     * `null` — в магазине их не закрыть целиком, считать нечего.
      */
     data class Planning(
         val available: Coins,
@@ -75,6 +77,7 @@ sealed interface BudgetState {
         val owl: OwlLook,
         val phrase: String,
         val hints: Map<SpendCategory, String?> = emptyMap(),
+        val mandatoryCover: Coins? = null,
     ) : BudgetState {
 
         /** Пустой план подтверждать нечего, а перебор сначала надо исправить. */
@@ -215,6 +218,8 @@ class BudgetViewModel @Inject constructor(
         limit: Boolean,
     ): BudgetState.Planning {
         val check = budget.check(plan, wallet)
+        val remainder = (check as? PlanCheck.Fits)?.remainder ?: Coins.ZERO
+        val overBy = (check as? PlanCheck.Exceeds)?.overBy ?: Coins.ZERO
         val goal = progress?.let { goals[it.goalId] }
         val goalTitle = goal?.let { pack.texts.textOf(it.titleKey) }
         val coverByNeed = petState.coverByNeed(pet.state, pack.shop)
@@ -224,8 +229,8 @@ class BudgetViewModel @Inject constructor(
         return BudgetState.Planning(
             available = wallet,
             plan = plan,
-            remainder = (check as? PlanCheck.Fits)?.remainder ?: Coins.ZERO,
-            overBy = (check as? PlanCheck.Exceeds)?.overBy ?: Coins.ZERO,
+            remainder = remainder,
+            overBy = overBy,
             needsGoal = plan.savings > Coins.ZERO && progress == null,
             hasGoal = progress != null,
             owl = owlLook(
@@ -242,6 +247,7 @@ class BudgetViewModel @Inject constructor(
                 SpendCategory.OPTIONAL to optionalHint(pack.texts, plan.optional, wants),
                 SpendCategory.SAVINGS to savingsHint(pack.texts, plan.savings, goalTitle, days),
             ),
+            mandatoryCover = cover,
         )
     }
 
