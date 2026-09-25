@@ -21,6 +21,7 @@ data class ContentPack(
     val tasks: List<LearningTask>,
     val glossary: List<GlossaryTerm>,
     val texts: Map<String, String>,
+    val events: List<DayEvent> = emptyList(),
 ) {
 
     companion object {

@@ -10,6 +10,8 @@ import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.PetEffect
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.TaskProgressRepository
@@ -28,6 +30,23 @@ class OutcomeRecorderImpl @Inject constructor(
     private val petState: PetStateEngine,
     private val taskProgress: TaskProgressRepository,
 ) : OutcomeRecorder {
+
+    override suspend fun recordEventOnce(profileId: ProfileId, outcome: ActionOutcome): Boolean =
+        database.withTransaction {
+            val marker = requireNotNull(outcome.transaction)
+            check(marker.type == TransactionType.EVENT_CARE || marker.type == TransactionType.INCOME_GIFT)
+            val period = checkNotNull(database.periods().byId(marker.periodId)) { "День события не найден" }
+            check(period.profileId == profileId.value) { "Событие относится к другому профилю" }
+            if (period.status != PeriodStatus.PLANNING ||
+                database.transactions().byPeriod(marker.periodId).any { it.reasonKey == marker.reasonKey }) {
+                false
+            } else {
+                check(database.petStates().byProfile(profileId.value) != null) { "У события нет питомца" }
+                applyEffects(profileId, outcome.effects)
+                database.transactions().insert(marker.toEntity())
+                true
+            }
+        }
 
     override suspend fun record(profileId: ProfileId, outcome: ActionOutcome): List<Change.PetStat> =
         database.withTransaction {

@@ -169,6 +169,64 @@ class OutcomeRecorderTest {
         assertTrue(periods.transactions(periodId).isEmpty())
     }
 
+    @Test
+    fun событие_ухода_не_повторяется_после_нового_экземпляра_писателя() = runBlocking {
+        periods.save(periods.current(profileId)!!.copy(status = PeriodStatus.PLANNING))
+        val outcome = ActionOutcome(
+            transaction = Transaction(0, periodId, TransactionType.EVENT_CARE, Coins(10),
+                "event.dirty-feathers", FIXED_TIME),
+            effects = listOf(PetEffect(PetStatKind.CARE, -10)),
+        )
+        assertTrue(recorder.recordEventOnce(profileId, outcome))
+        val reopened = OutcomeRecorderImpl(db, PetStateEngine(balance), tasks)
+        assertEquals(false, reopened.recordEventOnce(profileId, outcome))
+        assertEquals(Stat(balance.initialStat - 10), profiles.pet(profileId)!!.state.care)
+        assertEquals(1, periods.transactions(periodId).size)
+    }
+
+    @Test
+    fun сбой_записи_события_откатывает_изменение_ухода() = runBlocking {
+        periods.save(periods.current(profileId)!!.copy(status = PeriodStatus.PLANNING))
+        val occupied = periods.addTransaction(deposit(periodId))
+        val outcome = ActionOutcome(
+            transaction = Transaction(occupied.id, periodId, TransactionType.EVENT_CARE, Coins(10),
+                "event.dirty-feathers", FIXED_TIME),
+            effects = listOf(PetEffect(PetStatKind.CARE, -10)),
+        )
+        try {
+            recorder.recordEventOnce(profileId, outcome)
+            fail("событие с занятым id должно откатиться")
+        } catch (_: SQLiteConstraintException) {
+            // Занятый первичный ключ прерывает всю транзакцию.
+        }
+        assertEquals(Stat(balance.initialStat), profiles.pet(profileId)!!.state.care)
+        assertEquals(1, periods.transactions(periodId).size)
+    }
+
+    @Test
+    fun подарок_прибавляет_монеты_только_один_раз() = runBlocking {
+        periods.save(periods.current(profileId)!!.copy(status = PeriodStatus.PLANNING))
+        val outcome = ActionOutcome(transaction = Transaction(0, periodId, TransactionType.INCOME_GIFT,
+            Coins(8), "event.family-gift", FIXED_TIME))
+        val before = periods.balance(periods.current(profileId)!!)
+        assertTrue(recorder.recordEventOnce(profileId, outcome))
+        assertEquals(false, recorder.recordEventOnce(profileId, outcome))
+        assertEquals(before + Coins(8), periods.balance(periods.current(profileId)!!))
+        assertEquals(1, periods.transactions(periodId).size)
+    }
+
+    @Test
+    fun событие_не_меняет_питомца_после_подтверждения_плана() = runBlocking {
+        val outcome = ActionOutcome(
+            transaction = Transaction(0, periodId, TransactionType.EVENT_CARE, Coins(10),
+                "event.dirty-feathers", FIXED_TIME),
+            effects = listOf(PetEffect(PetStatKind.CARE, -10)),
+        )
+        assertEquals(false, recorder.recordEventOnce(profileId, outcome))
+        assertEquals(Stat(balance.initialStat), profiles.pet(profileId)!!.state.care)
+        assertTrue(periods.transactions(periodId).isEmpty())
+    }
+
     private fun deposit(period: Long) = Transaction(
         id = 0,
         periodId = period,

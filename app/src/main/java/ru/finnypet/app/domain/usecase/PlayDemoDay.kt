@@ -75,7 +75,11 @@ class PlayDemoDay(
             needs.forEach { buy(profileId, period, it) }
             cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it) }
         }
-        closeDay(profileId)
+        if (closeDay(profileId) != null) {
+            // Игрок видит следующий день сразу после нажатия: доход и событие
+            // должны быть готовы до возврата на главный экран.
+            openPeriod(profileId)
+        }
     }
 
     /**

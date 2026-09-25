@@ -194,6 +194,10 @@ private fun ReadyScreen(
     ) {
         banner()
 
+        state.event?.let { message ->
+            FinnyCard { Text(text = message, style = MaterialTheme.typography.bodyLarge) }
+        }
+
         Bubble(text = state.phrase)
         Pet(state = state)
         GrowthRow(growth = state.growth, onOpen = onProgress)
@@ -466,10 +470,12 @@ private fun walletLabel(line: WalletLine): String {
             TransactionType.INCOME_PERIOD -> R.string.wallet_income
             TransactionType.INCOME_TASK -> R.string.wallet_task
             TransactionType.INCOME_PARENT -> R.string.wallet_parent
+            TransactionType.INCOME_GIFT -> R.string.wallet_gift
             TransactionType.PURCHASE_MANDATORY, TransactionType.PURCHASE_OPTIONAL -> R.string.wallet_purchase
             TransactionType.SAVINGS_DEPOSIT -> R.string.wallet_to_savings
             TransactionType.SAVINGS_WITHDRAW -> R.string.wallet_from_savings
             TransactionType.UNEXPECTED_EXPENSE -> R.string.wallet_unexpected
+            TransactionType.EVENT_CARE -> R.string.wallet_care_event
             TransactionType.GOAL_PURCHASE -> R.string.wallet_goal_change
         },
     )

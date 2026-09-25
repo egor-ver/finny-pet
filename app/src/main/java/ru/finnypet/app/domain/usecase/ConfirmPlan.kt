@@ -25,6 +25,7 @@ import ru.finnypet.app.domain.repository.SavingsRepository
  * или не помещается в кошелёк, в копилку запланировано, а цели нет.
  */
 class ConfirmPlan(
+    private val openPeriod: OpenPeriodIfNeeded,
     private val periods: PeriodRepository,
     private val savings: SavingsRepository,
     private val content: ContentRepository,
@@ -35,8 +36,13 @@ class ConfirmPlan(
 ) {
 
     suspend operator fun invoke(profileId: ProfileId): Boolean {
+        val pending = periods.current(profileId) ?: return false
+        if (pending.status != PeriodStatus.PLANNING) return false
+        // Подготовка дня (доход и событие) должна завершиться до принятия
+        // неизменяемого плана, даже если кнопку нажали сразу после входа.
+        openPeriod(profileId)
         val period = periods.current(profileId) ?: return false
-        if (period.status != PeriodStatus.PLANNING) return false
+        if (period.id != pending.id || period.status != PeriodStatus.PLANNING) return false
         val plan = periods.plan(period.id) ?: return false
         if (plan.total == Coins.ZERO) return false
 

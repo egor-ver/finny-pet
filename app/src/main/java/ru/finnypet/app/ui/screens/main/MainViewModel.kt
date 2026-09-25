@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import ru.finnypet.app.domain.content.DayEvent
 import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
@@ -103,6 +104,7 @@ sealed interface MainState {
         val step: NextStep,
         /** Купленные цели рядом с совой (R13) по порядку покупки. */
         val things: List<Thing> = emptyList(),
+        val event: String? = null,
     ) : MainState
 }
 
@@ -136,6 +138,7 @@ class MainViewModel @Inject constructor(
     private val shopItems: Map<ItemId, ShopItem> = shop.associateBy { it.id }
     private val pets = content.pack().pets
     private val texts: Map<String, String> = content.pack().texts
+    private val events = content.pack().events
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<MainState> =
@@ -201,6 +204,7 @@ class MainViewModel @Inject constructor(
                         stats = pet.state,
                         needs = needs,
                         phrase = texts.textOf(phrase),
+                        event = eventMessage(transactions),
                         growth = growthOf(pet.growth, balance.growthThresholds),
                         balance = wallet,
                         wallet = walletLines(period.startBalance, transactions, ::nameOf),
@@ -249,6 +253,17 @@ class MainViewModel @Inject constructor(
             allDone = TaskSchedule.listed(tasks).all { it.id in done },
             reward = balance.taskReward,
         )
+    }
+
+    private fun eventMessage(transactions: List<Transaction>): String? {
+        val event = events.firstOrNull { candidate ->
+            transactions.any { it.reasonKey == "event.${candidate.id}" }
+        } ?: return null
+        val recordedAmount = transactions.first { it.reasonKey == "event.${event.id}" }.amount.amount
+        return when (event) {
+            is DayEvent.ExtraCare -> texts.textOf(event.messageKey).replace("{care}", "$recordedAmount")
+            is DayEvent.Gift -> texts.textOf(event.messageKey).replace("{amount}", "$recordedAmount")
+        }
     }
 
     /** Товар или цель операции словами; пропавшие из контент-пака — без имени, но с суммой. */

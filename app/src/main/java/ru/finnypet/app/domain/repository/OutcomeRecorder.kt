@@ -34,4 +34,7 @@ data class ActionOutcome(
 interface OutcomeRecorder {
 
     suspend fun record(profileId: ProfileId, outcome: ActionOutcome): List<Change.PetStat>
+
+    /** Маркер события, деньги и показатель сохраняются вместе; повтор после перезапуска ничего не меняет. */
+    suspend fun recordEventOnce(profileId: ProfileId, outcome: ActionOutcome): Boolean
 }

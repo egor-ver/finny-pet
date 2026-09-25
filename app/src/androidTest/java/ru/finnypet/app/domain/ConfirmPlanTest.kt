@@ -77,7 +77,16 @@ class ConfirmPlanTest {
             petName = "Пушок",
             appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
         ).id
+        val recorder = OutcomeRecorderImpl(
+            database = db,
+            petState = PetStateEngine(balance),
+            taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock),
+        )
+        val openPeriod = OpenPeriodIfNeeded(
+            periods, WalletEngine(clock), balance, content.pack().events, recorder, clock,
+        )
         confirm = ConfirmPlan(
+            openPeriod = openPeriod,
             periods = periods,
             savings = savings,
             content = content,
@@ -90,13 +99,9 @@ class ConfirmPlanTest {
                 clock = clock,
             ),
             savingsEngine = SavingsEngine(clock),
-            recorder = OutcomeRecorderImpl(
-                database = db,
-                petState = PetStateEngine(balance),
-                taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock),
-            ),
+            recorder = recorder,
         )
-        period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(profileId)
+        period = openPeriod(profileId)
     }
 
     @After
@@ -159,6 +164,22 @@ class ConfirmPlanTest {
         periods.savePlan(period.id, BudgetPlan(mandatory = wallet, optional = Coins.ZERO, savings = Coins.ZERO))
 
         assertTrue(confirm(profileId))
+    }
+
+    @Test
+    fun быстрое_подтверждение_ждёт_событие_дня_4() = runBlocking {
+        periods.save(period.copy(status = PeriodStatus.CLOSED, closedAt = FIXED_TIME))
+        val fourth = periods.open(GamePeriod(
+            id = 0, profileId = profileId, number = 4, income = balance.periodIncome,
+            startBalance = Coins.ZERO, status = PeriodStatus.PLANNING,
+        ))
+        periods.savePlan(fourth.id, BudgetPlan(mandatory = Coins(10), optional = Coins.ZERO, savings = Coins.ZERO))
+
+        assertTrue(confirm(profileId))
+
+        assertEquals(PeriodStatus.RUNNING, periods.current(profileId)!!.status)
+        assertEquals(1, periods.transactions(fourth.id).count { it.type == TransactionType.EVENT_CARE })
+        assertEquals(balance.initialStat - 10, db.petStates().byProfile(profileId.value)!!.care)
     }
 
     private suspend fun chooseGoal() {

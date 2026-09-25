@@ -70,6 +70,8 @@
     <string name="wallet_income">Доход дня</string>
     <string name="wallet_task">За задание</string>
     <string name="wallet_parent">От взрослого</string>
+    <string name="wallet_gift">Подарок от семьи</string>
+    <string name="wallet_care_event">Перья испачкались</string>
     <string name="wallet_to_savings">В копилку</string>
     <string name="wallet_from_savings">Из копилки</string>
     <string name="wallet_purchase">Покупка</string>

@@ -34,6 +34,7 @@ class AssetContentRepository @Inject constructor(
                 tasks = read("tasks.json"),
                 glossary = read("glossary.json"),
                 explanations = read("explanations.json"),
+                events = read("events.json"),
             )
         )
     }

@@ -2,6 +2,7 @@ package ru.finnypet.app.data.content
 
 import kotlinx.serialization.json.Json
 import ru.finnypet.app.domain.content.ContentOption
+import ru.finnypet.app.domain.content.DayEvent
 import ru.finnypet.app.domain.content.ContentPack
 import ru.finnypet.app.domain.content.GlossaryTerm
 import ru.finnypet.app.domain.content.PetColor
@@ -38,6 +39,7 @@ data class RawContent(
     val tasks: String,
     val glossary: String,
     val explanations: String,
+    val events: String = "{\"events\":[]}",
 )
 
 /**
@@ -62,14 +64,20 @@ class ContentParser @Inject constructor() {
         // по идентификатору и берут награду по умолчанию из чисел экономики.
         val balance = parseBalance(raw.balance)
         val shop = parseShop(raw.shop)
+        val texts = decode<Map<String, String>>(EXPLANATIONS, raw.explanations)
+        val events = parseEvents(raw.events)
+        events.forEach { event ->
+            require(event.messageKey in texts) { "$EVENTS: нет текста ${event.messageKey} в $EXPLANATIONS" }
+        }
         return ContentPack(
             balance = balance,
             pets = parsePets(raw.pets),
             shop = shop,
             goals = parseGoals(raw.goals),
             tasks = parseTasks(raw.tasks, shop.map { it.id }.toSet(), balance.taskReward),
+            events = events,
             glossary = parseGlossary(raw.glossary),
-            texts = decode<Map<String, String>>(EXPLANATIONS, raw.explanations),
+            texts = texts,
         )
     }
 
@@ -92,13 +100,36 @@ class ContentParser @Inject constructor() {
                 growthForPlanFollowed = dto.growthForPlanFollowed,
                 growthForSavingsKept = dto.growthForSavingsKept,
                 growthThresholds = dto.growthThresholds,
-                // Генератора непредвиденных расходов в проекте нет: в
-                // обязательный минимум ТЗ они не входят, поле остаётся нулевым.
-                unexpectedExpenseChance = 0,
                 carryOverUnspent = dto.carryOverUnspent,
                 rewardedTasksPerPeriod = dto.rewardedTasksPerPeriod,
                 parentBonus = Coins(dto.parentBonus),
             )
+        }
+    }
+
+    private fun parseEvents(raw: String): List<DayEvent> {
+        val dto = decode<EventsDto>(EVENTS, raw)
+        return dto.events.map { event ->
+            at(EVENTS, "событие ${event.id}") {
+                require(event.id.isNotBlank() && event.messageKey.isNotBlank()) { "нужны id и messageKey" }
+                require(event.day >= 1) { "номер дня начинается с 1" }
+                when (event.type) {
+                    "EXTRA_CARE" -> {
+                        require(event.amount == null) { "у ухода нет денежной суммы" }
+                        DayEvent.ExtraCare(event.id, event.day, event.messageKey, requireNotNull(event.careDrop))
+                    }
+                    "GIFT" -> {
+                        require(event.careDrop == null) { "у подарка нет снижения ухода" }
+                        DayEvent.Gift(event.id, event.day, event.messageKey, Coins(requireNotNull(event.amount)))
+                    }
+                    else -> error("неизвестный тип ${event.type}")
+                }
+            }
+        }.also { events ->
+            events.map { it.id }.requireUnique(EVENTS, "событие")
+            if (events.map { it.day }.distinct().size != events.size) {
+                throw ContentParseException("$EVENTS: не больше одного события на день")
+            }
         }
     }
 
@@ -407,6 +438,7 @@ class ContentParser @Inject constructor() {
         const val TASKS = "tasks.json"
         const val GLOSSARY = "glossary.json"
         const val EXPLANATIONS = "explanations.json"
+        const val EVENTS = "events.json"
 
         val HEX_COLOR = Regex("#[0-9A-Fa-f]{6}")
     }

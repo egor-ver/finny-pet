@@ -20,6 +20,7 @@ object RealContent {
         shop: String? = null,
         goals: String? = null,
         tasks: String? = null,
+        events: String? = null,
     ) = RawContent(
         balance = balance ?: asset("balance.json"),
         pets = pets ?: asset("pets.json"),
@@ -28,6 +29,7 @@ object RealContent {
         tasks = tasks ?: asset("tasks.json"),
         glossary = asset("glossary.json"),
         explanations = asset("explanations.json"),
+        events = events ?: asset("events.json"),
     )
 
     fun asset(name: String): String {

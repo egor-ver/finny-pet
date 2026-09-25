@@ -94,13 +94,14 @@ class TransactionTest {
     }
 
     @Test
-    fun `доходом считаются только начисления, снятие с накоплений и сдача с покупки цели`() {
+    fun `доходом считаются начисления включая подарок, снятие и сдача с цели`() {
         val income = TransactionType.entries.filter { it.isIncome }
         assertEquals(
             listOf(
                 TransactionType.INCOME_PERIOD,
                 TransactionType.INCOME_TASK,
                 TransactionType.INCOME_PARENT,
+                TransactionType.INCOME_GIFT,
                 TransactionType.SAVINGS_WITHDRAW,
                 TransactionType.GOAL_PURCHASE,
             ),
@@ -120,6 +121,8 @@ class TransactionTest {
     fun `расходы не считаются доходом`() {
         assertFalse(TransactionType.PURCHASE_MANDATORY.isIncome)
         assertFalse(TransactionType.UNEXPECTED_EXPENSE.isIncome)
+        assertFalse(TransactionType.EVENT_CARE.isIncome)
+        assertEquals(0, transaction(TransactionType.EVENT_CARE, Coins(10)).balanceDelta)
         assertTrue(TransactionType.SAVINGS_WITHDRAW.isIncome)
     }
 
@@ -127,10 +130,10 @@ class TransactionTest {
     fun `имена типов транзакций не меняются`() {
         assertEquals(
             listOf(
-                "INCOME_PERIOD", "INCOME_TASK", "INCOME_PARENT",
+                "INCOME_PERIOD", "INCOME_TASK", "INCOME_PARENT", "INCOME_GIFT",
                 "PURCHASE_MANDATORY", "PURCHASE_OPTIONAL",
                 "SAVINGS_DEPOSIT", "SAVINGS_WITHDRAW",
-                "UNEXPECTED_EXPENSE", "GOAL_PURCHASE",
+                "UNEXPECTED_EXPENSE", "EVENT_CARE", "GOAL_PURCHASE",
             ),
             TransactionType.entries.map { it.name },
         )

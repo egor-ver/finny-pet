@@ -3,12 +3,19 @@ package ru.finnypet.app.domain.usecase
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.content.DayEvent
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GamePeriod
+import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.domain.repository.ActionOutcome
+import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -27,6 +34,9 @@ class OpenPeriodIfNeeded(
     private val periods: PeriodRepository,
     private val wallet: WalletEngine,
     private val balance: GameBalance,
+    private val events: List<DayEvent> = emptyList(),
+    private val recorder: OutcomeRecorder? = null,
+    private val clock: GameClock? = null,
 ) {
 
     /**
@@ -39,6 +49,7 @@ class OpenPeriodIfNeeded(
     suspend operator fun invoke(profileId: ProfileId): GamePeriod = opening.withLock {
         val period = periods.current(profileId) ?: openFirst(profileId)
         creditIncome(period)
+        applyEvent(period)
         period
     }
 
@@ -84,6 +95,33 @@ class OpenPeriodIfNeeded(
             periodId = period.id,
         )
         periods.addTransaction(credited.value.transaction)
+    }
+
+    private suspend fun applyEvent(period: GamePeriod) {
+        val event = events.firstOrNull { it.day == period.number } ?: return
+        // На старом сохранении день уже мог быть подтверждён до установки обновления.
+        if (period.status != PeriodStatus.PLANNING) return
+        val transaction = when (event) {
+            is DayEvent.ExtraCare -> Transaction(
+                id = UNSAVED,
+                periodId = period.id,
+                type = TransactionType.EVENT_CARE,
+                amount = Coins(event.careDrop),
+                reasonKey = "event.${event.id}",
+                createdAt = checkNotNull(clock).now(),
+            )
+            is DayEvent.Gift -> wallet.credit(
+                type = TransactionType.INCOME_GIFT,
+                amount = event.amount,
+                currentBalance = periods.balance(period),
+                periodId = period.id,
+            ).value.transaction.copy(reasonKey = "event.${event.id}")
+        }
+        val effects = when (event) {
+            is DayEvent.ExtraCare -> listOf(PetEffect(PetStatKind.CARE, -event.careDrop))
+            is DayEvent.Gift -> emptyList()
+        }
+        checkNotNull(recorder).recordEventOnce(period.profileId, ActionOutcome(transaction = transaction, effects = effects))
     }
 
     private fun firstPeriod(profileId: ProfileId) = GamePeriod(

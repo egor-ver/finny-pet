@@ -1,0 +1,18 @@
+{
+  "events": [
+    {
+      "id": "dirty-feathers",
+      "day": 4,
+      "type": "EXTRA_CARE",
+      "messageKey": "event.dirty_feathers",
+      "careDrop": 10
+    },
+    {
+      "id": "family-gift",
+      "day": 5,
+      "type": "GIFT",
+      "messageKey": "event.family_gift",
+      "amount": 8
+    }
+  ]
+}

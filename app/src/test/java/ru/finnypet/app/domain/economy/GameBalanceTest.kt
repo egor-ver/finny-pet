@@ -12,7 +12,7 @@ class GameBalanceTest {
     private fun balance(
         growthThresholds: List<Int> = listOf(0, 10, 25),
         growthForMandatoryCovered: Int = 2,
-        unexpectedExpenseChance: Int = 15,
+        nightDropCare: Int = 15,
         initialStat: Int = 70,
         nightDropSatiety: Int = 25,
         statFloor: Int = 30,
@@ -22,7 +22,7 @@ class GameBalanceTest {
         taskReward = Coins(15),
         initialStat = initialStat,
         nightDropSatiety = nightDropSatiety,
-        nightDropCare = 15,
+        nightDropCare = nightDropCare,
         nightDropMood = 10,
         statFloor = statFloor,
         needThreshold = 70,
@@ -32,7 +32,6 @@ class GameBalanceTest {
         growthForPlanFollowed = 2,
         growthForSavingsKept = 1,
         growthThresholds = growthThresholds,
-        unexpectedExpenseChance = unexpectedExpenseChance,
         carryOverUnspent = true,
         parentBonus = Coins(10),
     )
@@ -122,13 +121,13 @@ class GameBalanceTest {
     }
 
     @Test
-    fun `шанс непредвиденных расходов больше ста не допускается`() {
-        assertThrows(IllegalArgumentException::class.java) { balance(unexpectedExpenseChance = 101) }
+    fun `отрицательное ночное снижение ухода не допускается`() {
+        assertThrows(IllegalArgumentException::class.java) { balance(nightDropCare = -1) }
     }
 
     @Test
-    fun `шанс непредвиденных расходов меньше нуля не допускается`() {
-        assertThrows(IllegalArgumentException::class.java) { balance(unexpectedExpenseChance = -1) }
+    fun `нулевое ночное снижение ухода допускается`() {
+        assertEquals(0, balance(nightDropCare = 0).nightDropCare)
     }
 
     @Test

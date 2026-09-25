@@ -169,6 +169,7 @@ class WalletEngine(private val clock: GameClock) {
             TransactionType.INCOME_PERIOD,
             TransactionType.INCOME_TASK,
             TransactionType.INCOME_PARENT,
+            TransactionType.INCOME_GIFT,
         )
         const val KEY_DONE = "purchase.done"
         const val KEY_REJECTED = "purchase.rejected"

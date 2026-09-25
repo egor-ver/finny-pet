@@ -7,11 +7,13 @@ enum class TransactionType(
     INCOME_PERIOD(null, true),
     INCOME_TASK(null, true),
     INCOME_PARENT(null, true),
+    INCOME_GIFT(null, true),
     PURCHASE_MANDATORY(SpendCategory.MANDATORY, false),
     PURCHASE_OPTIONAL(SpendCategory.OPTIONAL, false),
     SAVINGS_DEPOSIT(SpendCategory.SAVINGS, false),
     SAVINGS_WITHDRAW(SpendCategory.SAVINGS, true),
     UNEXPECTED_EXPENSE(SpendCategory.MANDATORY, false),
+    EVENT_CARE(null, false),
 
     /**
      * Покупка собранной цели (R13). Цена оплачена копилкой, поэтому сумма
@@ -37,7 +39,10 @@ data class Transaction(
         require(reasonKey.isNotBlank()) { "Транзакция обязана нести ключ объяснения" }
     }
 
-    val balanceDelta: Int get() = if (type.isIncome) amount.amount else -amount.amount
+    val balanceDelta: Int get() = when (type) {
+        TransactionType.EVENT_CARE -> 0
+        else -> if (type.isIncome) amount.amount else -amount.amount
+    }
 
     val factDelta: Int get() = -balanceDelta
 }

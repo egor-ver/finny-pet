@@ -79,6 +79,7 @@ class DemoModeTest {
     private lateinit var startDemo: StartDemo
     private lateinit var exitDemo: ExitDemo
     private lateinit var playDay: PlayDemoDay
+    private lateinit var openPeriod: OpenPeriodIfNeeded
     private lateinit var periodEngine: PeriodEngine
 
     @Before
@@ -110,15 +111,19 @@ class DemoModeTest {
             petState = PetStateEngine(balance),
             taskProgress = tasks,
         )
+        openPeriod = OpenPeriodIfNeeded(
+            periods, WalletEngine(clock), balance, content.pack().events, recorder, clock,
+        )
         playDay = PlayDemoDay(
             profiles = profiles,
             periods = periods,
             savings = savings,
             tasks = tasks,
             content = content,
-            openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
+            openPeriod = openPeriod,
             closeDay = CloseDay(periods, profiles, periodEngine, DayRecorderImpl(db)),
             confirmPlan = ConfirmPlan(
+                openPeriod = openPeriod,
                 periods = periods,
                 savings = savings,
                 content = content,
@@ -240,6 +245,27 @@ class DemoModeTest {
         assertEquals(GrowthStage.GROWN, profiles.pet(demo.id)?.growth?.stage)
         // Каждый день — новое задание: в разделе взрослого темы не нулевые.
         assertEquals(DEMO_DAYS, tasks.completedIds(demo.id).size)
+    }
+
+    @Test
+    fun события_следующего_дня_готовы_сразу_после_нажатия_демо() = runBlocking {
+        val demo = startDemo()
+        repeat(3) { playDay() }
+
+        val fourth = periods.current(demo.id)!!
+        assertEquals(4, fourth.number)
+        val care = periods.transactions(fourth.id).single { it.type == TransactionType.EVENT_CARE }
+        assertEquals(Coins(10), care.amount)
+        val state = profiles.pet(demo.id)!!.state
+        openPeriod(demo.id)
+        assertEquals(state, profiles.pet(demo.id)!!.state)
+        assertEquals(1, periods.transactions(fourth.id).count { it.type == TransactionType.EVENT_CARE })
+
+        playDay()
+        val fifth = periods.current(demo.id)!!
+        assertEquals(5, fifth.number)
+        assertEquals(Coins(8), periods.transactions(fifth.id)
+            .single { it.type == TransactionType.INCOME_GIFT }.amount)
     }
 
     /** Раздел 4 плана: второй день с ошибкой — роста нет, сова грустит, утром разбор. */

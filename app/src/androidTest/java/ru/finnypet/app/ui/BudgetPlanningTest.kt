@@ -297,6 +297,7 @@ class BudgetPlanningTest {
     private fun savings() = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
 
     private fun confirmPlan() = ConfirmPlan(
+        openPeriod = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance),
         periods = periods,
         savings = savings(),
         content = AssetContentRepository(context, ContentParser()),

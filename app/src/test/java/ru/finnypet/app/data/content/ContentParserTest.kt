@@ -8,6 +8,7 @@ import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.content.DayEvent
 import ru.finnypet.app.domain.model.TaskStep
 import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.usecase.TaskSchedule
@@ -18,6 +19,28 @@ import ru.finnypet.app.domain.usecase.TaskSchedule
  * формат, это видно сразу, а не на устройстве.
  */
 class ContentParserTest {
+
+    @Test
+    fun `события дней 4 и 5 читаются из JSON и оставляют выбор`() {
+        val pack = parser.parse(realContent())
+        assertEquals(listOf(4, 5), pack.events.map { it.day })
+        val care = pack.events[0] as DayEvent.ExtraCare
+        val gift = pack.events[1] as DayEvent.Gift
+        assertEquals(10, care.careDrop)
+        assertEquals(8, gift.amount.amount)
+        // После обычной ночи уход 55; событие снижает до 45, щётка закрывает потребность.
+        val brush = pack.shop.first { it.id.value == "care-brush" }
+        assertTrue(45 + brush.effects.single().delta >= pack.balance.needThreshold)
+        assertTrue(brush.price + pack.shop.first { it.id.value == "food-porridge" }.price <= pack.balance.periodIncome)
+        assertTrue(gift.amount < pack.shop.minOf { it.price } + pack.shop.filter { it.category == SpendCategory.OPTIONAL }.minOf { it.price })
+    }
+
+    @Test
+    fun `повтор события в одном дне отклоняется`() {
+        org.junit.Assert.assertThrows(ContentParseException::class.java) {
+            parser.parse(realContent(events = """{"events":[{"id":"a","day":4,"type":"GIFT","messageKey":"event.family_gift","amount":8},{"id":"b","day":4,"type":"GIFT","messageKey":"event.family_gift","amount":8}]}"""))
+        }
+    }
 
     private val parser = ContentParser()
 
@@ -441,7 +464,8 @@ class ContentParserTest {
         shop: String? = null,
         goals: String? = null,
         tasks: String? = null,
-    ) = RealContent.raw(balance, pets, shop, goals, tasks)
+        events: String? = null,
+    ) = RealContent.raw(balance, pets, shop, goals, tasks, events)
 
     private companion object {
 
@@ -449,7 +473,7 @@ class ContentParserTest {
         const val DEMO_PERIODS = 5
 
         /** Файлы, где лежат ссылки на тексты: поля с именем на «Key». */
-        val CONTENT_FILES = listOf("tasks.json", "shop.json", "goals.json", "pets.json", "glossary.json")
+        val CONTENT_FILES = listOf("tasks.json", "shop.json", "goals.json", "pets.json", "glossary.json", "events.json")
         val TEXT_KEY = Regex(""""\w*Key"\s*:\s*"([^"]+)"""")
 
         val TASK_WITH_ALL_STEPS = """

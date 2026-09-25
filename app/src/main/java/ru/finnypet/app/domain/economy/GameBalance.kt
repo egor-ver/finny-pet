@@ -39,7 +39,6 @@ data class GameBalance(
     val growthForPlanFollowed: Int,
     val growthForSavingsKept: Int,
     val growthThresholds: List<Int>,
-    val unexpectedExpenseChance: Int,
     val carryOverUnspent: Boolean,
     /**
      * Сколько заданий в игровой день приносят монеты. Остальные играются
@@ -91,9 +90,6 @@ data class GameBalance(
         require(growthForMandatoryCovered >= 0 && growthForPlanFollowed >= 0 && growthForSavingsKept >= 0) {
             "Очки роста не могут быть отрицательными"
         }
-        require(unexpectedExpenseChance in 0..100) {
-            "Шанс непредвиденных расходов задаётся в процентах, задан: $unexpectedExpenseChance"
-        }
         require(rewardedTasksPerPeriod >= 0) {
             "Число заданий с наградой в день не может быть отрицательным, задано: $rewardedTasksPerPeriod"
         }
@@ -123,7 +119,6 @@ data class GameBalance(
             growthForPlanFollowed = 2,
             growthForSavingsKept = 1,
             growthThresholds = listOf(0, 10, 25),
-            unexpectedExpenseChance = 15,
             carryOverUnspent = true,
             parentBonus = Coins(10),
         )

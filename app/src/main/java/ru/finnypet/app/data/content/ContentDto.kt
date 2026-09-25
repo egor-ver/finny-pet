@@ -38,6 +38,19 @@ data class BalanceDto(
 )
 
 @Serializable
+data class EventsDto(val events: List<EventDto>)
+
+@Serializable
+data class EventDto(
+    val id: String,
+    val day: Int,
+    val type: String,
+    val messageKey: String,
+    val careDrop: Int? = null,
+    val amount: Int? = null,
+)
+
+@Serializable
 data class OptionDto(
     val id: String,
     val titleKey: String,

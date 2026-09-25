@@ -81,6 +81,7 @@ object DomainModule {
 
     @Provides
     fun confirmPlan(
+        openPeriod: OpenPeriodIfNeeded,
         periods: PeriodRepository,
         savings: SavingsRepository,
         content: ContentRepository,
@@ -89,6 +90,7 @@ object DomainModule {
         savingsEngine: SavingsEngine,
         recorder: OutcomeRecorder,
     ): ConfirmPlan = ConfirmPlan(
+        openPeriod = openPeriod,
         periods = periods,
         savings = savings,
         content = content,
@@ -165,10 +167,16 @@ object DomainModule {
         periods: PeriodRepository,
         wallet: WalletEngine,
         balance: GameBalance,
+        content: ContentRepository,
+        recorder: OutcomeRecorder,
+        clock: GameClock,
     ): OpenPeriodIfNeeded = OpenPeriodIfNeeded(
         periods = periods,
         wallet = wallet,
         balance = balance,
+        events = content.pack().events,
+        recorder = recorder,
+        clock = clock,
     )
 
     @Provides
