@@ -223,6 +223,8 @@
     <!-- Мягкий план (AD-4): в подтверждении покупки, а не отдельным запретом -->
     <string name="shop_over_plan">Сверх плана</string>
     <string name="shop_balance_after">В кошельке останется</string>
+    <!-- Раздел 3 плана: «доступность нужного» после этой покупки -->
+    <string name="shop_needs_shortfall">Не хватит на нужное</string>
     <string name="shop_options">Что можно сделать</string>
     <string name="shop_option_hint">• %1$s</string>
     <string name="shop_failed">Не получилось открыть магазин. Попробуй ещё раз.</string>

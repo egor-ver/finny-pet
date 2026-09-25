@@ -21,7 +21,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -295,7 +294,8 @@ private fun JarChip(category: SpendCategory, left: Coins) {
 /**
  * Карточка товара — вся целиком кнопка: картинка, название, цена, влияние
  * и метка. Метка словами: цвет и приглушение не единственный признак (ТЗ 3.6).
- * Товар «не в плане» приглушён, но без замка — нажать можно, сова объяснит.
+ * Товар «не в плане» не приглушён: план мягкий (AD-4), покупка сверх него —
+ * обычное решение, а не то, что нужно оправдывать видом карточки.
  */
 @Composable
 private fun ShopCard(item: ShopItemView, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -306,7 +306,6 @@ private fun ShopCard(item: ShopItemView, onClick: () -> Unit, modifier: Modifier
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(role = Role.Button, onClick = onClick)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .alpha(if (item.mark == ItemMark.NOT_IN_PLAN) DIMMED else 1f)
             .padding(Dimens.SpaceMedium),
     ) {
         ItemIcon(icon = item.icon)
@@ -332,14 +331,13 @@ private val ItemMark.label: Int?
         ItemMark.NONE -> null
     }
 
-private const val DIMMED = 0.6f
-
 /**
  * Подтверждение: что покупаем, за сколько и что от этого изменится.
  *
  * Покупка сверх плана не блокируется отдельным окном (AD-4): здесь же, без
- * упрёка, видно, насколько это больше плана и что останется в кошельке —
- * ребёнок решает сам, а не получает стену вместо покупки.
+ * упрёка, видно, насколько это больше плана, что останется в кошельке и
+ * хватит ли потом на нужное (раздел 3 плана, «доступность нужного»; ТЗ 2.5.9,
+ * 8.4) — ребёнок решает сам, а не получает стену вместо покупки.
  */
 @Composable
 private fun ConfirmDialog(
@@ -351,6 +349,7 @@ private fun ConfirmDialog(
 ) {
     val overPlan = overPlanOf(item.price, item.category, jars)
     val balanceAfter = balance.takeIf { it.covers(item.price) }?.let { it - item.price }
+    val needsShortfall = needsShortfallOf(balanceAfter, item.needsCostAfter)
 
     FinnyDialog(
         title = item.title,
@@ -384,6 +383,8 @@ private fun ConfirmDialog(
         // Сверх плана — не запрет, а честная цифра рядом с ценой (AD-4, ТЗ 8.4).
         if (overPlan != null) LabelledLine(label = stringResource(R.string.shop_over_plan), amount = overPlan)
         if (balanceAfter != null) LabelledLine(label = stringResource(R.string.shop_balance_after), amount = balanceAfter)
+        // Раздел 3 плана: предупреждение честное, но не пугает — просто цифра рядом с остатком.
+        if (needsShortfall != null) LabelledLine(label = stringResource(R.string.shop_needs_shortfall), amount = needsShortfall)
     }
 }
 

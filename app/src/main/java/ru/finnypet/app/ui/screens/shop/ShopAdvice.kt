@@ -36,6 +36,19 @@ fun overPlanOf(price: Coins, category: SpendCategory, jars: JarsLeft?): Coins? {
     return left.shortfallTo(price).takeIf { it > Coins.ZERO }
 }
 
+/**
+ * Не хватит ли после покупки на нужное (раздел 3 плана, «доступность
+ * нужного»): [needsCost] — цена самого дешёвого набора, закрывающего
+ * потребности совы после этой покупки (`PetStateEngine.cheapestCover` на
+ * состоянии с применёнными эффектами товара). `null` — покупка недоступна
+ * (об этом скажет отказ, не это предупреждение), потребностей после неё не
+ * остаётся, или денег хватает и на неё, и на остальное нужное.
+ */
+fun needsShortfallOf(balanceAfter: Coins?, needsCost: Coins): Coins? {
+    if (balanceAfter == null || needsCost == Coins.ZERO) return null
+    return needsCost.takeIf { !balanceAfter.covers(it) }
+}
+
 /** Что сова говорит в магазине: о первой потребности — еда раньше ухода, как везде. */
 fun shopPhrase(needs: List<PetStatKind>): Explanation =
     Explanation(needs.firstOrNull()?.let { "owl.shop.need.${it.name}" } ?: "owl.shop.fed")

@@ -13,7 +13,7 @@ import ru.finnypet.app.ui.screens.main.JarsLeft
 
 /**
  * Метки карточек и фразы совы в магазине — на настоящем контент-паке и
- * эталонном дне 3 (раздел 4 плана): на желаемое по плану осталось 2.
+ * эталонном дне 2 (раздел 4 плана): на желаемое по плану осталось 2.
  */
 class ShopAdviceTest {
 
@@ -33,7 +33,7 @@ class ShopAdviceTest {
         assertEquals(ItemMark.NOT_NEEDED, markOf(porridge, neededNow = false, optionalLeft = Coins(2)))
     }
 
-    /** Эталон дня 3: на желаемое 2 — и мячик за 24, и наклейка за 10 не в плане. */
+    /** Эталон дня 2: на желаемое 2 — и мячик за 24, и наклейка за 10 не в плане. */
     @Test
     fun `желаемое дороже остатка по плану — не в плане`() {
         assertEquals(ItemMark.NOT_IN_PLAN, markOf(ball, neededNow = false, optionalLeft = Coins(2)))
@@ -53,7 +53,7 @@ class ShopAdviceTest {
 
     /**
      * L2/AD-4: план мягкий — превышение только цифра для подтверждения
-     * покупки, эталон дня 3 (раздел 4 плана), на желаемое осталось 2.
+     * покупки, эталон дня 2 (раздел 4 плана), на желаемое осталось 2.
      */
     @Test
     fun `превышение плана — цена минус остаток по своему направлению`() {
@@ -73,6 +73,32 @@ class ShopAdviceTest {
     @Test
     fun `до подтверждения плана превышения нет`() {
         assertEquals(null, overPlanOf(ball.price, SpendCategory.OPTIONAL, jars = null))
+    }
+
+    /**
+     * Раздел 3 плана, «доступность нужного»: эталон дня 2 — в кошельке 27,
+     * мячик за 24, на еду после него не остаётся ни на что.
+     */
+    @Test
+    fun `после покупки не хватает на нужное`() {
+        assertEquals(Coins(14), needsShortfallOf(balanceAfter = Coins(3), needsCost = Coins(14)))
+    }
+
+    @Test
+    fun `после покупки на нужное хватает`() {
+        assertEquals(null, needsShortfallOf(balanceAfter = Coins(20), needsCost = Coins(14)))
+    }
+
+    /** Потребностей нет — предупреждать не о чем, даже если в кошельке пусто. */
+    @Test
+    fun `предупреждения нет, если потребностей не осталось`() {
+        assertEquals(null, needsShortfallOf(balanceAfter = Coins.ZERO, needsCost = Coins.ZERO))
+    }
+
+    /** Покупка и так недоступна — об этом скажет отказ, а не это предупреждение. */
+    @Test
+    fun `предупреждения нет, если покупка недоступна`() {
+        assertEquals(null, needsShortfallOf(balanceAfter = null, needsCost = Coins(14)))
     }
 
     @Test

@@ -31,6 +31,7 @@ import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
@@ -52,7 +53,9 @@ import javax.inject.Inject
 /**
  * Товар как его видит экран: готовое название, цена, направление, влияние на
  * питомца. [mark] — метка на карточке; [warning] — фраза совы в окне покупки
- * для нужного, которое ей пока не нужно (R12).
+ * для нужного, которое ей пока не нужно (R12). [needsCostAfter] — цена
+ * самого дешёвого набора, закрывающего потребности совы, если этот товар уже
+ * куплен (раздел 3 плана, «доступность нужного»); ноль — нечего закрывать.
  */
 data class ShopItemView(
     val id: ItemId,
@@ -63,6 +66,7 @@ data class ShopItemView(
     val icon: String,
     val mark: ItemMark = ItemMark.NONE,
     val warning: String? = null,
+    val needsCostAfter: Coins = Coins.ZERO,
 )
 
 /** Вариант выхода при нехватке денег с подписью из контент-пака. */
@@ -298,6 +302,10 @@ class ShopViewModel @Inject constructor(
 
     private fun viewOf(item: ShopItem, state: PetState, jars: JarsLeft?): ShopItemView {
         val mark = markOf(item, petState.neededNow(state, item), jars?.optional)
+        // Что останется нужным, если этот товар уже куплен: у самой еды или
+        // ухода это нередко ноль, а у желаемого — обычно ровно то, что не закрыто сейчас.
+        val projected = petState.apply(state, item.effects).value
+        val needsCostAfter = petState.cheapestCover(projected, items)?.totalPrice() ?: Coins.ZERO
         return ShopItemView(
             id = item.id,
             title = texts.textOf(item.titleKey),
@@ -307,6 +315,7 @@ class ShopViewModel @Inject constructor(
             icon = item.icon,
             mark = mark,
             warning = notNeededPhrase(item)?.takeIf { mark == ItemMark.NOT_NEEDED }?.let(texts::textOf),
+            needsCostAfter = needsCostAfter,
         )
     }
 
