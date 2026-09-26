@@ -33,7 +33,7 @@
 
     <!-- Главный экран -->
     <string name="main_title">Финни</string>
-    <string name="main_balance">Баланс</string>
+    <string name="main_balance">Кошелёк</string>
     <string name="main_savings">Накоплено</string>
     <string name="main_goal_none">Цель пока не выбрана</string>
     <string name="main_goal_left">Осталось</string>
@@ -100,6 +100,8 @@
     <string name="progress_goal">На что копим</string>
     <string name="progress_tasks">Пройденные задания</string>
     <string name="progress_no_tasks">Заданий пока не пройдено.</string>
+    <!-- Задание пройдено, но монеты за него уже не полагаются (Б22): не показываем «0 монет» как штраф -->
+    <string name="progress_task_no_reward">Тренировка без награды</string>
     <string name="progress_glossary">Что это значит</string>
     <string name="progress_failed">Не получилось открыть прогресс. Попробуй ещё раз.</string>
     <string name="progress_term_opened">Свернуть «%1$s»</string>
@@ -124,7 +126,7 @@
     <string name="adult_days">Сыграно дней</string>
     <string name="adult_stage">Стадия питомца</string>
     <string name="adult_points">Очки роста</string>
-    <string name="adult_balance">Сейчас на балансе</string>
+    <string name="adult_balance">Кошелёк</string>
     <string name="adult_saved">Отложено на цель</string>
     <string name="adult_bonus">Монеты от взрослого</string>
     <string name="adult_bonus_explain">Раз в игровой день можно начислить %1$s за дело вне игры — за уборку, за помощь, за что считаете нужным.</string>
@@ -332,6 +334,6 @@
     <string name="onboarding_choice_optional_body">Игрушки и лакомства. Приятно, но можно и подождать.</string>
     <string name="onboarding_choice_savings_title">Отложить</string>
     <string name="onboarding_choice_savings_body">Спрятать монеты в копилку, чтобы собрать на мечту.</string>
-    <string name="onboarding_hint">Эту подсказку можно открыть снова с главного экрана — строкой «Как играть».</string>
+    <string name="onboarding_hint">Эту подсказку можно открыть снова с главного экрана — значком «?».</string>
     <string name="help_action">Как играть</string>
 </resources>

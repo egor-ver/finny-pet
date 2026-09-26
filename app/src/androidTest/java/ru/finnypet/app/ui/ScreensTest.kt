@@ -1296,6 +1296,29 @@ class ScreensTest {
         scrollToText(text(R.string.topic_planning))
     }
 
+    /** Б22: пройденное без монет — это тренировка, а не штраф в виде «0 монет». */
+    @Test
+    fun `пройденное задание без награды не показывает 0 монет`() {
+        showProgress(
+            ProgressState.Ready(
+                lastDay = null,
+                goal = null,
+                passed = listOf(
+                    PassedTask(
+                        id = TaskId("story"),
+                        title = "Сова нашла монеты",
+                        topic = TaskTopic.SAVING,
+                        reward = Coins.ZERO,
+                    ),
+                ),
+                terms = emptyList(),
+            )
+        )
+
+        scrollToText(text(R.string.progress_task_no_reward))
+        compose.onAllNodesWithText("0").assertCountEquals(0)
+    }
+
     /** Пока день не закончен и заданий нет — экран объясняет, а не пустует. */
     @Test
     fun `пустой_прогресс_объясняет_что_будет_дальше`() {

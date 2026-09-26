@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyListScaffold
@@ -177,7 +178,15 @@ private fun PassedTaskTile(task: PassedTask) {
                     modifier = Modifier.weight(1f),
                 )
             }
-            MoneyAmount(amount = task.reward, style = MaterialTheme.typography.bodyLarge)
+            if (task.reward == Coins.ZERO) {
+                Text(
+                    text = stringResource(R.string.progress_task_no_reward),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                MoneyAmount(amount = task.reward, style = MaterialTheme.typography.bodyLarge)
+            }
         }
     }
 }
