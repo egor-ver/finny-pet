@@ -213,7 +213,7 @@ private fun NavHostController.popOnce() {
 /**
  * Смена экранов слушает настройку движения (ТЗ 3.6, AD-8): по умолчанию
  * навигация плавно проявляет экран, а с выключенным движением он меняется
- * сразу. Длительность — как у навигации по умолчанию.
+ * сразу. 250 мс — короткий переход, который не кажется медленным (U2, Б13).
  */
 internal fun screenEnter(motion: Boolean): EnterTransition =
     if (motion) fadeIn(tween(SCREEN_FADE_MS)) else EnterTransition.None
@@ -221,4 +221,4 @@ internal fun screenEnter(motion: Boolean): EnterTransition =
 internal fun screenExit(motion: Boolean): ExitTransition =
     if (motion) fadeOut(tween(SCREEN_FADE_MS)) else ExitTransition.None
 
-private const val SCREEN_FADE_MS = 700
+private const val SCREEN_FADE_MS = 250

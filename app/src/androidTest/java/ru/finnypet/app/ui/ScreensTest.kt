@@ -1149,6 +1149,7 @@ class ScreensTest {
             usualDeposit = Coins(8),
             balance = Coins(80),
             canOperate = canOperate,
+            owl = testOwl(),
             draft = draft,
             outcome = outcome,
         )

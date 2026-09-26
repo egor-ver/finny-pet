@@ -91,6 +91,7 @@ data class ShopItemDto(
     val category: String,
     val effects: List<EffectDto> = emptyList(),
     val icon: String,
+    val isToy: Boolean = false,
 )
 
 @Serializable

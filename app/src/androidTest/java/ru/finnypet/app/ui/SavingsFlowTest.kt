@@ -111,6 +111,7 @@ class SavingsFlowTest {
             ),
             engine = SavingsEngine(clock),
             recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock)),
+            petState = PetStateEngine(balance),
             content = content(),
         )
     }
@@ -382,6 +383,7 @@ class SavingsFlowTest {
                 petState = PetStateEngine(balance),
                 taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock),
             ),
+            petState = PetStateEngine(balance),
             content = content(),
         )
         val restartedReady = withTimeout(TIMEOUT_MS) {

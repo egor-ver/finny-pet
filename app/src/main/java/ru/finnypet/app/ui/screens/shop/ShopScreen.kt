@@ -250,6 +250,16 @@ private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?)
                 if (done != null) {
                     Text(text = done.title, style = MaterialTheme.typography.titleMedium)
                     Text(text = done.text, style = MaterialTheme.typography.bodyLarge)
+                    // Игрушка — не просто цифры: видно, что сова взяла её в лапы (U2, ТЗ 2.5.9).
+                    if (done.isToy) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                        ) {
+                            ItemIcon(icon = done.icon)
+                            Text(text = stringResource(R.string.shop_toy_playing), style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
                     done.changes.forEach { change -> StatChangeLine(change = change) }
                     if (done.effects.isNotEmpty() && done.changes.isEmpty()) {
                         Text(

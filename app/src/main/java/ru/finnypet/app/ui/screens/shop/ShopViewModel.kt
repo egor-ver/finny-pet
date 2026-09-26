@@ -95,6 +95,9 @@ sealed interface PurchaseOutcome {
         val price: Coins,
         val effects: List<PetEffect>,
         val changes: List<Change.PetStat>,
+        /** Игрушка: облачко покажет, как сова играет с ней, а не только цифры (U2). */
+        val isToy: Boolean = false,
+        val icon: String = "",
     ) : PurchaseOutcome
 
     /**
@@ -237,6 +240,8 @@ class ShopViewModel @Inject constructor(
                     price = item.price,
                     effects = result.effects,
                     changes = changes,
+                    isToy = item.isToy,
+                    icon = item.icon,
                 )
             }
 

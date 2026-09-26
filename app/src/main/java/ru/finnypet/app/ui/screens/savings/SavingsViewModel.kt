@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.WithdrawPreview
 import ru.finnypet.app.domain.model.Coins
@@ -22,13 +23,19 @@ import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.Pet
+import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.goalFraction
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
+import ru.finnypet.app.ui.components.wellbeing
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
@@ -115,6 +122,8 @@ sealed interface SavingsState {
          * (ТЗ 2.5.5), как и покупка.
          */
         val canOperate: Boolean,
+        /** Сова рядом с целью — то же лицо питомца, что и на других экранах (U2). */
+        val owl: OwlLook,
         val draft: SavingsDraft? = null,
         val outcome: SavingsOutcomeView? = null,
     ) : SavingsState {
@@ -164,11 +173,13 @@ class SavingsViewModel @Inject constructor(
     private val openPeriod: OpenPeriodIfNeeded,
     private val engine: SavingsEngine,
     private val recorder: OutcomeRecorder,
+    private val petState: PetStateEngine,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
     private val goals: List<Goal> = content.pack().goals
     private val texts: Map<String, String> = content.pack().texts
+    private val pets = content.pack().pets
 
     private val draft = MutableStateFlow<DraftRequest?>(null)
     private val outcome = MutableStateFlow<SavingsOutcomeView?>(null)
@@ -183,7 +194,7 @@ class SavingsViewModel @Inject constructor(
                 when {
                     isFailed -> flowOf(SavingsState.Failed)
                     profile == null -> flowOf(SavingsState.Loading)
-                    else -> forProfile(profile.id)
+                    else -> forProfile(profile)
                 }
             }
             .stateIn(
@@ -344,9 +355,12 @@ class SavingsViewModel @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun forProfile(profileId: ProfileId): Flow<SavingsState> =
-        periods.observeCurrent(profileId).flatMapLatest { period ->
-            if (period == null) {
+    private fun forProfile(profile: Profile): Flow<SavingsState> = combine(
+        periods.observeCurrent(profile.id),
+        profiles.observePet(profile.id),
+    ) { period, pet -> period to pet }
+        .flatMapLatest { (period, pet) ->
+            if (period == null || pet == null) {
                 flowOf(SavingsState.Loading)
             } else {
                 // Средний взнос меняется только вместе с операциями и выбором
@@ -354,25 +368,27 @@ class SavingsViewModel @Inject constructor(
                 // «больше» в окне. Идёт одним значением с прогрессом, чтобы
                 // экран не показал новое накопленное со старым сроком.
                 val progressWithAverage = combine(
-                    savings.observeAll(profileId),
+                    savings.observeAll(profile.id),
                     periods.observeTransactions(period.id),
                 ) { progresses, _ ->
                     val active = progresses.firstOrNull { it.isActive }
-                    progresses to (active?.let { savings.averageDeposit(profileId, it.goalId) } ?: Coins.ZERO)
+                    progresses to (active?.let { savings.averageDeposit(profile.id, it.goalId) } ?: Coins.ZERO)
                 }
                 combine(
                     periods.observeBalance(period),
                     progressWithAverage,
-                    savings.observeBought(profileId),
+                    savings.observeBought(profile.id),
                     draft,
                     outcome,
                 ) { balance, (progresses, avgDeposit), bought, draft, outcome ->
-                    ready(period, balance, progresses, avgDeposit, bought.toSet(), draft, outcome)
+                    ready(profile, pet, period, balance, progresses, avgDeposit, bought.toSet(), draft, outcome)
                 }
             }
         }
 
     private fun ready(
+        profile: Profile,
+        pet: Pet,
         period: GamePeriod,
         balance: Coins,
         progresses: List<GoalProgress>,
@@ -397,12 +413,21 @@ class SavingsViewModel @Inject constructor(
         val progress = progresses.firstOrNull { it.isActive }
         val goal = progress?.let { active -> goals.firstOrNull { it.id == active.goalId } }
         val periodsToGoal = if (progress != null && goal != null) engine.periodsToGoal(progress, goal, avgDeposit) else null
+        val mood = petState.moodOf(pet.state)
         return SavingsState.Ready(
             goals = views,
             periodsToGoal = periodsToGoal,
             usualDeposit = avgDeposit,
             balance = balance,
             canOperate = period.status == PeriodStatus.RUNNING,
+            owl = owlLook(
+                pets = pets,
+                appearance = profile.appearance,
+                stage = pet.growth.stage,
+                mood = mood,
+                description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+                wellbeing = pet.state.wellbeing,
+            ),
             draft = request?.let { draftOf(it, balance, progress, goal, avgDeposit) },
             outcome = outcome,
         )

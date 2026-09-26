@@ -40,6 +40,8 @@ import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.Owl
+import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StepButton
@@ -175,6 +177,7 @@ private fun Ready(
             }
         },
     ) {
+        Owl(look = state.owl, size = 96.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
         MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
 
         if (!state.canOperate) {
@@ -225,7 +228,7 @@ private fun Ready(
             onCancel = onCancel,
         )
     }
-    state.outcome?.let { OutcomeDialog(outcome = it, onDismiss = onDismiss) }
+    state.outcome?.let { OutcomeDialog(outcome = it, owl = state.owl, onDismiss = onDismiss) }
 }
 
 /** Пока день планируется, копилка закрыта — и дорога в план тут же (ТЗ 3.4). */
@@ -466,7 +469,7 @@ private fun AmountStepper(
 }
 
 @Composable
-private fun OutcomeDialog(outcome: SavingsOutcomeView, onDismiss: () -> Unit) {
+private fun OutcomeDialog(outcome: SavingsOutcomeView, owl: OwlLook, onDismiss: () -> Unit) {
     FinnyDialog(
         title = stringResource(
             if (outcome.goalReached) R.string.main_goal_reached else R.string.savings_done_title
@@ -476,6 +479,7 @@ private fun OutcomeDialog(outcome: SavingsOutcomeView, onDismiss: () -> Unit) {
             FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
         },
     ) {
+        Owl(look = owl, size = 72.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
         Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
     }
 }

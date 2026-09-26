@@ -164,6 +164,7 @@ class ContentParser @Inject constructor() {
                     category = enum<SpendCategory>(item.category, "category"),
                     effects = item.effects.map(::effect),
                     icon = icon(item.icon),
+                    isToy = item.isToy,
                 )
             }
         }.also { items -> items.map { it.id.value }.requireUnique(SHOP, "товар") }

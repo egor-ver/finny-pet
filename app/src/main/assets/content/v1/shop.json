@@ -89,7 +89,8 @@
           "stat": "MOOD",
           "delta": 25
         }
-      ]
+      ],
+      "isToy": true
     },
     {
       "id": "toy-book",
@@ -102,7 +103,8 @@
           "stat": "MOOD",
           "delta": 35
         }
-      ]
+      ],
+      "isToy": true
     }
   ]
 }
