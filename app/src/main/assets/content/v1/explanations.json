@@ -46,9 +46,9 @@
   "pet.color.black": "Дымчатый",
   "pet.color.white": "Белый",
   "pet.color.ginger": "Рыжий",
-  "owl.describe.HAPPY": "{name} радуется",
-  "owl.describe.CALM": "{name} спокоен",
-  "owl.describe.SAD": "{name} грустит: {reason}",
+  "owl.describe.HAPPY": "Совёнок {name} радуется",
+  "owl.describe.CALM": "Совёнок {name} спокоен",
+  "owl.describe.SAD": "Совёнок {name} грустит: {reason}",
   "owl.reason.SATIETY": "хочет есть",
   "owl.reason.CARE": "перья растрепались",
   "owl.say.morning": "Доброе утро! Пришло {coins:income}. Как разделим: на нужное, на желаемое и в копилку?",
@@ -186,7 +186,7 @@
   "task.pay_cinema_cashier.otherwise": "Билет и стакан стоят 30 монет, а с собой только 25 — денег не хватит. Держи в голове свой лимит!",
 
   "glossary.budget.title": "Бюджет",
-  "glossary.budget.body": "Это сколько у тебя есть монеток.",
+  "glossary.budget.body": "Все твои монетки — в игре это «Кошелёк».",
   "glossary.plan.title": "План",
   "glossary.plan.body": "Твоя подсказка: сколько монет сразу отложить, а сколько оставить на покупки.",
   "glossary.savings.title": "Накопления",
@@ -196,7 +196,7 @@
   "glossary.mandatory_expenses.title": "Нужное",
   "glossary.mandatory_expenses.body": "Самое важное, без чего питомцу не обойтись: еда и забота о здоровье. По-взрослому это называют «обязательные расходы».",
   "glossary.wants.title": "Желаемое",
-  "glossary.wants.body": "Приятные радости вроде игрушек или наклеек, которые можно купить попозже.",
+  "glossary.wants.body": "Приятные радости вроде игрушек или наклеек, которые можно купить попозже. По-взрослому это называют «необязательные расходы».",
   "event.dirty_feathers": "Сегодня перья испачкались. Уход снизился на {care}. Помоги Финни привести их в порядок.",
   "event.family_gift": "Семья подарила {amount} монет. Теперь их можно учесть в плане дня."
 }

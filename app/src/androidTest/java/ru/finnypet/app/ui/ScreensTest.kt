@@ -16,6 +16,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -1316,7 +1317,7 @@ class ScreensTest {
         )
 
         scrollToText(text(R.string.progress_task_no_reward))
-        compose.onAllNodesWithText("0").assertCountEquals(0)
+        compose.onAllNodesWithContentDescription(text(R.string.coins_many, 0)).assertCountEquals(0)
     }
 
     /** Пока день не закончен и заданий нет — экран объясняет, а не пустует. */

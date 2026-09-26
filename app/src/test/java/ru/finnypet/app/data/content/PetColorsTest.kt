@@ -71,7 +71,7 @@ class PetColorsTest {
     fun `описание для TalkBack говорит, почему сова грустит`() {
         val texts = parser.parse(RealContent.raw()).texts
 
-        assertEquals("Пушок грустит: хочет есть", owlDescription(texts, "Пушок", PetMood.SAD, PetStatKind.SATIETY))
-        assertEquals("Пушок радуется", owlDescription(texts, "Пушок", PetMood.HAPPY, sadAbout = null))
+        assertEquals("Совёнок Пушок грустит: хочет есть", owlDescription(texts, "Пушок", PetMood.SAD, PetStatKind.SATIETY))
+        assertEquals("Совёнок Пушок радуется", owlDescription(texts, "Пушок", PetMood.HAPPY, sadAbout = null))
     }
 }
