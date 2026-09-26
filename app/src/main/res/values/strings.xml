@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">finny-pet</string>
+    <string name="app_name">Питомец Финни</string>
 
     <!--
         Строки интерфейса. Учебный контент сюда не попадает: тексты игры
@@ -153,8 +153,7 @@
     <string name="demo_exit_confirm_text">Всё, что сделано в демонстрации, сотрётся. Игра ребёнка не изменится.</string>
     <string name="demo_exit_confirm">Выйти и стереть</string>
 
-    <string name="adult_settings">Звук и движение</string>
-    <string name="adult_sound">Звук в игре</string>
+    <string name="adult_settings">Движение</string>
     <string name="adult_animations">Движение на экране</string>
 
     <!-- Итоги игрового дня (ТЗ 2.5.9, 2.5.10) -->

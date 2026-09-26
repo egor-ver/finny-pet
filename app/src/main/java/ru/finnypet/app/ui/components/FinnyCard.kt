@@ -19,11 +19,18 @@ import ru.finnypet.app.ui.theme.Dimens
 /**
  * Карточка во всю ширину на скруглённой подложке. С [onClick] нажимается
  * целиком; что она нажимается, должна сказать подпись внутри (ТЗ 3.6).
+ *
+ * [enabled] и [onClickLabel] нужны только при [onClick] — строке выбора,
+ * которая может быть временно недоступна ([SavingsScreen] `GoalRow`), или
+ * действию, для которого TalkBack должен назвать не описание, а команду
+ * ([ProgressScreen] `Tile` — термин против задания).
  */
 @Composable
 fun FinnyCard(
     color: Color = MaterialTheme.colorScheme.surfaceVariant,
     onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    onClickLabel: String? = null,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -34,7 +41,13 @@ fun FinnyCard(
             // Скругление до нажатия: иначе отклик выходит за края подложки.
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(color)
-            .then(if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClick = onClick))
+            .then(
+                if (onClick == null) {
+                    Modifier
+                } else {
+                    Modifier.clickable(enabled = enabled, onClickLabel = onClickLabel, role = Role.Button, onClick = onClick)
+                },
+            )
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
         content = content,
     )

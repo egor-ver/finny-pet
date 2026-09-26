@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,21 +116,17 @@ fun MoneyCard(
     amount: Coins,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = modifier
-            // Иначе озвучка произнесёт подпись и сумму двумя остановками,
-            // и связь между ними потеряется.
-            .semantics(mergeDescendants = true) {}
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
-    ) {
-        Label(text = label)
-        MoneyAmount(amount = amount)
+    // Иначе озвучка произнесёт подпись и сумму двумя остановками, и связь
+    // между ними потеряется.
+    FinnyCard(modifier = modifier.semantics(mergeDescendants = true) {}) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Label(text = label)
+            MoneyAmount(amount = amount)
+        }
     }
 }
 

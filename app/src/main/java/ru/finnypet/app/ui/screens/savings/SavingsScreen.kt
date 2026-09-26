@@ -1,7 +1,5 @@
 package ru.finnypet.app.ui.screens.savings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -9,8 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,10 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,6 +26,7 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
@@ -242,16 +236,7 @@ private fun ActiveGoal(state: SavingsState.Ready, goal: GoalView, onBuy: () -> U
     var askingBuy by rememberSaveable { mutableStateOf(false) }
     // «Купить комиксы», а не «Купить Комиксы»: название стоит внутри фразы.
     val thing = goal.title.replaceFirstChar { it.lowercase() }
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
-    ) {
+    FinnyCard {
         Text(text = goal.title, style = MaterialTheme.typography.titleLarge)
         LabelledLine(label = stringResource(R.string.savings_price), amount = goal.price)
         LabelledLine(label = stringResource(R.string.main_savings), amount = goal.saved)
@@ -328,55 +313,56 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .background(container)
-            .clickable(enabled = selectable, role = Role.Button, onClick = onClick)
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+    FinnyCard(
+        color = container,
+        onClick = onClick,
+        enabled = selectable,
+        modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget),
     ) {
-        ItemIcon(icon = goal.icon)
-        Column(
-            verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-            modifier = Modifier.weight(1f),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = goal.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = if (goal.isActive) FontWeight.Bold else FontWeight.Normal,
-            )
-            if (goal.isActive || goal.isBought) {
-                val labelRes = when {
-                    // Активна и куплена — значит копит на ещё один экземпляр (L5).
-                    goal.isActive && goal.isBought -> R.string.savings_goal_repeat
-                    goal.isBought -> R.string.savings_goal_bought
-                    else -> R.string.savings_goal_active
-                }
+            ItemIcon(icon = goal.icon)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+                modifier = Modifier.weight(1f),
+            ) {
                 Text(
-                    text = stringResource(labelRes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = goal.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (goal.isActive) FontWeight.Bold else FontWeight.Normal,
                 )
-            }
-            if (goal.saved > Coins.ZERO) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-                ) {
+                if (goal.isActive || goal.isBought) {
+                    val labelRes = when {
+                        // Активна и куплена — значит копит на ещё один экземпляр (L5).
+                        goal.isActive && goal.isBought -> R.string.savings_goal_repeat
+                        goal.isBought -> R.string.savings_goal_bought
+                        else -> R.string.savings_goal_active
+                    }
                     Text(
-                        text = stringResource(R.string.main_savings),
+                        text = stringResource(labelRes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    MoneyAmount(amount = goal.saved, style = MaterialTheme.typography.bodyLarge)
+                }
+                if (goal.saved > Coins.ZERO) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.main_savings),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        MoneyAmount(amount = goal.saved, style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
+            MoneyAmount(amount = goal.price)
         }
-        MoneyAmount(amount = goal.price)
     }
 }
 

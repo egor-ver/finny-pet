@@ -28,6 +28,7 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.CategoryLabel
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
@@ -39,7 +40,6 @@ import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
-import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -277,13 +277,7 @@ private fun JarProgress(line: BudgetLine) {
             verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
             modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            ) {
-                Text(text = line.category.icon, style = MaterialTheme.typography.titleMedium)
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
-            }
+            CategoryLabel(category = line.category, style = MaterialTheme.typography.titleMedium)
             ProgressLine(
                 fraction = if (line.planned == Coins.ZERO) 0f else line.actual.amount.toFloat() / line.planned.amount,
                 color = line.category.color,

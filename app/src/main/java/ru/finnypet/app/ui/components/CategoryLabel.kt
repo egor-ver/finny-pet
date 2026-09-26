@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.theme.Dimens
@@ -38,7 +39,11 @@ val SpendCategory.color: Color
  * признак (ТЗ 3.6): TalkBack читает слово, иконка для него молчит.
  */
 @Composable
-fun CategoryLabel(category: SpendCategory, modifier: Modifier = Modifier) {
+fun CategoryLabel(
+    category: SpendCategory,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
@@ -46,12 +51,12 @@ fun CategoryLabel(category: SpendCategory, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = category.icon,
-            style = MaterialTheme.typography.bodyMedium,
+            style = style,
             modifier = Modifier.clearAndSetSemantics {},
         )
         Text(
             text = stringResource(category.label),
-            style = MaterialTheme.typography.bodyMedium,
+            style = style,
             fontWeight = FontWeight.SemiBold,
             color = category.color,
         )

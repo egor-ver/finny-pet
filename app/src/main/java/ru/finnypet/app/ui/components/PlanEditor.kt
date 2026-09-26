@@ -1,12 +1,8 @@
 package ru.finnypet.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -139,16 +135,10 @@ private fun CategoryRow(
     onChooseGoal: (() -> Unit)?,
     fillAmount: Coins?,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
-    ) {
+    // Не CategoryLabel: title — своя подпись задания из labelKey (TaskViewModel),
+    // не всегда общее название направления, а CategoryLabel всегда читает его
+    // из category.label и потеряло бы эту подмену.
+    FinnyCard {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -162,6 +152,7 @@ private fun CategoryRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
+                color = category.color,
                 modifier = Modifier.weight(1f),
             )
             // Подпись для озвучки склеивает название с суммой: иначе читается

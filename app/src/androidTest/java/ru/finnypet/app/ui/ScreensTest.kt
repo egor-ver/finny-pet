@@ -1481,15 +1481,13 @@ class ScreensTest {
         scrollToText(text(R.string.adult_bonus_no_day))
     }
 
+    /** Б16: переключатель ничего не делал — в U3 его убрали со экрана, а не почистили текст. */
     @Test
-    fun `звук_выключается_нажатием_на_строку`() {
-        var enabled: Boolean? = null
-        showAdult(adultState(), onSound = { enabled = it })
+    fun `звук_в_игре_скрыт_у_взрослого`() {
+        showAdult(adultState())
 
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.adult_sound)))
-        compose.onNodeWithText(text(R.string.adult_sound)).performClick()
-
-        assertEquals(false, enabled)
+        scrollToText(text(R.string.adult_animations))
+        compose.onAllNodesWithText("Звук в игре").assertCountEquals(0)
     }
 
     @Test
@@ -1547,7 +1545,6 @@ class ScreensTest {
         state: AdultState,
         onRetry: () -> Unit = {},
         onAward: () -> Unit = {},
-        onSound: (Boolean) -> Unit = {},
         onStartDemo: () -> Unit = {},
         onDeleteGame: () -> Unit = {},
     ) {
@@ -1558,7 +1555,6 @@ class ScreensTest {
                     onBack = {},
                     onRetry = onRetry,
                     onAward = onAward,
-                    onSound = onSound,
                     onStartDemo = onStartDemo,
                     onDeleteGame = onDeleteGame,
                 )

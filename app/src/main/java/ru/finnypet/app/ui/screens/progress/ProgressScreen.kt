@@ -1,7 +1,5 @@
 package ru.finnypet.app.ui.screens.progress
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -9,10 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,15 +18,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.Explanation
@@ -224,29 +219,12 @@ private fun Tile(
     clickLabel: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-        modifier = Modifier
-            .fillMaxWidth()
-            // Скругление до нажатия: иначе отклик выходит за края подложки.
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .then(
-                if (onClick == null) {
-                    Modifier
-                } else {
-                    // Подпись действия, а не описание: описание заменило бы
-                    // собой весь текст внутри, и объяснение термина пропало бы
-                    // из озвучки (ТЗ 3.6).
-                    Modifier.clickable(
-                        role = Role.Button,
-                        onClickLabel = clickLabel,
-                        onClick = onClick,
-                    )
-                }
-            )
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
+    // Подпись действия, а не описание: описание заменило бы собой весь текст
+    // внутри, и объяснение термина пропало бы из озвучки (ТЗ 3.6).
+    FinnyCard(
+        onClick = onClick,
+        onClickLabel = clickLabel,
+        modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget),
         content = content,
     )
 }

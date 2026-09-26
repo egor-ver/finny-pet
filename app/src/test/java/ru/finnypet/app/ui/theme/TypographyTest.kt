@@ -3,6 +3,7 @@ package ru.finnypet.app.ui.theme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.icon
 
@@ -36,6 +37,14 @@ class TypographyTest {
     @Test
     fun `у каждого направления своя иконка`() {
         assertEquals(SpendCategory.entries.size, SpendCategory.entries.map { it.icon }.toSet().size)
+    }
+
+    /** Совпади они, на главном экране цвет остался бы единственным отличием (ТЗ 3.6). */
+    @Test
+    fun `иконки показателей не совпадают с иконками направлений`() {
+        val statIcons = PetStatKind.entries.map { it.icon }.toSet()
+        val categoryIcons = SpendCategory.entries.map { it.icon }.toSet()
+        assertTrue(statIcons.intersect(categoryIcons).isEmpty())
     }
 
     private companion object {

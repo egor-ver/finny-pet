@@ -35,6 +35,7 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
@@ -221,17 +222,9 @@ private fun PetSpeech(text: String, owl: OwlLook) {
 
 @Composable
 private fun Note(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyLarge,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(Dimens.Space),
-    )
+    FinnyCard(color = MaterialTheme.colorScheme.secondaryContainer) {
+        Text(text = text, style = MaterialTheme.typography.bodyLarge)
+    }
 }
 
 @Composable

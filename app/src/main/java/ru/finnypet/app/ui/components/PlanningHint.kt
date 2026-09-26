@@ -1,18 +1,11 @@
 package ru.finnypet.app.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import ru.finnypet.app.R
-import ru.finnypet.app.ui.theme.Dimens
 
 /**
  * Пока день планируется, тратить, откладывать и проходить задания нельзя —
@@ -25,16 +18,7 @@ fun PlanningHint(
     onPlan: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.secondaryContainer,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(Dimens.Space),
-    ) {
+    FinnyCard(color = MaterialTheme.colorScheme.secondaryContainer, modifier = modifier) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,

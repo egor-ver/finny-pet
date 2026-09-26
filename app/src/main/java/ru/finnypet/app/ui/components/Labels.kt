@@ -27,10 +27,16 @@ val PetStatKind.label: Int
         PetStatKind.CARE -> R.string.stat_care
     }
 
-/** Иконка показателя рядом со словом — для глаз; TalkBack читает слово (раздел 8 плана). */
+/**
+ * Иконка показателя рядом со словом — для глаз; TalkBack читает слово (раздел 8 плана).
+ *
+ * У сытости не миска: она совпала бы с иконкой «Нужного» у направлений трат
+ * (`SpendCategory.icon`) — на главном экране обе иконки стоят рядом, и цвет
+ * остался бы единственным отличием (ТЗ 3.6 это запрещает, см. `TypographyTest`).
+ */
 val PetStatKind.icon: String
     get() = when (this) {
-        PetStatKind.SATIETY -> "🥣"
+        PetStatKind.SATIETY -> "🍎"
         PetStatKind.MOOD -> "😊"
         PetStatKind.CARE -> "✨"
     }

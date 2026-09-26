@@ -66,7 +66,6 @@ fun AdultScreen(
         onRetry = viewModel::retry,
         onAward = viewModel::award,
         onDismissAward = viewModel::dismissAward,
-        onSound = viewModel::setSound,
         onAnimations = viewModel::setAnimations,
         onStartDemo = viewModel::startDemo,
         onDeleteGame = viewModel::deleteGame,
@@ -80,7 +79,6 @@ fun AdultContent(
     onRetry: () -> Unit = {},
     onAward: () -> Unit = {},
     onDismissAward: () -> Unit = {},
-    onSound: (Boolean) -> Unit = {},
     onAnimations: (Boolean) -> Unit = {},
     onStartDemo: () -> Unit = {},
     onDeleteGame: () -> Unit = {},
@@ -108,7 +106,6 @@ fun AdultContent(
             onBack = onBack,
             onAward = onAward,
             onDismissAward = onDismissAward,
-            onSound = onSound,
             onAnimations = onAnimations,
             onStartDemo = onStartDemo,
             onDeleteGame = onDeleteGame,
@@ -122,7 +119,6 @@ private fun Ready(
     onBack: () -> Unit,
     onAward: () -> Unit,
     onDismissAward: () -> Unit,
-    onSound: (Boolean) -> Unit,
     onAnimations: (Boolean) -> Unit,
     onStartDemo: () -> Unit,
     onDeleteGame: () -> Unit,
@@ -137,7 +133,7 @@ private fun Ready(
         Topics(state.topics)
         Overview(state)
         Bonus(state, onAward)
-        Settings(state, onSound, onAnimations)
+        Settings(state, onAnimations)
         Demo(onStartDemo)
         DeleteGame(onAsk = { askingDelete = true })
     }
@@ -257,15 +253,19 @@ private fun ColumnScope.DeleteGame(onAsk: () -> Unit) {
     FinnySecondaryButton(text = stringResource(R.string.adult_delete_action), onClick = onAsk)
 }
 
-/** Звук и анимации отключаются (ТЗ 3.6), и делает это взрослый. */
+/**
+ * Анимации отключаются (ТЗ 3.6), и делает это взрослый.
+ *
+ * Звук — без переключателя (Б16, U3): звуков в игре нет, а нерабочая
+ * настройка обманывала бы ожидание. Хранение осталось нетронутым в
+ * [SettingsRepository] на случай, если звук появится позже.
+ */
 @Composable
 private fun ColumnScope.Settings(
     state: AdultState.Ready,
-    onSound: (Boolean) -> Unit,
     onAnimations: (Boolean) -> Unit,
 ) {
     Heading(stringResource(R.string.adult_settings))
-    Toggle(stringResource(R.string.adult_sound), state.soundEnabled, onSound)
     Toggle(stringResource(R.string.adult_animations), state.animationsEnabled, onAnimations)
 }
 

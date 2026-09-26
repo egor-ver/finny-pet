@@ -1,22 +1,16 @@
 package ru.finnypet.app.ui.screens.tasks
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,6 +18,7 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.label
@@ -119,21 +114,16 @@ private fun Ready(
 /** Правило дня — до выбора задания, чтобы ребёнок знал, за что монеты, а за что нет. */
 @Composable
 private fun RewardNote(available: Boolean, limit: Int) {
-    Text(
-        text = if (available) {
-            stringResource(R.string.tasks_reward_available, tasksText(limit))
-        } else {
-            stringResource(R.string.tasks_reward_taken)
-        },
-        style = MaterialTheme.typography.bodyLarge,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(Dimens.Space),
-    )
+    FinnyCard {
+        Text(
+            text = if (available) {
+                stringResource(R.string.tasks_reward_available, tasksText(limit))
+            } else {
+                stringResource(R.string.tasks_reward_taken)
+            },
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
 }
 
 
@@ -155,16 +145,7 @@ private fun tasksText(count: Int): String = stringResource(
  */
 @Composable
 private fun TaskRowCard(task: TaskRow, onClick: () -> Unit) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(role = Role.Button, onClick = onClick)
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
-    ) {
+    FinnyCard(onClick = onClick, modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget)) {
         Text(
             text = task.intro,
             style = MaterialTheme.typography.bodyLarge,

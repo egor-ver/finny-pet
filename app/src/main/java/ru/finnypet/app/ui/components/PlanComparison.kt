@@ -1,13 +1,9 @@
 package ru.finnypet.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,18 +63,8 @@ private fun ComparisonRow(line: BudgetLine) {
         line.actual.amount,
         status,
     )
-    Column(
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clearAndSetSemantics { contentDescription = spoken }
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.Corner),
-            )
-            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
-    ) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
+    FinnyCard(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
+        CategoryLabel(category = line.category, style = MaterialTheme.typography.titleMedium)
         Row(
             horizontalArrangement = Arrangement.spacedBy(Dimens.Space),
             verticalAlignment = Alignment.CenterVertically,
