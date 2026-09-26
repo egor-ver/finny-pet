@@ -228,7 +228,6 @@
     <string name="shop_buy">Купить</string>
     <string name="shop_done_title">Готово!</string>
     <string name="shop_no_change">Питомцу и так хорошо — показатели не изменились.</string>
-    <string name="shop_toy_playing">Питомец играет с ней прямо сейчас!</string>
     <string name="shop_rejected_title">Монет не хватает</string>
     <!-- Мягкий план (AD-4): в подтверждении покупки, а не отдельным запретом -->
     <string name="shop_over_plan">Сверх плана</string>

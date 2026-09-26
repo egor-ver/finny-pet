@@ -93,7 +93,18 @@ fun owlLook(
  * под размер компонента.
  */
 @Composable
-fun Owl(look: OwlLook, modifier: Modifier = Modifier, size: Dp = 170.dp) {
+fun Owl(
+    look: OwlLook,
+    modifier: Modifier = Modifier,
+    size: Dp = 170.dp,
+    /**
+     * Разовая реакция на появление совы, а не на рост показателей (U2):
+     * копилка их не меняет, поэтому [shouldJump] тут не с чего сработать.
+     * Срабатывает при первой композиции — для этого и заводится диалог с
+     * итогом заново при каждой операции, а не переиспользуется.
+     */
+    reactOnAppear: Boolean = false,
+) {
     val motion = LocalAnimationsEnabled.current
     val lift = remember { Animatable(0f) }
     // Прошлое самочувствие переживает уход в магазин и возврат: после
@@ -105,6 +116,12 @@ fun Owl(look: OwlLook, modifier: Modifier = Modifier, size: Dp = 170.dp) {
             lift.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
         }
         seen = look.wellbeing
+    }
+    LaunchedEffect(Unit) {
+        if (shouldReact(reactOnAppear, motion)) {
+            lift.animateTo(1f, tween(JUMP_UP_MS))
+            lift.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+        }
     }
     Canvas(
         modifier = modifier
@@ -127,6 +144,9 @@ fun Owl(look: OwlLook, modifier: Modifier = Modifier, size: Dp = 170.dp) {
  * (ТЗ 3.6). Смысл движением не передаётся: выражение и описание меняются и так.
  */
 internal fun shouldJump(before: Int, after: Int, motion: Boolean): Boolean = motion && after > before
+
+/** Разовая реакция на появление совы (U2) — с выключенным движением не играет, как и прыжок. */
+internal fun shouldReact(reactOnAppear: Boolean, motion: Boolean): Boolean = reactOnAppear && motion
 
 /**
  * Пропорции стадии: [top] — верх головы, [bottom] — низ тела, [half] —

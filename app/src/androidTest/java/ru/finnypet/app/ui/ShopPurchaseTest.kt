@@ -88,6 +88,7 @@ class ShopPurchaseTest {
         price = Coins(18),
         category = SpendCategory.OPTIONAL,
         effects = listOf(PetEffect(PetStatKind.MOOD, 15)),
+        isToy = true,
     )
 
     /** Дороже всего дня: 20 + 60 = 80 — не хватит. */
@@ -214,6 +215,8 @@ class ShopPurchaseTest {
         assertEquals("Вкусная каша", done.title)
         assertEquals("Осталось 68 монет.", done.text)
         assertEquals(food.effects, done.effects)
+        // Каша — не игрушка: сова с ней не «играет» (U2).
+        assertNull(done.toyPhrase)
         val initial = Stat(balance.initialStat)
         assertEquals(
             listOf(Change.PetStat(PetStatKind.SATIETY, from = initial, to = initial + 20)),
@@ -232,6 +235,19 @@ class ShopPurchaseTest {
         val pet = profiles.pet(profileId)!!
         assertEquals(Stat(balance.initialStat + 20), pet.state.satiety)
         assertEquals(Stat(balance.initialStat), pet.state.mood)
+    }
+
+    /** U2: игрушка — короткая фраза из контент-пака с именем питомца, а не жёсткая строка. */
+    @Test
+    fun покупка_игрушки_показывает_как_питомец_играет() = runBlocking {
+        startDay()
+        awaitReady()
+
+        viewModel.buy(toy.id)
+
+        val done = awaitOutcome<PurchaseOutcome.Done>()
+        assertEquals("Пушок играет с новой игрушкой!", done.toyPhrase)
+        assertEquals(toy.icon, done.icon)
     }
 
     /**
@@ -386,6 +402,7 @@ class ShopPurchaseTest {
                 "shop.vet" to "Ветеринар",
                 "purchase.done" to "Осталось {balance} монет.",
                 "purchase.rejected" to "Не хватает {shortfall} монет.",
+                "shop.toy_playing" to "{name} играет с новой игрушкой!",
                 "recovery.DO_TASK" to "Выполнить задание",
                 "recovery.POSTPONE_PURCHASE" to "Купить попозже",
                 "recovery.WITHDRAW_FROM_SAVINGS" to "Взять из копилки",

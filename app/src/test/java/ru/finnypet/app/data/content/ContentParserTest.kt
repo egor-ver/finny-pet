@@ -66,6 +66,16 @@ class ContentParserTest {
         assertEquals(SpendCategory.OPTIONAL, pack.shop.first { it.id.value == "toy-ball" }.category)
     }
 
+    /** U2: только мяч и книга — игрушки, у которых питомец видимо играет после покупки. */
+    @Test
+    fun `игрушкой помечены только мяч и книга`() {
+        val pack = parser.parse(realContent())
+
+        assertTrue(pack.shop.first { it.id.value == "toy-ball" }.isToy)
+        assertTrue(pack.shop.first { it.id.value == "toy-book" }.isToy)
+        assertTrue(pack.shop.filter { it.id.value !in setOf("toy-ball", "toy-book") }.none { it.isToy })
+    }
+
     @Test
     fun `комбинации внешности считаются с учётом варианта без аксессуара`() {
         val pets = parser.parse(

@@ -24,6 +24,7 @@ import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GoalProgress
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.Pet
+import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.repository.ActionOutcome
@@ -124,6 +125,13 @@ sealed interface SavingsState {
         val canOperate: Boolean,
         /** Сова рядом с целью — то же лицо питомца, что и на других экранах (U2). */
         val owl: OwlLook,
+        /**
+         * Сова в окне «Готово»/«Ура»: копилка не меняет показатели, поэтому
+         * лицо то же самое, но не грустное — грусть рядом с «Ура» выглядела
+         * бы так, будто питомцу от пополнения стало хуже (U2). Радость не
+         * подделывается: если сова и так спокойна или рада, лицо не меняется.
+         */
+        val reactionOwl: OwlLook = owl,
         val draft: SavingsDraft? = null,
         val outcome: SavingsOutcomeView? = null,
     ) : SavingsState {
@@ -150,6 +158,13 @@ sealed interface SavingsState {
  */
 private fun canChooseGoal(goalId: GoalId, bought: Set<GoalId>, allGoalIds: Collection<GoalId>): Boolean =
     goalId !in bought || allGoalIds.all { it in bought }
+
+/**
+ * Выражение совы для окна с итогом операции копилки (U2): показатели она не
+ * меняет, поэтому грусть — не про эту операцию, и рядом с «Ура» выглядела бы
+ * отрицанием успеха. Радость не подделывается — только не ниже спокойного.
+ */
+internal fun reactionMood(actual: PetMood): PetMood = if (actual == PetMood.SAD) PetMood.CALM else actual
 
 /** Что ребёнок набирает: вид операции и сумма. Границы и превью досчитывает состояние. */
 private data class DraftRequest(
@@ -414,20 +429,30 @@ class SavingsViewModel @Inject constructor(
         val goal = progress?.let { active -> goals.firstOrNull { it.id == active.goalId } }
         val periodsToGoal = if (progress != null && goal != null) engine.periodsToGoal(progress, goal, avgDeposit) else null
         val mood = petState.moodOf(pet.state)
+        val owl = owlLook(
+            pets = pets,
+            appearance = profile.appearance,
+            stage = pet.growth.stage,
+            mood = mood,
+            description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+            wellbeing = pet.state.wellbeing,
+        )
+        // Копилка не меняет показатели питомца, поэтому его настоящая грусть
+        // может пережить успешную операцию — рядом с «Готово»/«Ура» это
+        // выглядело бы как отрицание успеха. До спокойного — не выше.
+        val rMood = reactionMood(mood)
+        val reactionOwl = if (rMood == mood) owl else owl.copy(
+            mood = rMood,
+            description = owlDescription(texts, profile.petName, rMood, sadAbout = null),
+        )
         return SavingsState.Ready(
             goals = views,
             periodsToGoal = periodsToGoal,
             usualDeposit = avgDeposit,
             balance = balance,
             canOperate = period.status == PeriodStatus.RUNNING,
-            owl = owlLook(
-                pets = pets,
-                appearance = profile.appearance,
-                stage = pet.growth.stage,
-                mood = mood,
-                description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
-                wellbeing = pet.state.wellbeing,
-            ),
+            owl = owl,
+            reactionOwl = reactionOwl,
             draft = request?.let { draftOf(it, balance, progress, goal, avgDeposit) },
             outcome = outcome,
         )

@@ -23,4 +23,12 @@ class OwlJumpTest {
         assertFalse(shouldJump(before = 175, after = 125, motion = true))
         assertFalse(shouldJump(before = 175, after = 175, motion = true))
     }
+
+    /** Копилка не меняет показатели, поэтому реакция на успех — отдельный повод для прыжка (U2). */
+    @Test
+    fun `реакция на появление срабатывает только с движением`() {
+        assertTrue(shouldReact(reactOnAppear = true, motion = true))
+        assertFalse(shouldReact(reactOnAppear = true, motion = false))
+        assertFalse(shouldReact(reactOnAppear = false, motion = true))
+    }
 }

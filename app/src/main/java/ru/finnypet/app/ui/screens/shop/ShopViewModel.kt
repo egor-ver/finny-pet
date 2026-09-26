@@ -95,8 +95,13 @@ sealed interface PurchaseOutcome {
         val price: Coins,
         val effects: List<PetEffect>,
         val changes: List<Change.PetStat>,
-        /** Игрушка: облачко покажет, как сова играет с ней, а не только цифры (U2). */
-        val isToy: Boolean = false,
+        /**
+         * Игрушка: короткая фраза из контент-пака о том, что питомец играет с
+         * ней, — не только цифры (U2). `null` — товар не игрушка. Слова
+         * собраны здесь, а не в экране: там нет доступа к контент-паку и
+         * имени питомца.
+         */
+        val toyPhrase: String? = null,
         val icon: String = "",
     ) : PurchaseOutcome
 
@@ -208,6 +213,12 @@ class ShopViewModel @Inject constructor(
         outcome.value = null
     }
 
+    /** «{name} играет с новой игрушкой!» — без рода конкретного товара (U2). */
+    private suspend fun toyPhraseFor(profileId: ProfileId): String {
+        val petName = profiles.byId(profileId)?.petName.orEmpty()
+        return texts.textOf(TOY_PLAYING_KEY).replace("{name}", petName)
+    }
+
     /**
      * Баланс и копилка берутся из базы в момент покупки, а не из состояния
      * экрана: экран отстаёт от базы на время записи.
@@ -240,7 +251,7 @@ class ShopViewModel @Inject constructor(
                     price = item.price,
                     effects = result.effects,
                     changes = changes,
-                    isToy = item.isToy,
+                    toyPhrase = if (item.isToy) toyPhraseFor(profileId) else null,
                     icon = item.icon,
                 )
             }
@@ -321,5 +332,6 @@ class ShopViewModel @Inject constructor(
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+        const val TOY_PLAYING_KEY = "shop.toy_playing"
     }
 }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -42,7 +43,10 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.PetMood
+import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
@@ -189,6 +193,30 @@ class SavingsFlowTest {
         val deposit = periods.transactions(period.id).single { it.type == TransactionType.SAVINGS_DEPOSIT }
         assertEquals(Coins(10), deposit.amount)
         assertEquals(scooter.id, deposit.goalId)
+        // Питомец не грустил — сова в окне итога та же, что и рядом с целью (U2).
+        assertEquals(after.owl, after.reactionOwl)
+    }
+
+    /**
+     * U2: копилка не меняет показатели питомца, поэтому его настоящая грусть
+     * не должна выглядеть отрицанием успеха рядом с «Отложили».
+     */
+    @Test
+    fun реакция_совы_на_пополнение_не_грустнее_спокойного() = runBlocking {
+        startDay()
+        val pet = profiles.pet(profileId)!!
+        profiles.savePet(profileId, pet.state.with(PetStatKind.SATIETY, Stat(10)), pet.growth)
+        viewModel.choose(scooter.id)
+        val before = await { it.active != null }
+        assertEquals(PetMood.SAD, before.owl.mood)
+
+        viewModel.startDeposit()
+        await { it.draft is SavingsDraft.Deposit }
+        viewModel.confirm()
+
+        val after = await { it.outcome != null }
+        assertEquals(PetMood.SAD, after.owl.mood)
+        assertNotEquals(PetMood.SAD, after.reactionOwl.mood)
     }
 
     /** ТЗ 2.5.7: срок считается по средней сумме регулярного пополнения. */

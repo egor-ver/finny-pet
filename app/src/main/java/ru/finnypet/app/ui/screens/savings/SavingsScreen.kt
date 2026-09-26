@@ -228,7 +228,7 @@ private fun Ready(
             onCancel = onCancel,
         )
     }
-    state.outcome?.let { OutcomeDialog(outcome = it, owl = state.owl, onDismiss = onDismiss) }
+    state.outcome?.let { OutcomeDialog(outcome = it, owl = state.reactionOwl, onDismiss = onDismiss) }
 }
 
 /** Пока день планируется, копилка закрыта — и дорога в план тут же (ТЗ 3.4). */
@@ -479,7 +479,8 @@ private fun OutcomeDialog(outcome: SavingsOutcomeView, owl: OwlLook, onDismiss: 
             FinnyButton(text = stringResource(R.string.action_ok), onClick = onDismiss)
         },
     ) {
-        Owl(look = owl, size = 72.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
+        // Показатели копилка не меняет — прыжок не про рост, а про сам факт успеха (U2).
+        Owl(look = owl, size = 72.dp, reactOnAppear = true, modifier = Modifier.align(Alignment.CenterHorizontally))
         Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
     }
 }
