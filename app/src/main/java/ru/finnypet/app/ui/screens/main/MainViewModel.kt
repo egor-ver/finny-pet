@@ -55,14 +55,13 @@ data class SavingsView(
 )
 
 /**
- * Задание дня (ТЗ 2.5.3: активное задание видно на главном). Заголовка у
- * задания нет — только вступление, поэтому показывается его начало и тема.
+ * Задание дня (ТЗ 2.5.3: активное задание видно на главном) — узнаётся по
+ * теме в заголовке карточки; вступление ребёнок читает уже внутри задания.
  * `null` — заданий в контент-паке нет.
  */
 data class TaskOfDay(
     val id: TaskId,
     val topic: TaskTopic,
-    val intro: String,
     /** Остался ли на сегодня лимит наград: «+10» или галочка «получено». */
     val rewardAvailable: Boolean,
     /** Все задания уже пройдены — предлагается повторить давнее всех. */
@@ -248,7 +247,6 @@ class MainViewModel @Inject constructor(
         return TaskOfDay(
             id = task.id,
             topic = task.topic,
-            intro = texts.textOf(task.introKey),
             rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
             allDone = TaskSchedule.listed(tasks).all { it.id in done },
             reward = balance.taskReward,

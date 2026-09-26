@@ -297,7 +297,6 @@ class ScreensTest {
         val task = TaskOfDay(
             id = TaskId("story"),
             topic = TaskTopic.SAVING,
-            intro = "Сова нашла монеты. Что с ними делать?",
             rewardAvailable = true,
             allDone = false,
             reward = Coins(10),
@@ -320,7 +319,6 @@ class ScreensTest {
         val task = TaskOfDay(
             id = TaskId("story"),
             topic = TaskTopic.SAVING,
-            intro = "Вступление",
             rewardAvailable = true,
             allDone = false,
             reward = Coins(10),
@@ -339,7 +337,7 @@ class ScreensTest {
     @Test
     fun `главная_кнопка_ведёт_к_заданию`() {
         var opened: TaskId? = null
-        val task = TaskOfDay(TaskId("story"), TaskTopic.SAVING, "Вступление", rewardAvailable = true, allDone = false, reward = Coins(10))
+        val task = TaskOfDay(TaskId("story"), TaskTopic.SAVING, rewardAvailable = true, allDone = false, reward = Coins(10))
         showMain(readyState(task = task, periodStatus = PeriodStatus.RUNNING, step = NextStep.Plan), onTask = { opened = it })
 
         compose.onNodeWithText("Выполни задание дня — за него дают монеты.").assertIsDisplayed()
@@ -396,7 +394,6 @@ class ScreensTest {
         val task = TaskOfDay(
             id = TaskId("story"),
             topic = TaskTopic.SAVING,
-            intro = "Вступление",
             rewardAvailable = false,
             allDone = true,
             reward = Coins(10),
@@ -1299,7 +1296,7 @@ class ScreensTest {
 
     /** Б22: пройденное без монет — это тренировка, а не штраф в виде «0 монет». */
     @Test
-    fun `пройденное задание без награды не показывает 0 монет`() {
+    fun `пройденное_задание_без_награды_не_показывает_0_монет`() {
         showProgress(
             ProgressState.Ready(
                 lastDay = null,
@@ -1575,7 +1572,7 @@ class ScreensTest {
     fun `вне_демонстрации_полосы_нет`() {
         compose.setContent { FinnypetTheme { DemoBannerContent(visible = false) } }
 
-        compose.onAllNodesWithText(text(R.string.demo_banner)).assertCountEquals(0)
+        compose.onAllNodesWithContentDescription(text(R.string.demo_banner)).assertCountEquals(0)
         compose.onAllNodesWithText(text(R.string.demo_play_day)).assertCountEquals(0)
     }
 
@@ -1594,9 +1591,9 @@ class ScreensTest {
             }
         }
 
-        compose.onNodeWithText(text(R.string.demo_banner)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(text(R.string.demo_banner)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.demo_play_day)).performClick()
-        compose.onNodeWithText(text(R.string.demo_exit)).performClick()
+        compose.onNodeWithContentDescription(text(R.string.demo_exit)).performClick()
         assertFalse("выход стирает демонстрацию без спроса", exited)
         compose.onNodeWithText(text(R.string.demo_exit_confirm)).performClick()
 

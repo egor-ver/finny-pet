@@ -5,11 +5,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,7 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -30,7 +32,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -182,14 +183,17 @@ private fun ReadyScreen(
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
     FinnyScaffold(
-        // Вместо заголовка — кошелёк: сколько монет есть, ребёнок видит
-        // первым делом, без инструкции (ТЗ 8.4).
-        title = { WalletChip(balance = state.balance, onOpen = { walletOpen = true }) },
+        // Слева сверху на всех остальных экранах — «Назад» (ТЗ 3.6): если
+        // положить кошелёк туда же на главном, привычное нажатие в тот же
+        // угол открывает его по ошибке вместо ничего (Б23). Поэтому слева —
+        // пусто, кошелёк — в действиях справа, рядом со «?» и замком.
+        title = {},
         actions = {
+            WalletChip(balance = state.balance, onOpen = { walletOpen = true })
             TopIcon(symbol = "?", label = stringResource(R.string.help_action), onClick = onHelp)
             TopIcon(symbol = "🔒", label = stringResource(R.string.adult_action), onClick = onAdult)
         },
-        spacing = Dimens.SpaceMedium,
+        spacing = Dimens.SpaceSmall,
         bottomBar = { DayButtons(step = state.step, onPlan = onPlan, onShop = onShop, onSleep = onFinishDay) },
     ) {
         banner()
@@ -198,19 +202,13 @@ private fun ReadyScreen(
             FinnyCard { Text(text = message, style = MaterialTheme.typography.bodyLarge) }
         }
 
-        Bubble(text = state.phrase)
         Pet(state = state)
-        GrowthRow(growth = state.growth, onOpen = onProgress)
+        GrowthRow(state = state, onOpen = onProgress)
         PetStats(state = state)
         CoinsRow(jars = state.jars, savings = state.savings, onPlan = onPlan, onSavings = onSavings)
 
         state.task?.let { task ->
-            TaskRow(task = task, onOpen = { onTask(task.id) })
-            // ТЗ 2.5.3: с главного доступны задания, а не только задание дня.
-            Link(
-                text = stringResource(if (task.allDone) R.string.main_task_all_done else R.string.main_tasks_all),
-                onOpen = onTasks,
-            )
+            TaskSection(task = task, onOpen = { onTask(task.id) }, onAllTasks = onTasks)
         }
     }
 }
@@ -252,72 +250,66 @@ private fun DayButtons(step: NextStep, onPlan: () -> Unit, onShop: () -> Unit, o
         NextStep.Shop -> shop to onShop
         NextStep.Sleep -> sleep to onSleep
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        if (step == NextStep.Shop) {
-            FinnySecondaryButton(text = sleep, onClick = onSleep, modifier = Modifier.weight(1f))
-        } else {
-            FinnySecondaryButton(text = shop, onClick = onShop, modifier = Modifier.weight(1f))
+    val secondary = if (step == NextStep.Shop) sleep to onSleep else shop to onShop
+
+    // При обычном отступе кнопки в узкой половине строки на 360 dp слово
+    // рвётся посреди себя же (Б21): даже сузив боковые поля до минимума,
+    // ширина растёт не быстрее шрифта. При системном увеличении шрифта
+    // переключаемся на столбик во всю ширину — как везде в игре.
+    if (LocalDensity.current.fontScale > 1f) {
+        ButtonColumn {
+            FinnyButton(text = main, onClick = onMain, modifier = Modifier.heightIn(min = MAIN_BUTTON_HEIGHT))
+            FinnySecondaryButton(text = secondary.first, onClick = secondary.second)
         }
-        FinnyButton(
-            text = main,
-            onClick = onMain,
-            modifier = Modifier
-                .weight(2f)
-                .heightIn(min = MAIN_BUTTON_HEIGHT),
-        )
-    }
-}
-
-/**
- * Облачко совы: почему она такая и что делать дальше (ТЗ 2.5.9, 2.5.10).
- * Одна фраза вместо подсказки внизу — говорит тот, о ком заботятся.
- */
-@Composable
-private fun Bubble(text: String) {
-    FinnyCard {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
+    } else {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
-        )
+        ) {
+            FinnySecondaryButton(
+                text = secondary.first,
+                onClick = secondary.second,
+                contentPadding = DAY_BUTTON_PADDING,
+                modifier = Modifier.weight(1f),
+            )
+            FinnyButton(
+                text = main,
+                onClick = onMain,
+                contentPadding = DAY_BUTTON_PADDING,
+                modifier = Modifier
+                    .weight(2f)
+                    .heightIn(min = MAIN_BUTTON_HEIGHT),
+            )
+        }
     }
 }
 
 /**
- * Питомец с именем и стадией.
+ * Сова и её фраза в одном ряду (ТЗ 2.5.9, 2.5.10): облачко раньше стояло
+ * отдельной карточкой над совой и добавляло экрану лишнюю строку с отступом
+ * (Б5) — сбоку оно занимает место, которое сова и так забирает под себя.
  *
- * Стадия написана словом, а не только нарисована: по картинке отличить
- * подростка от взрослого труднее, чем прочитать, и озвучке картинка недоступна
- * вовсе (ТЗ 3.6). Заодно это выполняет ТЗ 2.5.10 — стадия видна ребёнку.
+ * У фразы нет ни `maxLines`, ни многоточия: самая длинная фраза дня («ждёт
+ * задание») в этой колонке идёт на 7–8 строк — обрезать её значит терять
+ * объяснение совы, а ТЗ 2.5.9 требует, чтобы оно было полным. Ряд просто
+ * становится выше совы в эти дни — раздел 8 плана явно разрешает прокрутку
+ * ради этого, если высоты не хватит.
  */
 @Composable
 private fun Pet(state: MainState.Ready) {
-    // На низком экране сова меньше: иначе строки под ней уйдут под кнопки
-    // и главный перестанет помещаться без прокрутки (раздел 8 плана).
-    val low = LocalConfiguration.current.screenHeightDp < LOW_SCREEN_DP
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+    Row(
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        // Вещи сбоку, а не под совой: высота главного не растёт (раздел 8 плана).
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        ) {
-            Owl(look = state.owl, size = if (low) 120.dp else 170.dp)
-            Things(state.things)
-        }
+        Owl(look = state.owl, size = OWL_SIZE)
         Text(
-            text = stringResource(R.string.main_pet_stage, state.petName, stringResource(state.stage.label)),
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
+            text = state.phrase,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
         )
+        Things(state.things)
     }
 }
 
@@ -332,16 +324,14 @@ private fun Things(things: List<Thing>) {
 }
 
 /**
- * Строка «Финни»: три показателя в ряд. Под потребностью — слово «нужно»:
+ * Три показателя в ряд, без заголовка сверху: у каждого свой значок и
+ * подпись, а «Как себя чувствует Финни» над ними дублировало то же самое
+ * ещё одной строкой с отступом (Б5). Под потребностью — слово «нужно»:
  * цвет полосы не единственный признак (ТЗ 3.6). Полосы одного нейтрального
  * цвета, чтобы не спорить с цветами направлений трат (раздел 8 плана).
  */
 @Composable
 private fun PetStats(state: MainState.Ready) {
-    Text(
-        text = stringResource(R.string.main_pet_state, state.petName),
-        style = MaterialTheme.typography.titleMedium,
-    )
     Row(
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
         modifier = Modifier.fillMaxWidth(),
@@ -387,28 +377,6 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
             )
         }
     }
-}
-
-/**
- * Дорога в раздел — строкой, а не кнопкой: кнопок внизу уже две, а третья
- * вытесняет показатели питомца за край экрана при крупном шрифте.
- *
- * Текст называет действие словом: цвет — не единственный признак того, что
- * строка нажимается (ТЗ 3.6).
- */
-@Composable
-private fun Link(text: String, onOpen: () -> Unit) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Dimens.Corner))
-            .clickable(role = Role.Button, onClick = onOpen)
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .padding(vertical = Dimens.SpaceSmall),
-    )
 }
 
 /**
@@ -487,11 +455,31 @@ private fun walletLabel(line: WalletLine): String {
 }
 
 /**
- * Строка роста — дорога в «Мой прогресс» (ТЗ 2.5.10): сколько очков и до
- * какой стадии. Полоса нейтрального цвета, как у показателей.
+ * Имя, стадия и рост — в одной строке, дорога в «Мой прогресс» (ТЗ 2.5.10).
+ * Раньше «Имя · стадия» стояло отдельной строкой под совой — при имени в
+ * 20 символов (максимум профиля) вместе с «До подростка», полосой и числом
+ * очков это не поместилось бы ни в одну строку (Б5).
+ *
+ * Слово «До подростка»/«До взрослого» с экрана убрано — имени с весом
+ * `weight(1f)` и так может не хватить места на длинное имя, а числа очков
+ * подвинуть нельзя. Для TalkBack оно никуда не делось: озвучивается вместе
+ * со стадией и прогрессом одной фразой (ТЗ 3.6 — смысл не только по цвету/
+ * количеству звёзд).
  */
 @Composable
-private fun GrowthRow(growth: GrowthView?, onOpen: () -> Unit) {
+private fun GrowthRow(state: MainState.Ready, onOpen: () -> Unit) {
+    val nameStage = stringResource(R.string.main_pet_stage, state.petName, stringResource(state.stage.label))
+    val growth = state.growth
+    val spoken = if (growth == null) {
+        "$nameStage. ${stringResource(R.string.main_growth_done)}"
+    } else {
+        val toStage = stringResource(
+            if (growth.next == GrowthStage.GROWN) R.string.main_growth_to_grown else R.string.main_growth_to_young,
+        )
+        val points = stringResource(R.string.main_growth_points, growth.points, growth.target)
+        "$nameStage. $toStage $points"
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -500,29 +488,24 @@ private fun GrowthRow(growth: GrowthView?, onOpen: () -> Unit) {
             .clip(RoundedCornerShape(Dimens.Corner))
             .clickable(role = Role.Button, onClick = onOpen)
             .defaultMinSize(minHeight = Dimens.TouchTarget)
-            .semantics(mergeDescendants = true) {},
+            .clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Text(text = "⭐", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics {})
-        if (growth == null) {
-            Text(
-                text = stringResource(R.string.main_growth_done),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-        } else {
-            Text(
-                text = stringResource(
-                    if (growth.next == GrowthStage.GROWN) R.string.main_growth_to_grown else R.string.main_growth_to_young,
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+        // Имя переносится по словам, если не помещается, но не вытесняет
+        // звёзды и число очков справа — у них фиксированная ширина.
+        Text(
+            text = nameStage,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(text = "⭐", style = MaterialTheme.typography.bodyLarge)
+        if (growth != null) {
             ProgressLine(
                 fraction = growth.points.toFloat() / growth.target,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.width(GROWTH_BAR_WIDTH),
             )
             Text(
-                text = stringResource(R.string.main_growth_points, growth.points, growth.target),
+                text = stringResource(R.string.main_growth_points_short, growth.points, growth.target),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -531,14 +514,14 @@ private fun GrowthRow(growth: GrowthView?, onOpen: () -> Unit) {
 }
 
 /**
- * Строка «Монеты»: сколько по плану осталось в банках нужного и желаемого,
- * и копилка с целью (ТЗ 2.5.3). Строка — дорога в план, банка копилки — в
- * копилку. Копилка отдельной строкой: три банки в ряд при 16 sp на 360 dp
- * не помещаются.
+ * Сколько по плану осталось в банках нужного и желаемого, и копилка с целью
+ * (ТЗ 2.5.3), без заголовка «Монеты» сверху — иконки и подписи банок и так
+ * называют деньги, а строка с отступом над карточкой только повторяла это
+ * (Б5). Карточка — дорога в план, банка копилки — в копилку. Копилка
+ * отдельной строкой: три банки в ряд при 16 sp на 360 dp не помещаются.
  */
 @Composable
 private fun CoinsRow(jars: JarsLeft?, savings: SavingsView, onPlan: () -> Unit, onSavings: () -> Unit) {
-    Text(text = stringResource(R.string.main_coins), style = MaterialTheme.typography.titleMedium)
     FinnyCard(onClick = onPlan) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -612,13 +595,40 @@ private fun SavingsJar(savings: SavingsView, onOpen: () -> Unit) {
 }
 
 /**
- * Задание дня (ТЗ 2.5.3): тема, начало вступления и награда. Награду уже
- * получили — вместо «+10» галочка, TalkBack читает её словами.
+ * Задание дня и переход ко всем заданиям рядом, одной строкой (ТЗ 2.5.3).
+ * Раньше «Все задания» шли отдельной строкой под карточкой — при их
+ * объединении в саму карточку высота почти не менялась (кнопка всё равно
+ * не бывает меньше 48 dp), а два разных действия — открыть это задание или
+ * список — слились бы в одно. Компактная кнопка сбоку решает высоту, не
+ * трогая смысл (Б5).
  */
 @Composable
-private fun TaskRow(task: TaskOfDay, onOpen: () -> Unit) {
+private fun TaskSection(task: TaskOfDay, onOpen: () -> Unit, onAllTasks: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        TaskCard(task = task, onOpen = onOpen, modifier = Modifier.weight(1f))
+        AllTasksButton(onOpen = onAllTasks)
+    }
+}
+
+/**
+ * Тема задания — в заголовке карточки вместо статичного «Задание дня»:
+ * задание должно быть узнаваемо (ТЗ 2.5.3), а не просто присутствовать.
+ * Вступление задания сюда больше не выводится — со свободным по высоте
+ * облачком совы над рядом с фразой дня оно бы дублировало текст задания.
+ *
+ * Все задания пройдены — это состояние всей игры, а не конкретного
+ * задания, поэтому сообщение об этом строкой в самой карточке, а не в
+ * кнопке «Все ›»: полный текст `main_task_all_done` в 48 dp не поместился
+ * бы, а без слов ребёнок не поймёт, что произошло (ТЗ 3.6).
+ */
+@Composable
+private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val reward = stringResource(if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken)
-    FinnyCard(onClick = onOpen) {
+    FinnyCard(onClick = onOpen, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -626,7 +636,7 @@ private fun TaskRow(task: TaskOfDay, onOpen: () -> Unit) {
         ) {
             Text(text = "🎯", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics {})
             Text(
-                text = stringResource(R.string.main_task),
+                text = stringResource(task.topic.label),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -638,12 +648,33 @@ private fun TaskRow(task: TaskOfDay, onOpen: () -> Unit) {
             )
             Chevron()
         }
-        Text(
-            text = stringResource(R.string.main_task_intro, stringResource(task.topic.label), task.intro),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (task.allDone) {
+            Text(text = stringResource(R.string.main_task_all_done), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/**
+ * Компактный переход ко всем заданиям — словом, а не только значком
+ * (ТЗ 3.6): ребёнку 7 лет значок без подписи не говорит, что он делает, а
+ * полная подпись для озвучки зрячему не помогает.
+ */
+@Composable
+private fun AllTasksButton(onOpen: () -> Unit) {
+    val label = stringResource(R.string.main_tasks_all)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = Modifier
+            .clip(RoundedCornerShape(Dimens.Corner))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(role = Role.Button, onClick = onOpen)
+            .defaultMinSize(minWidth = Dimens.TouchTarget, minHeight = Dimens.TouchTarget)
+            .padding(horizontal = Dimens.SpaceSmall)
+            .clearAndSetSemantics { contentDescription = label },
+    ) {
+        Text(text = stringResource(R.string.main_tasks_short), style = MaterialTheme.typography.bodyLarge)
+        Chevron()
     }
 }
 
@@ -661,7 +692,17 @@ private fun Chevron() {
 /** Порядок как на макете: еда первой — о ней сова просит чаще всего. */
 private val STATS = listOf(PetStatKind.SATIETY, PetStatKind.MOOD, PetStatKind.CARE)
 
-/** Ниже этой высоты сова уменьшается (раздел 8 плана); vivo V2111 выше. */
-private const val LOW_SCREEN_DP = 730
+/**
+ * Сова на главном всегда этого размера (раздел 8 плана). На vivo раньше
+ * стояла сова 170 dp — уменьшена ради высоты экрана: без остальных правок
+ * этого пункта главный не помещался без прокрутки (Б5).
+ */
+private val OWL_SIZE = 120.dp
+
+/** Ширина полосы роста рядом со звёздами — фиксированная, весь вес у имени. */
+private val GROWTH_BAR_WIDTH = 56.dp
 
 private val MAIN_BUTTON_HEIGHT = 56.dp
+
+/** Уже отступа кнопки хватает под «Магазин»/«Уложить спать» в половину строки (Б21). */
+private val DAY_BUTTON_PADDING = PaddingValues(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall)

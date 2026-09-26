@@ -2,11 +2,13 @@ package ru.finnypet.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -28,11 +30,15 @@ fun FinnyButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    // Уже у обычного текста хватает места на 24 dp с каждой стороны; переопределяют
+    // только те, кому тесно — например, кнопки дня в узкой половине строки (Б21).
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(Dimens.Corner),
+        contentPadding = contentPadding,
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = Dimens.TouchTarget),
@@ -53,11 +59,13 @@ fun FinnySecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
 ) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(Dimens.Corner),
+        contentPadding = contentPadding,
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = Dimens.TouchTarget),

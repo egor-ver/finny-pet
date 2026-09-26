@@ -49,9 +49,9 @@
     <string name="main_growth_to_young">До подростка</string>
     <string name="main_growth_to_grown">До взрослого</string>
     <string name="main_growth_points">%1$d из %2$d</string>
+    <!-- То же число рядом со звездой на главном: «3/10» короче «3 из 10» — не помещается вместе с именем в одну строку -->
+    <string name="main_growth_points_short">%1$d/%2$d</string>
     <string name="main_growth_done">Взрослый — дорога пройдена</string>
-    <!-- Строка «Монеты»: остаток по банкам плана -->
-    <string name="main_coins">Монеты</string>
     <string name="main_coins_unplanned">Монеты ещё не разложены</string>
     <string name="main_jar_left">ещё %1$d</string>
     <string name="main_jar_left_description">%1$s: ещё %2$d</string>
@@ -59,9 +59,9 @@
     <string name="main_jar_goal_description">Копилка: %1$s, %2$d из %3$d</string>
     <string name="main_jar_no_goal">%1$d · выбрать цель</string>
     <string name="main_jar_no_goal_description">Копилка: %1$d, цель не выбрана</string>
-    <!-- «Накопления: Сова нашла монеты…» -->
-    <string name="main_task_intro">%1$s: %2$s</string>
     <string name="main_tasks_all">Все задания</string>
+    <!-- Кнопка рядом с карточкой задания: «Все ›» — слово короткое, стрелку рисует Chevron -->
+    <string name="main_tasks_short">Все</string>
     <!-- Кошелёк сегодня (ТЗ 2.5.4) -->
     <string name="main_things">Мои вещи: %1$s</string>
     <string name="wallet_open">Кошелёк сегодня</string>
@@ -143,8 +143,12 @@
     <string name="adult_delete_confirm">Удалить навсегда</string>
     <string name="adult_delete_confirm_text">Всё сотрётся с этого устройства, вернуть игру не получится.</string>
     <string name="demo_banner">Демонстрационный режим</string>
+    <!-- Видимая метка на тонкой полосе (Б24); полное название — только для озвучки -->
+    <string name="demo_badge">Демо</string>
     <string name="demo_play_day">Прожить день</string>
     <string name="demo_exit">Выйти из демонстрации</string>
+    <!-- Видимое слово на полосе; для озвучки читается demo_exit целиком -->
+    <string name="demo_exit_short">Выйти</string>
     <string name="demo_exit_confirm_title">Выйти из демонстрации?</string>
     <string name="demo_exit_confirm_text">Всё, что сделано в демонстрации, сотрётся. Игра ребёнка не изменится.</string>
     <string name="demo_exit_confirm">Выйти и стереть</string>
@@ -208,7 +212,7 @@
 
     <!-- Магазин (ТЗ 2.5.6) -->
     <string name="shop_title">Магазин</string>
-    <string name="shop_action">В магазин</string>
+    <string name="shop_action">Магазин</string>
     <!-- Метки карточек (раздел 8 плана, R12, R4) -->
     <string name="shop_mark_needed">нужно сейчас</string>
     <string name="shop_mark_not_needed">пока не нужно</string>

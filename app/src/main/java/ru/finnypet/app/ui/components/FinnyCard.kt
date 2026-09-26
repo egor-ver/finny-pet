@@ -24,11 +24,12 @@ import ru.finnypet.app.ui.theme.Dimens
 fun FinnyCard(
     color: Color = MaterialTheme.colorScheme.surfaceVariant,
     onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             // Скругление до нажатия: иначе отклик выходит за края подложки.
             .clip(RoundedCornerShape(Dimens.Corner))
