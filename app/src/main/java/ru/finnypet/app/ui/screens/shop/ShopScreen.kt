@@ -279,10 +279,16 @@ private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?)
     }
 }
 
-/** «🥣 Нужное: ещё 24» — сколько по плану ещё можно, как на главном. */
+/**
+ * «🥣 Нужное: ещё 24» — сколько по плану ещё можно, как на главном.
+ *
+ * Столбцом, а не в ряд: в ряд без переноса при крупном шрифте вторая
+ * подпись зажималась до ширины уже без места даже на одно слово и рвала
+ * его посередине («Желаемо/е») — против ТЗ 3.6.
+ */
 @Composable
 private fun JarChips(jars: JarsLeft) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
         JarChip(category = SpendCategory.MANDATORY, left = jars.mandatory)
         JarChip(category = SpendCategory.OPTIONAL, left = jars.optional)
     }
