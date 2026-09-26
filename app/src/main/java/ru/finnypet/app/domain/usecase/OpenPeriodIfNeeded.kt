@@ -6,10 +6,9 @@ import ru.finnypet.app.domain.economy.GameBalance
 import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.content.DayEvent
+import ru.finnypet.app.domain.content.petEffects
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GamePeriod
-import ru.finnypet.app.domain.model.PetEffect
-import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.Transaction
@@ -117,11 +116,10 @@ class OpenPeriodIfNeeded(
                 periodId = period.id,
             ).value.transaction.copy(reasonKey = "event.${event.id}")
         }
-        val effects = when (event) {
-            is DayEvent.ExtraCare -> listOf(PetEffect(PetStatKind.CARE, -event.careDrop))
-            is DayEvent.Gift -> emptyList()
-        }
-        checkNotNull(recorder).recordEventOnce(period.profileId, ActionOutcome(transaction = transaction, effects = effects))
+        checkNotNull(recorder).recordEventOnce(
+            period.profileId,
+            ActionOutcome(transaction = transaction, effects = event.petEffects()),
+        )
     }
 
     private fun firstPeriod(profileId: ProfileId) = GamePeriod(

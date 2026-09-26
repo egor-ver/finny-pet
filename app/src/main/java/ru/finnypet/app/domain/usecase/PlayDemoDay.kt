@@ -1,6 +1,7 @@
 package ru.finnypet.app.domain.usecase
 
 import kotlinx.coroutines.flow.first
+import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.TaskEngine
@@ -11,14 +12,14 @@ import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.OutcomeCondition
 import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.ShopItem
-import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.StepAnswer
 import ru.finnypet.app.domain.model.TaskAttempt
 import ru.finnypet.app.domain.model.TaskCompletion
 import ru.finnypet.app.domain.model.TaskStep
-import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
@@ -49,6 +50,7 @@ class PlayDemoDay(
     private val wallet: WalletEngine,
     private val taskEngine: TaskEngine,
     private val pet: PetStateEngine,
+    private val periodEngine: PeriodEngine,
     private val recorder: OutcomeRecorder,
 ) {
 
@@ -58,23 +60,28 @@ class PlayDemoDay(
         // Сначала заработай, потом распредели (R7): награда входит в план.
         passTask(profileId, period)
         val wallet = periods.balance(period)
-        if (period.number == MISTAKE_DAY) {
-            // Раздел 4 плана, день 2: самая дорогая игрушка вместо еды. Эксперт
-            // видит день без роста, грустную сову утром и разбор ошибки.
-            val toy = priciest(SpendCategory.OPTIONAL, wallet)
-            planOf(profileId, period) { mistakePlan(wallet, toy?.price ?: Coins.ZERO) }
-            toy?.let { buy(profileId, period, it) }
+        val existingPlan = periods.plan(period.id)
+        // Эксперт мог купить что-то руками до нажатия «Прожить день» — демо
+        // тратит только то, что от плана осталось, а не весь план заново
+        // (ревью L8): иначе желаемое было бы куплено дважды.
+        val transactionsToday = periods.transactions(period.id)
+        val spentToday = periodEngine.factOf(transactionsToday)
+        val boughtToday = transactionsToday.mapNotNull { it.itemId }.toSet()
+        val state = profiles.pet(profileId)?.state ?: PetState.uniform(Stat.MAX)
+        val decision = if (period.number == MISTAKE_DAY) {
+            // Раздел 4 плана, день 2: фиксированный мяч сверх плана желаемого,
+            // нужное не покупается. Эксперт видит день без роста, грустную
+            // сову утром и разбор ошибки.
+            DemoDayPlan.mistakeDay(wallet, state, content.pack().shop, pet, existingPlan, boughtToday)
         } else {
             // Тот же расчёт, что подсказывает ребёнку главный экран: самый дешёвый
             // набор, закрывающий потребности. Иначе сова в демо не росла бы (AD-3).
-            val needs = profiles.pet(profileId)
-                ?.let { pet.cheapestCover(it.state, content.pack().shop) }
-                .orEmpty()
-            val plan = planOf(profileId, period) { newPlan(wallet, minOf(needs.totalPrice(), wallet)) }
-            // Желаемое покупается одно и после нужного: весь план на него ещё свободен.
-            needs.forEach { buy(profileId, period, it) }
-            cheapest(SpendCategory.OPTIONAL, plan.optional)?.let { buy(profileId, period, it) }
+            DemoDayPlan.normalDay(wallet, state, content.pack().shop, pet, existingPlan, spentToday, boughtToday)
         }
+        planOf(profileId, period, existingPlan, decision.plan)
+        // Покупки выводятся из плана, а не пересчитаны от кошелька заново
+        // (Б10-ревью): ручной план эксперта должен решать, что купит демо.
+        decision.buys.forEach { buy(profileId, period, it) }
         if (closeDay(profileId) != null) {
             // Игрок видит следующий день сразу после нажатия: доход и событие
             // должны быть готовы до возврата на главный экран.
@@ -83,17 +90,17 @@ class PlayDemoDay(
     }
 
     /**
-     * Эксперт мог распределить монеты руками до нажатия — его план и берём.
-     * Доля копилки уходит на цель при подтверждении (R6), поэтому без цели
-     * демонстрация берёт первую: ребёнок выбирает сам, а жюри важен весь цикл.
+     * Эксперт мог распределить монеты руками до нажатия — его план и берём,
+     * ничего не пересчитывая. Доля копилки уходит на цель при подтверждении
+     * (R6), поэтому без цели демонстрация берёт первую: ребёнок выбирает сам,
+     * а жюри важен весь цикл.
      */
-    private suspend fun planOf(profileId: ProfileId, period: GamePeriod, draft: () -> BudgetPlan): BudgetPlan {
-        val plan = periods.plan(period.id) ?: draft().also { periods.savePlan(period.id, it) }
+    private suspend fun planOf(profileId: ProfileId, period: GamePeriod, existingPlan: BudgetPlan?, plan: BudgetPlan) {
+        if (existingPlan == null) periods.savePlan(period.id, plan)
         if (period.status == PeriodStatus.PLANNING) {
             chooseGoalIfNone(profileId)
             confirmPlan(profileId)
         }
-        return plan
     }
 
     /**
@@ -110,33 +117,6 @@ class PlayDemoDay(
         val goal = goals.firstOrNull { it.id !in bought } ?: goals.first()
         savings.setActive(profileId, savings.progress(profileId, goal.id).copy(isActive = true))
     }
-
-    /**
-     * Разумная игра: сначала ровно столько, сколько стоит нужное, остальное
-     * пополам между желаемым и копилкой. План строится под покупку: нужное
-     * соблюдено, когда потрачено не больше запланированного (R3).
-     */
-    private fun newPlan(available: Coins, mandatory: Coins): BudgetPlan {
-        val rest = available - mandatory
-        val savings = Coins(rest.amount / 2)
-        return BudgetPlan(mandatory = mandatory, optional = rest - savings, savings = savings)
-    }
-
-    /** Ошибка дня: желаемое — вся игрушка, остаток пополам между копилкой и нужным, на которое не хватит. */
-    private fun mistakePlan(available: Coins, toy: Coins): BudgetPlan {
-        val rest = available - toy
-        val savings = Coins(rest.amount / 2)
-        return BudgetPlan(mandatory = rest - savings, optional = toy, savings = savings)
-    }
-
-    private fun cheapest(category: SpendCategory, budget: Coins): ShopItem? = affordable(category, budget)
-        .minByOrNull { it.price.amount }
-
-    private fun priciest(category: SpendCategory, budget: Coins): ShopItem? = affordable(category, budget)
-        .maxByOrNull { it.price.amount }
-
-    private fun affordable(category: SpendCategory, budget: Coins): List<ShopItem> = content.pack().shop
-        .filter { it.category == category && budget.covers(it.price) }
 
     /** Задание дня на верный исход с наибольшей наградой: эксперт видит начисление и объяснение. */
     private suspend fun passTask(profileId: ProfileId, period: GamePeriod) {

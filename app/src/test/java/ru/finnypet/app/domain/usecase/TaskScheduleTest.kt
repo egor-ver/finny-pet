@@ -197,6 +197,35 @@ class TaskScheduleTest {
         assertEquals(TaskId("a"), dayTask(tasks, yesterday, today, pet = fed)?.id)
     }
 
+    /**
+     * Граница дня — включительно: совпадение отметки прохождения с началом
+     * дня (грубые секундные часы демо) — тот же день, а не два разных (AD-6).
+     */
+    @Test
+    fun `совпадение отметки с началом дня — тот же день`() {
+        val sameInstant = listOf(passed("review", DAY_START))
+
+        assertTrue(TaskSchedule.triedToday(TaskId("review"), sameInstant, today))
+    }
+
+    /**
+     * Б10: разбор застревал заданием дня, потому что часы демо были
+     * заморожены, и `dayStart` нового периода совпадал с `completedAt`
+     * прошлого — включительное сравнение путало прошлый день с текущим.
+     * В коде `TaskSchedule` для этого никакого отдельного правила нет — это
+     * допущение (AD-6): часы обязаны сдвинуться хотя бы на отметку между
+     * периодами, а обеспечивают это часы, а не движок. Тест документирует
+     * само допущение: при сдвинутых часах прохождение прошлого периода в
+     * текущий не попадает.
+     */
+    @Test
+    fun `прохождение прошлого периода не считается сегодняшним, если часы периода продвинулись`() {
+        val passedLastPeriod = listOf(passed("review", DAY_START))
+        val nextPeriodStarted = listOf(transaction(TransactionType.INCOME_PERIOD, at = DAY_START + 1))
+
+        assertFalse(TaskSchedule.triedToday(TaskId("review"), passedLastPeriod, nextPeriodStarted))
+    }
+
     private companion object {
         const val DAY_START = 1_000L
     }

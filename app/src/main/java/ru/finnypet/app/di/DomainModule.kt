@@ -131,6 +131,7 @@ object DomainModule {
         wallet: WalletEngine,
         taskEngine: TaskEngine,
         pet: PetStateEngine,
+        periodEngine: PeriodEngine,
         recorder: OutcomeRecorder,
     ): PlayDemoDay = PlayDemoDay(
         profiles = profiles,
@@ -144,6 +145,7 @@ object DomainModule {
         wallet = wallet,
         taskEngine = taskEngine,
         pet = pet,
+        periodEngine = periodEngine,
         recorder = recorder,
     )
 

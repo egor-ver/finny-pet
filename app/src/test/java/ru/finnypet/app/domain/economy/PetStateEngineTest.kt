@@ -37,6 +37,36 @@ class PetStateEngineTest {
         assertEquals(Stat(30), result.value.care)
     }
 
+    /**
+     * AD-14: отрицательный эффект (включая события) не роняет показатель ниже
+     * `min(текущее, пол)` — тем же правилом, что и ночь. Без этого событие
+     * могло увести уже подсевший показатель глубже нижнего предела (ТЗ 3.5).
+     * `balance.statFloor` у `GameBalance.PLACEHOLDER` — 30.
+     */
+    @Test
+    fun `отрицательный эффект точно на полу не опускает его дальше`() {
+        val result = engine.apply(PetState.uniform(Stat(30)), listOf(PetEffect(PetStatKind.CARE, -10)))
+        assertEquals(Stat(30), result.value.care)
+    }
+
+    @Test
+    fun `отрицательный эффект выше пола останавливается на полу, а не проходит его`() {
+        val result = engine.apply(PetState.uniform(Stat(35)), listOf(PetEffect(PetStatKind.CARE, -10)))
+        assertEquals(Stat(30), result.value.care)
+    }
+
+    @Test
+    fun `показатель уже ниже пола отрицательный эффект не поднимает`() {
+        val result = engine.apply(PetState.uniform(Stat(25)), listOf(PetEffect(PetStatKind.CARE, -10)))
+        assertEquals(Stat(25), result.value.care)
+    }
+
+    @Test
+    fun `положительный эффект возле пола новым правилом не меняется`() {
+        val result = engine.apply(PetState.uniform(Stat(25)), listOf(PetEffect(PetStatKind.CARE, 10)))
+        assertEquals(Stat(35), result.value.care)
+    }
+
     @Test
     fun `эффект упирается в потолок а не переполняет шкалу`() {
         val full = PetState.uniform(Stat(95))

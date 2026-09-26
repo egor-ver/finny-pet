@@ -16,10 +16,22 @@ import ru.finnypet.app.domain.model.totalPrice
 
 class PetStateEngine(private val balance: GameBalance) {
 
+    /**
+     * Отрицательный эффект (включая события, AD-14) не роняет показатель ниже
+     * `min(текущее, пол)` — тем же правилом, что и ночь: иначе, скажем, событие
+     * могло увести уже подсевший показатель глубже нижнего предела (ТЗ 3.5).
+     * Показатель ниже границы этим не поднимается, положительные эффекты не меняются.
+     */
     fun apply(state: PetState, effects: List<PetEffect>): GameResult<PetState> {
         var next = state
         effects.forEach { effect ->
-            next = next.with(effect.stat, next.statFor(effect.stat) + effect.delta)
+            val current = next.statFor(effect.stat)
+            val updated = if (effect.delta < 0) {
+                maxOf(current + effect.delta, minOf(current, Stat(balance.statFloor)))
+            } else {
+                current + effect.delta
+            }
+            next = next.with(effect.stat, updated)
         }
         return GameResult(
             value = next,

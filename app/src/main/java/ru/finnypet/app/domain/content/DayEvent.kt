@@ -1,6 +1,8 @@
 package ru.finnypet.app.domain.content
 
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetStatKind
 
 /** Фиксированное событие игрового дня, происходящее до составления плана. */
 sealed interface DayEvent {
@@ -25,4 +27,14 @@ sealed interface DayEvent {
     ) : DayEvent {
         init { require(amount > Coins.ZERO) }
     }
+}
+
+/**
+ * Эффект события на показатели совы. Одна функция для продакшн-кода
+ * ([ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded]) и симуляции (L8):
+ * иначе денежная и статовая часть события описывались бы дважды и могли разойтись.
+ */
+fun DayEvent.petEffects(): List<PetEffect> = when (this) {
+    is DayEvent.ExtraCare -> listOf(PetEffect(PetStatKind.CARE, -careDrop))
+    is DayEvent.Gift -> emptyList()
 }

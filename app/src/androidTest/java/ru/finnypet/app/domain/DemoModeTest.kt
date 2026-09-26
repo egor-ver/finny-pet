@@ -34,11 +34,14 @@ import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.GrowthEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.economy.SavingsEngine
 import ru.finnypet.app.domain.economy.TaskEngine
 import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PetAppearance
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.SpendCategory
@@ -46,6 +49,7 @@ import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.usecase.AfterDemo
 import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.ConfirmPlan
@@ -64,7 +68,13 @@ import java.io.File
 class DemoModeTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val clock = GameClock { FIXED_TIME }
+
+    // Часы обязаны идти вперёд между операциями (TaskScheduleTest доказывает
+    // минимальное правило: dayStart нового периода не должен совпадать с
+    // completedAt прошлого). Одна и та же застывшая отметка на весь прогон —
+    // это и был Б10: разбор навсегда застревал заданием дня.
+    private var tick = FIXED_TIME
+    private val clock = GameClock { tick++ }
     private val content = AssetContentRepository(context, ContentParser())
     private val balance = content.pack().balance
 
@@ -81,6 +91,7 @@ class DemoModeTest {
     private lateinit var playDay: PlayDemoDay
     private lateinit var openPeriod: OpenPeriodIfNeeded
     private lateinit var periodEngine: PeriodEngine
+    private lateinit var recorder: OutcomeRecorderImpl
 
     @Before
     fun setUp() {
@@ -106,7 +117,7 @@ class DemoModeTest {
         )
         startDemo = StartDemo(profiles, settings)
         exitDemo = ExitDemo(profiles, settings)
-        val recorder = OutcomeRecorderImpl(
+        recorder = OutcomeRecorderImpl(
             database = db,
             petState = PetStateEngine(balance),
             taskProgress = tasks,
@@ -135,6 +146,7 @@ class DemoModeTest {
             wallet = WalletEngine(clock),
             taskEngine = TaskEngine(clock),
             pet = PetStateEngine(balance),
+            periodEngine = periodEngine,
             recorder = recorder,
         )
     }
@@ -232,13 +244,19 @@ class DemoModeTest {
     /**
      * Доказательство ТЗ 2.6: пять игровых периодов и три стадии развития.
      * Дни проживаются настоящими движками, а не подставляются в базу.
+     * Очки по дням — эталон раздела 4 плана (3, 3, 6, 9, 12): второй день —
+     * с ошибкой, без прироста, дни 4–5 несут события L7 и всё равно растят.
      */
     @Test
     fun пять_дней_подряд_доводят_питомца_до_последней_стадии() = runBlocking {
         val demo = startDemo()
 
-        repeat(DEMO_DAYS) { playDay() }
+        val points = (1..DEMO_DAYS).map {
+            playDay()
+            profiles.pet(demo.id)!!.growth.points
+        }
 
+        assertEquals(listOf(3, 3, 6, 9, 12), points)
         // Закрытых дней пять, плюс шестой открыт под продолжение игры.
         assertEquals(DEMO_DAYS, periods.lastClosed(demo.id)?.number)
         assertEquals(DEMO_DAYS + 1, periods.count(demo.id))
@@ -337,6 +355,58 @@ class DemoModeTest {
         playDay()
 
         assertEquals(1, periods.lastClosed(demo.id)?.number)
+    }
+
+    /**
+     * Б10-ревью: раньше демо пересчитывало покупки от кошелька заново, и от
+     * ручного плана оставалось только число рядом с настоящими покупками.
+     * Здесь план ниже цены закрытия потребностей — вода по карману (8 из 10),
+     * витамины уже нет: сова остаётся голодной по уходу, и рост дня —
+     * настоящий ноль, а не совпадение с эталоном.
+     */
+    @Test
+    fun ручной_план_решает_что_купит_демо() = runBlocking {
+        val demo = startDemo()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        val manual = BudgetPlan(mandatory = Coins(10), optional = Coins(5), savings = Coins(20))
+        periods.savePlan(period.id, manual)
+
+        playDay()
+
+        val closed = periods.lastClosed(demo.id)!!
+        assertEquals(manual, periods.plan(closed.id))
+        val fact = periodEngine.factOf(periods.transactions(closed.id))
+        assertEquals(Coins(8), fact.amountFor(SpendCategory.MANDATORY))
+        assertEquals(Coins.ZERO, fact.amountFor(SpendCategory.OPTIONAL))
+        assertEquals(Coins(20), fact.amountFor(SpendCategory.SAVINGS))
+        assertEquals(0, profiles.pet(demo.id)!!.growth.points)
+    }
+
+    /**
+     * Ревью L8: раньше желаемое считалось от всего `plan.optional`, не зная
+     * про покупки, которые эксперт уже сделал руками до нажатия «Прожить
+     * день» — наклейка покупалась второй раз, и факт желаемого превышал план.
+     */
+    @Test
+    fun ручная_покупка_до_кнопки_не_дублируется_демо() = runBlocking {
+        val demo = startDemo()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        val manual = BudgetPlan(mandatory = Coins(23), optional = Coins(11), savings = Coins(11))
+        periods.savePlan(period.id, manual)
+        val sticker = content.pack().shop.single { it.id == ItemId("sticker-star") }
+        val bought = WalletEngine(clock).purchase(sticker, periods.balance(period), period.id)
+        check(bought is PurchaseResult.Success)
+        recorder.record(demo.id, ActionOutcome(transaction = bought.transaction, effects = bought.effects))
+
+        playDay()
+
+        val closed = periods.lastClosed(demo.id)!!
+        assertEquals(1, periods.transactions(closed.id).count { it.itemId == sticker.id })
+        val fact = periodEngine.factOf(periods.transactions(closed.id))
+        assertTrue(
+            "факт желаемого ${fact.amountFor(SpendCategory.OPTIONAL).amount} больше плана ${manual.optional.amount}",
+            fact.amountFor(SpendCategory.OPTIONAL) <= manual.optional,
+        )
     }
 
     /** Даже если активна игра ребёнка, день проживает только тестовый профиль. */
