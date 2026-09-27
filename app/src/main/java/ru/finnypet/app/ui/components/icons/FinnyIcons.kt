@@ -108,8 +108,8 @@ object FinnyIcons {
         path(fill = BLACK, pathFillType = PathFillType.EvenOdd) {
             // Тело.
             ellipse(cx = 11.5f, cy = 14f, rx = 8.5f, ry = 7.5f)
-            // Прорезь для монет — вырез сверху, левее ушей и выше глаза, не бантиком под ухом.
-            moveTo(6.3f, 8.8f); lineTo(9.3f, 8.8f); lineTo(9.3f, 10.1f); lineTo(6.3f, 10.1f); close()
+            // Прорезь для монет — на спине, правее ушей: над глазом читалась бы бровью.
+            moveTo(16f, 10.2f); lineTo(18.5f, 10.2f); lineTo(18.5f, 11.4f); lineTo(16f, 11.4f); close()
             // Глаз — вырез со стороны пятачка, а не на затылке.
             circle(cx = 6.6f, cy = 12.4f, r = 1f)
         }

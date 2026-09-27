@@ -76,7 +76,7 @@ val TaskTopic.icon: ImageVector
  */
 val TaskTopic.tint: Color
     @Composable get() = when (this) {
-        TaskTopic.SAVING -> SpendCategory.SAVINGS.color
+        TaskTopic.SAVING -> SpendCategory.SAVINGS.fill
         TaskTopic.PLANNING, TaskTopic.PAYMENTS -> MaterialTheme.colorScheme.onSurface
     }
 

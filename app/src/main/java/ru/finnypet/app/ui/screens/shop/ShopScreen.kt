@@ -53,6 +53,7 @@ import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.StatEffectLine
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
+import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.screens.main.JarsLeft
@@ -294,7 +295,7 @@ private fun JarChip(category: SpendCategory, left: Coins) {
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(Dimens.Corner))
             .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
     ) {
-        Icon(imageVector = category.icon, contentDescription = null, tint = category.color)
+        Icon(imageVector = category.icon, contentDescription = null, tint = category.fill)
         Text(
             text = stringResource(R.string.shop_jar_left, stringResource(category.label), left.amount),
             style = MaterialTheme.typography.bodyLarge,

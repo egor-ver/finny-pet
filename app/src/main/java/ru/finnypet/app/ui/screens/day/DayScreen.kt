@@ -243,7 +243,9 @@ private fun CheckLine(check: DayCheckView) {
             Icon(
                 imageVector = if (check.done) FinnyIcons.StarFilled else FinnyIcons.StarOutline,
                 contentDescription = null,
-                tint = FinnyTheme.palette.star,
+                // Незаработанная звезда — контур inkSoft, не жёлтый star (DESIGN_PLAN 2.1,
+                // 2.5): жёлтый контур на белом даёт 1,6:1, а нужно не меньше 3:1 (ТЗ 3.6).
+                tint = if (check.done) FinnyTheme.palette.star else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(text = check.text, style = MaterialTheme.typography.bodyLarge)
         }

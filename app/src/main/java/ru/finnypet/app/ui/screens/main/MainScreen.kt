@@ -58,6 +58,7 @@ import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.direction
+import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
@@ -366,7 +367,7 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Icon(imageVector = kind.icon, contentDescription = null, tint = kind.direction.color)
+        Icon(imageVector = kind.icon, contentDescription = null, tint = kind.direction.fill)
         ProgressLine(
             fraction = stat.value.toFloat() / Stat.RANGE.last,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -558,7 +559,7 @@ private fun JarLeft(category: SpendCategory, left: Coins, modifier: Modifier = M
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Icon(imageVector = category.icon, contentDescription = null, tint = category.color)
+        Icon(imageVector = category.icon, contentDescription = null, tint = category.fill)
         Text(
             text = stringResource(R.string.main_jar_left, left.amount),
             style = MaterialTheme.typography.bodyLarge,
@@ -593,7 +594,7 @@ private fun SavingsJar(savings: SavingsView, onOpen: () -> Unit) {
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Icon(imageVector = SpendCategory.SAVINGS.icon, contentDescription = null, tint = SpendCategory.SAVINGS.color)
+        Icon(imageVector = SpendCategory.SAVINGS.icon, contentDescription = null, tint = SpendCategory.SAVINGS.fill)
         Text(
             text = shown,
             style = MaterialTheme.typography.bodyLarge,

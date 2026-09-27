@@ -150,7 +150,7 @@ private fun CategoryRow(
             Icon(
                 imageVector = category.icon,
                 contentDescription = null,
-                tint = category.color,
+                tint = category.fill,
                 modifier = Modifier.size(24.dp),
             )
             Text(

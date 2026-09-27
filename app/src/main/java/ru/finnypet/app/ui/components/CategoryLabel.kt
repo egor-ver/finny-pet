@@ -46,6 +46,20 @@ val SpendCategory.color: Color
         SpendCategory.SAVINGS -> FinnyTheme.palette.save.text
     }
 
+/**
+ * Тон заливки направления — для полос и иконок (DESIGN_PLAN 2.1: «заливка
+ * для полос и иконок, текст... и светлый контейнер»). Не [color] ([text]):
+ * тот подобран для контраста текста на белом и на светлом контейнере, а
+ * заливка ярче — например, у «Радости» текст `#A04B00` (коричневый),
+ * заливка `#C96500` (оранжевая).
+ */
+val SpendCategory.fill: Color
+    @Composable get() = when (this) {
+        SpendCategory.MANDATORY -> FinnyTheme.palette.need.fill
+        SpendCategory.OPTIONAL -> FinnyTheme.palette.want.fill
+        SpendCategory.SAVINGS -> FinnyTheme.palette.save.fill
+    }
+
 /** Светлый контейнер направления — фон тарелки [ItemIcon] под эмодзи товара или цели. */
 val SpendCategory.container: Color
     @Composable get() = when (this) {
@@ -72,7 +86,7 @@ fun CategoryLabel(
         Icon(
             imageVector = category.icon,
             contentDescription = null,
-            tint = category.color,
+            tint = category.fill,
             modifier = Modifier.size(20.dp),
         )
         Text(
