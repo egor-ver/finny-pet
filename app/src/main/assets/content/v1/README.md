@@ -189,6 +189,9 @@
 **`SHELF` — собрать корзину на прилавке задания.** Товары описаны прямо
 здесь: тетради и сок в магазине питомца не продаются. `isMandatory` — то,
 без чего набор не собрать; необязательное поле, по умолчанию `false`.
+`icon` — картинка товара, один эмодзи, как в магазине; необязательное поле,
+но у товаров одного прилавка оно либо у всех, либо ни у кого: смесь
+картинок и «голых» слов на одной полке выглядит сломанной.
 
 ```
 {
@@ -196,8 +199,8 @@
   "promptKey": "task.my_task.step1",
   "budget": 35,
   "items": [
-    { "id": "notebook", "titleKey": "task.item.notebook", "price": 10, "isMandatory": true },
-    { "id": "keychain", "titleKey": "task.item.keychain", "price": 15 }
+    { "id": "notebook", "titleKey": "task.item.notebook", "price": 10, "isMandatory": true, "icon": "📓" },
+    { "id": "keychain", "titleKey": "task.item.keychain", "price": 15, "icon": "🔑" }
   ]
 }
 ```

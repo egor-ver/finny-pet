@@ -195,6 +195,8 @@ data class ShelfItemDto(
     val price: Int,
     /** Обязательная покупка — то, без чего набор не собрать. */
     val isMandatory: Boolean = false,
+    /** Эмодзи на тарелке (DESIGN_PLAN 3.8); у прилавка — у всех товаров или ни у кого. */
+    val icon: String = "",
 )
 
 @OptIn(ExperimentalSerializationApi::class)

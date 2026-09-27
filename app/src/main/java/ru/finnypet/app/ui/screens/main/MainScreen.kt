@@ -57,6 +57,7 @@ import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.TopSpeechBubble
 import ru.finnypet.app.ui.components.color
+import ru.finnypet.app.ui.components.colors
 import ru.finnypet.app.ui.components.container
 import ru.finnypet.app.ui.components.direction
 import ru.finnypet.app.ui.components.fill
@@ -65,7 +66,6 @@ import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.needLabel
-import ru.finnypet.app.ui.components.tint
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
@@ -852,7 +852,7 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(imageVector = task.topic.icon, contentDescription = null, tint = task.topic.tint)
+            Icon(imageVector = task.topic.icon, contentDescription = null, tint = task.topic.colors.fill)
             Text(
                 text = progress,
                 style = MaterialTheme.typography.bodyLarge,

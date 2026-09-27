@@ -37,6 +37,14 @@ val SaveFill = Color(0xFF9460E0)
 val SaveText = Color(0xFF7B3FC4)
 val SaveContainer = Color(0xFFEFE4FF)
 
+// Светлая тема — темы заданий; «Накопления» берут цвет копилки (DESIGN_PLAN 2.1)
+val TopicPlanFill = Color(0xFF17A2B8)
+val TopicPlanText = Color(0xFF0B6E7D)
+val TopicPlanContainer = Color(0xFFDDF4F7)
+val TopicShopFill = Color(0xFFE0567F)
+val TopicShopText = Color(0xFFA8325A)
+val TopicShopContainer = Color(0xFFFCE3EB)
+
 // Светлая тема — монета (одна и та же в обеих темах)
 val CoinFace = Color(0xFFFFC933)
 val CoinShadow = Color(0xFFF2A516)
@@ -74,6 +82,14 @@ val WantContainerDark = Color(0xFF45300F)
 val SaveFillDark = Color(0xFFC9A6FF)
 val SaveTextDark = Color(0xFFC9A6FF)
 val SaveContainerDark = Color(0xFF34264F)
+
+// Тёмная тема — темы заданий
+val TopicPlanFillDark = Color(0xFF6FD6E6)
+val TopicPlanTextDark = Color(0xFF6FD6E6)
+val TopicPlanContainerDark = Color(0xFF123A40)
+val TopicShopFillDark = Color(0xFFFF9AB8)
+val TopicShopTextDark = Color(0xFFFF9AB8)
+val TopicShopContainerDark = Color(0xFF4A1E2C)
 
 // Тёмная тема — нехватка монет
 val ShortageTextDark = Color(0xFFFFB4AB)

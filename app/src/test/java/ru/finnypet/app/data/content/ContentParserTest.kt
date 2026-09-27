@@ -367,6 +367,35 @@ class ContentParserTest {
         assertEquals(SpendCategory.OPTIONAL, step.items[1].category)
     }
 
+    /** DESIGN_PLAN 3.8, решение владельца №3: картинка товара полки — поле icon, как в магазине. */
+    @Test
+    fun `картинка товара на прилавке необязательна`() {
+        val withIcons = parser.parse(realContent(tasks = shelfTask(juiceIcon = "🧃", candyIcon = "🍭")))
+        assertEquals(listOf("🧃", "🍭"), (withIcons.tasks.single().steps.single() as TaskStep.Shelf).items.map { it.icon })
+
+        val plain = parser.parse(realContent(tasks = shelfTask(juiceIcon = null, candyIcon = null)))
+        assertEquals(listOf("", ""), (plain.tasks.single().steps.single() as TaskStep.Shelf).items.map { it.icon })
+    }
+
+    @Test
+    fun `прилавок, где картинка есть не у всех, отвергается`() {
+        val error = parseFailure(tasks = shelfTask(juiceIcon = "🧃", candyIcon = null))
+
+        assertTrue("Не названо поле: ${error.message}", error.message.orEmpty().contains("icon"))
+    }
+
+    /** На настоящей полке нет смеси картинок и «голых» слов (DESIGN_PLAN 3.8). */
+    @Test
+    fun `у каждого товара настоящих прилавков есть картинка`() {
+        val items = parser.parse(realContent()).tasks
+            .flatMap { it.steps }
+            .filterIsInstance<TaskStep.Shelf>()
+            .flatMap { it.items }
+
+        assertTrue(items.isNotEmpty())
+        assertTrue("Без картинки: ${items.filter { it.icon.isBlank() }.map { it.id }}", items.all { it.icon.isNotBlank() })
+    }
+
     @Test
     fun `условие по банкам читает минимумы по направлениям`() {
         val pack = parser.parse(realContent(tasks = TASK_WITH_JARS_AND_SHELF))
@@ -466,6 +495,23 @@ class ContentParserTest {
     }.exceptionOrNull().let { error ->
         assertTrue("Ожидалась ContentParseException, получено: $error", error is ContentParseException)
         error as ContentParseException
+    }
+
+    private fun shelfTask(juiceIcon: String?, candyIcon: String?): String {
+        fun icon(value: String?) = value?.let { ""","icon":"$it"""" }.orEmpty()
+        return """
+        {"tasks":[{
+          "id":"shelf","topic":"PAYMENTS","titleKey":"i",
+          "steps":[{"type":"SHELF","promptKey":"p","budget":25,"items":[
+            {"id":"juice","titleKey":"t.juice","price":18,"isMandatory":true${icon(juiceIcon)}},
+            {"id":"candy","titleKey":"t.candy","price":7${icon(candyIcon)}}
+          ]}],
+          "outcomes":[
+            {"condition":{"type":"BASKET_CONTAINS","itemId":"juice"},"explanationKey":"e1","correct":true},
+            {"condition":{"type":"OTHERWISE"},"explanationKey":"e2"}
+          ]
+        }]}
+        """
     }
 
     private fun realContent(

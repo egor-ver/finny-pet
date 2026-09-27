@@ -293,20 +293,28 @@ class ContentParser @Inject constructor() {
             budget = Coins(dto.budget),
         )
 
-        is TaskStepDto.Shelf -> TaskStep.Shelf(
-            promptKey = dto.promptKey,
-            budget = Coins(dto.budget),
-            items = dto.items.map { item ->
-                ShelfItem(
-                    id = item.id,
-                    titleKey = item.titleKey,
-                    price = Coins(item.price),
-                    // Обязательная покупка и обязательный расход — одно и то
-                    // же направление: ребёнок уже видел его в плане дня.
-                    category = if (item.isMandatory) SpendCategory.MANDATORY else SpendCategory.OPTIONAL,
-                )
-            },
-        )
+        is TaskStepDto.Shelf -> {
+            // Смесь картинок и «голых» слов на одной полке выглядит сломанной
+            // (DESIGN_PLAN 3.8): забытый эмодзи — опечатка продакта.
+            require(dto.items.all { it.icon.isBlank() } || dto.items.none { it.icon.isBlank() }) {
+                "у товаров прилавка поле icon должно быть у всех или ни у кого"
+            }
+            TaskStep.Shelf(
+                promptKey = dto.promptKey,
+                budget = Coins(dto.budget),
+                items = dto.items.map { item ->
+                    ShelfItem(
+                        id = item.id,
+                        titleKey = item.titleKey,
+                        price = Coins(item.price),
+                        // Обязательная покупка и обязательный расход — одно и то
+                        // же направление: ребёнок уже видел его в плане дня.
+                        category = if (item.isMandatory) SpendCategory.MANDATORY else SpendCategory.OPTIONAL,
+                        icon = item.icon,
+                    )
+                },
+            )
+        }
     }
 
     /**

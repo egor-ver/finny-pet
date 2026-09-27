@@ -150,3 +150,26 @@ internal fun ProgressTrack(
         )
     }
 }
+
+/**
+ * Полоса из [total] кусочков, первые [done] закрашены (DESIGN_PLAN 3.9):
+ * ребёнку 7–11 лет проще сосчитать кусочки, чем оценить долю сплошной
+ * полосы. Кусочек — тот же [ProgressTrack], чтобы полосы не расходились видом.
+ * Своей подписи нет: число рядом говорит то же словами.
+ */
+@Composable
+fun SegmentLine(
+    done: Int,
+    total: Int,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        repeat(total) { index ->
+            ProgressTrack(fraction = if (index < done) 1f else 0f, color = color, modifier = Modifier.weight(1f))
+        }
+    }
+}

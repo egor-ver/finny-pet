@@ -43,6 +43,8 @@ data class ShelfItem(
     val titleKey: String,
     val price: Coins,
     val category: SpendCategory,
+    /** Эмодзи товара (AD-11); пусто — прилавок без картинок. */
+    val icon: String = "",
 ) {
 
     init {

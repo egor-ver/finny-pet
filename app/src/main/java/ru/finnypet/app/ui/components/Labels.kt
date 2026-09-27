@@ -1,9 +1,7 @@
 package ru.finnypet.app.ui.components
 
 import androidx.annotation.StringRes
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.GrowthStage
@@ -11,6 +9,8 @@ import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.ui.components.icons.FinnyIcons
+import ru.finnypet.app.ui.theme.DirectionColors
+import ru.finnypet.app.ui.theme.FinnyTheme
 
 /**
  * Подписи доменных понятий — одни и те же на всех экранах (ТЗ 3.6 требует
@@ -82,14 +82,16 @@ val TaskTopic.icon: ImageVector
     }
 
 /**
- * Цвет иконки темы: «Накопления» — цвет копилки (DESIGN_PLAN 2.1, `save`).
- * У «Планирования» и «Покупок» своих токенов (`topicPlan`/`topicShop`) в
- * палитре ещё нет — их заводят в U10+U11, а не здесь; до тех пор — цвет текста.
+ * Три тона темы задания (DESIGN_PLAN 2.1): «Накопления» — тона копилки, у
+ * «Планирования» и «Покупок» свои. Заливка — иконке на белом, текст —
+ * иконке на светлой тарелке: заливка «Планирования» к своему контейнеру
+ * даёт меньше 3:1.
  */
-val TaskTopic.tint: Color
+val TaskTopic.colors: DirectionColors
     @Composable get() = when (this) {
-        TaskTopic.SAVING -> SpendCategory.SAVINGS.fill
-        TaskTopic.PLANNING, TaskTopic.PAYMENTS -> MaterialTheme.colorScheme.onSurface
+        TaskTopic.PLANNING -> FinnyTheme.palette.topicPlan
+        TaskTopic.SAVING -> FinnyTheme.palette.save
+        TaskTopic.PAYMENTS -> FinnyTheme.palette.topicShop
     }
 
 val GrowthStage.label: Int

@@ -67,8 +67,10 @@ class TaskContentTest {
     }
 
     @Test
-    fun `сок — маленький, леденец и пустая корзина`() {
+    fun `сок — большой, большой с леденцом, маленький, леденец и пустая корзина`() {
         assertEquals("task.pay_smart_pack.success" to true, explain("pay-smart-pack", basket("juice_big" to 18)))
+        // Большой сок с леденцом — тоже верно: фраза success не должна обещать сдачу.
+        assertEquals("task.pay_smart_pack.success" to true, explain("pay-smart-pack", basket("juice_big" to 18, "lollipop" to 7)))
         assertEquals("task.pay_smart_pack.small" to false, explain("pay-smart-pack", basket("juice_small" to 10, "lollipop" to 7)))
         assertEquals("task.pay_smart_pack.candy" to false, explain("pay-smart-pack", basket("lollipop" to 7)))
         assertEquals("task.pay_smart_pack.otherwise" to false, explain("pay-smart-pack", basket()))

@@ -60,11 +60,11 @@
           "promptKey": "task.plan_school_supplies.step1",
           "budget": 35,
           "items": [
-            { "id": "notebook", "titleKey": "task.item.notebook", "price": 10, "isMandatory": true },
-            { "id": "pens", "titleKey": "task.item.pens", "price": 12, "isMandatory": true },
-            { "id": "ruler", "titleKey": "task.item.ruler", "price": 5, "isMandatory": true },
-            { "id": "keychain", "titleKey": "task.item.keychain", "price": 15, "isMandatory": false },
-            { "id": "sparkle-pad", "titleKey": "task.item.sparkle_pad", "price": 14, "isMandatory": false }
+            { "id": "notebook", "titleKey": "task.item.notebook", "price": 10, "isMandatory": true, "icon": "📓" },
+            { "id": "pens", "titleKey": "task.item.pens", "price": 12, "isMandatory": true, "icon": "✏️" },
+            { "id": "ruler", "titleKey": "task.item.ruler", "price": 5, "isMandatory": true, "icon": "📏" },
+            { "id": "keychain", "titleKey": "task.item.keychain", "price": 15, "isMandatory": false, "icon": "🔑" },
+            { "id": "sparkle-pad", "titleKey": "task.item.sparkle_pad", "price": 14, "isMandatory": false, "icon": "📔" }
           ]
         }
       ],
@@ -184,9 +184,9 @@
           "promptKey": "task.pay_smart_pack.step1",
           "budget": 25,
           "items": [
-            { "id": "juice_big", "titleKey": "task.item.juice_big", "price": 18, "isMandatory": true },
-            { "id": "juice_small", "titleKey": "task.item.juice_small", "price": 10, "isMandatory": false },
-            { "id": "lollipop", "titleKey": "task.item.lollipop", "price": 7, "isMandatory": false }
+            { "id": "juice_big", "titleKey": "task.item.juice_big", "price": 18, "isMandatory": true, "icon": "🧃" },
+            { "id": "juice_small", "titleKey": "task.item.juice_small", "price": 10, "isMandatory": false, "icon": "🥤" },
+            { "id": "lollipop", "titleKey": "task.item.lollipop", "price": 7, "isMandatory": false, "icon": "🍭" }
           ]
         }
       ],

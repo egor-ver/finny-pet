@@ -66,6 +66,8 @@ data class PickItemView(
     val id: String,
     val title: String,
     val price: Coins,
+    /** Эмодзи на тарелке; пусто — прилавок без картинок. */
+    val icon: String = "",
 )
 
 /** Текущий шаг вместе с тем, что ребёнок уже набрал на нём. */
@@ -427,7 +429,7 @@ class TaskViewModel @Inject constructor(
                 description = owlDescription(texts, profile.petName, mood, sadAbout = null),
             ),
             balance = wallet,
-            maxReward = task.outcomes.filter { it.correct }.maxOf { it.reward },
+            maxReward = task.maxReward,
             rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
             stage = stageOf(task, current),
             submitting = current.submitting,
@@ -468,6 +470,7 @@ class TaskViewModel @Inject constructor(
                         id = it.id.value,
                         title = texts.textOf(it.titleKey),
                         price = it.price,
+                        icon = it.icon,
                     )
                 }
             },
@@ -482,6 +485,7 @@ class TaskViewModel @Inject constructor(
                     id = it.id,
                     title = texts.textOf(it.titleKey),
                     price = it.price,
+                    icon = it.icon,
                 )
             },
             picked = (draft as? Draft.Picked)?.ids ?: emptySet(),

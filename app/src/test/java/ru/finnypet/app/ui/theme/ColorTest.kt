@@ -29,6 +29,19 @@ class ColorTest {
         assertEquals(3, dark.size)
     }
 
+    /**
+     * Темы заданий «Планирование» и «Покупки» (DESIGN_PLAN 2.1) — свои цвета:
+     * совпади тема с направлением трат, карточка задания выглядела бы
+     * подсказкой «это нужное» или «это желаемое».
+     */
+    @Test
+    fun `темы заданий не совпадают с направлениями и действием`() {
+        val light = setOf(Primary, NeedText, WantText, SaveText, TopicPlanText, TopicShopText)
+        val dark = setOf(PrimaryDark, NeedTextDark, WantTextDark, SaveTextDark, TopicPlanTextDark, TopicShopTextDark)
+        assertEquals(6, light.size)
+        assertEquals(6, dark.size)
+    }
+
     /** Прозрачный цвет на карточке дал бы просвечивающий фон вместо направления. */
     @Test
     fun `все цвета палитры непрозрачные`() {
@@ -37,12 +50,15 @@ class ColorTest {
             Primary, OnPrimary, PrimaryDeep, PrimaryContainer,
             NeedFill, NeedText, NeedContainer, WantFill, WantText, WantContainer,
             SaveFill, SaveText, SaveContainer,
+            TopicPlanFill, TopicPlanText, TopicPlanContainer, TopicShopFill, TopicShopText, TopicShopContainer,
             CoinFace, CoinShadow, CoinEdge, CoinHighlight,
             ShortageText, ShortageContainer,
             BackgroundDark, SurfaceDark, SurfaceSunkenDark, OutlineDark, InkDark, InkSoftDark,
             PrimaryDark, OnPrimaryDark, PrimaryDeepDark, PrimaryContainerDark,
             NeedFillDark, NeedTextDark, NeedContainerDark, WantFillDark, WantTextDark, WantContainerDark,
             SaveFillDark, SaveTextDark, SaveContainerDark,
+            TopicPlanFillDark, TopicPlanTextDark, TopicPlanContainerDark,
+            TopicShopFillDark, TopicShopTextDark, TopicShopContainerDark,
             ShortageTextDark, ShortageContainerDark,
         )
         colors.forEach { assertEquals(1f, it.alpha) }

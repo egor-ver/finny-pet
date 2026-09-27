@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.domain.model.SpendCategory
@@ -24,12 +25,21 @@ import ru.finnypet.app.domain.model.SpendCategory
  */
 @Composable
 fun ItemIcon(icon: String, category: SpendCategory, modifier: Modifier = Modifier) {
+    ItemIcon(icon = icon, plate = category.container, modifier = modifier)
+}
+
+/**
+ * Та же тарелка другого цвета — на полке задания она цвета темы, а не
+ * направления: направление там и есть ответ, который ищет ребёнок (DESIGN_PLAN 3.8).
+ */
+@Composable
+fun ItemIcon(icon: String, plate: Color, modifier: Modifier = Modifier) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(PLATE_SIZE)
             .clip(CircleShape)
-            .background(category.container),
+            .background(plate),
     ) {
         Text(
             text = icon,

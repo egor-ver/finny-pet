@@ -124,7 +124,7 @@ class TasksFlowTest {
         assertEquals(listOf("Разложи монеты.", "Сова нашла монеты.", "Собери обед."), ready.groups.flatMap { g -> g.tasks.map { it.intro } })
         assertTrue(ready.groups.flatMap { it.tasks }.none { it.completed })
         assertTrue(ready.rewardAvailable)
-        assertEquals(1, ready.rewardLimit)
+        assertEquals(balance.taskReward, ready.reward)
     }
 
     /** Пометка «пройдено» и лимит приходят из базы: одно записано прохождение — одно помечено, лимит выбран. */

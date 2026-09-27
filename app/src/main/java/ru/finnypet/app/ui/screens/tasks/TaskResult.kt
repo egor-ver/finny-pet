@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.screens.tasks
 
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.PetMood
 
 /** Что сказать про монеты в итоге задания. */
@@ -26,3 +27,7 @@ fun rewardLine(correct: Boolean, paid: Coins): RewardLine = when {
 
 /** Ошибка — повод разобраться, а не грустить (раздел 8 плана): сова спокойна. */
 fun taskMood(correct: Boolean): PetMood = if (correct) PetMood.HAPPY else PetMood.CALM
+
+/** Наибольшая награда за верный исход — «до +10» на вступлении и «+10» в списке. */
+val LearningTask.maxReward: Coins
+    get() = outcomes.filter { it.correct }.maxOf { it.reward }

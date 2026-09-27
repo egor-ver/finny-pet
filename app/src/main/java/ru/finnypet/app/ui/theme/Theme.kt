@@ -81,8 +81,8 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * Один цвет направления трат: заливка (полосы, иконки), текст и светлый
- * контейнер для карточек (DESIGN_PLAN 2.1). Своя группа, а не роли Material
+ * Один цвет направления трат или темы задания: заливка (полосы, иконки),
+ * текст и светлый контейнер для карточек (DESIGN_PLAN 2.1). Своя группа, а не роли Material
  * `secondary`/`tertiary`: иначе, как раньше, направление снова могло бы
  * незаметно совпасть по цвету с главным действием.
  */
@@ -91,12 +91,15 @@ data class DirectionColors(val fill: Color, val text: Color, val container: Colo
 /** Четыре тона монеты: грань, тень нижним полумесяцем, кант, блик (DESIGN_PLAN 2.5). */
 data class CoinColors(val face: Color, val shadow: Color, val edge: Color, val highlight: Color)
 
-/** Цвета, которых нет среди ролей Material: монета, направления, звезда, нижняя грань кнопки. */
+/** Цвета, которых нет среди ролей Material: монета, направления, темы заданий, звезда, нижняя грань кнопки. */
 data class FinnyPalette(
     val coin: CoinColors,
     val need: DirectionColors,
     val want: DirectionColors,
     val save: DirectionColors,
+    /** Темы заданий «Планирование» и «Покупки»; у «Накоплений» своего нет — это [save]. */
+    val topicPlan: DirectionColors,
+    val topicShop: DirectionColors,
     val buttonDeep: Color,
     /** Звезда роста (DESIGN_PLAN 2.1, 2.5) — одна и та же в обеих темах. */
     val star: Color,
@@ -114,6 +117,8 @@ private val FinnyPaletteLight = FinnyPalette(
     need = DirectionColors(fill = NeedFill, text = NeedText, container = NeedContainer),
     want = DirectionColors(fill = WantFill, text = WantText, container = WantContainer),
     save = DirectionColors(fill = SaveFill, text = SaveText, container = SaveContainer),
+    topicPlan = DirectionColors(fill = TopicPlanFill, text = TopicPlanText, container = TopicPlanContainer),
+    topicShop = DirectionColors(fill = TopicShopFill, text = TopicShopText, container = TopicShopContainer),
     buttonDeep = PrimaryDeep,
     star = StarFill,
 )
@@ -123,6 +128,8 @@ private val FinnyPaletteDark = FinnyPalette(
     need = DirectionColors(fill = NeedFillDark, text = NeedTextDark, container = NeedContainerDark),
     want = DirectionColors(fill = WantFillDark, text = WantTextDark, container = WantContainerDark),
     save = DirectionColors(fill = SaveFillDark, text = SaveTextDark, container = SaveContainerDark),
+    topicPlan = DirectionColors(fill = TopicPlanFillDark, text = TopicPlanTextDark, container = TopicPlanContainerDark),
+    topicShop = DirectionColors(fill = TopicShopFillDark, text = TopicShopTextDark, container = TopicShopContainerDark),
     buttonDeep = PrimaryDeepDark,
     star = StarFill,
 )
