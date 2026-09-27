@@ -16,8 +16,14 @@ import kotlin.math.sin
  * 2.3, AD-16): `material-icons-extended` не подключаем — нужно около 15
  * значков, а библиотека тянет тысячи и стиль у неё «офисный».
  *
- * Один тон: цвет и подпись для TalkBack задаёт вызывающий `Icon(tint=…,
- * contentDescription=…)`, поэтому пути внутри рисуются условным чёрным.
+ * Цвет и подпись для TalkBack задаёт вызывающий `Icon(tint=…,
+ * contentDescription=…)`, поэтому пути внутри рисуются условным чёрным —
+ * `Icon` красит все пути в один RGB через `ColorFilter.tint`, но альфа-канал
+ * каждого пути сохраняет. Поэтому у силуэтов с деталью того же цвета поверх
+ * заливки (миска, мяч, копилка, яблоко, пёрышко) основа рисуется через
+ * `filled(alpha = 0.3f)` — второй тон по DESIGN_PLAN 2.3 («тот же цвет на
+ * 30% прозрачности»): без него деталь полной силы на сплошной заливке той
+ * же силы не отличить (была видна как один сплошной круг/пятно).
  */
 object FinnyIcons {
 
@@ -63,7 +69,7 @@ object FinnyIcons {
 
     /** Миска — «Нужное» и еда: раздел 8 плана держит одну иконку на направление везде. */
     val Bowl: ImageVector = icon("FinnyBowl") {
-        filled {
+        filled(0.3f) {
             moveTo(3.5f, 11f)
             curveTo(3.5f, 10.4f, 4f, 10f, 4.6f, 10f)
             lineTo(19.4f, 10f)
@@ -84,7 +90,7 @@ object FinnyIcons {
 
     /** Мяч — «Желаемое». */
     val Ball: ImageVector = icon("FinnyBall") {
-        filled { circle(cx = 12f, cy = 12f, r = 8.5f) }
+        filled(0.3f) { circle(cx = 12f, cy = 12f, r = 8.5f) }
         outlined(1.3f) {
             moveTo(12f, 7.5f); lineTo(15.2f, 9.8f); lineTo(14f, 13.6f); lineTo(10f, 13.6f); lineTo(8.8f, 9.8f); close()
         }
@@ -92,7 +98,7 @@ object FinnyIcons {
 
     /** Копилка — «Накопления»: используется и для направления трат, и для темы заданий. */
     val Piggy: ImageVector = icon("FinnyPiggy") {
-        filled {
+        filled(0.3f) {
             moveTo(4f, 13f)
             curveTo(4f, 9.4f, 7.4f, 6.5f, 12f, 6.5f)
             curveTo(15.6f, 6.5f, 18.6f, 8.3f, 19.6f, 10.8f)
@@ -109,7 +115,7 @@ object FinnyIcons {
 
     /** Яблоко — показатель «Сыт». */
     val Apple: ImageVector = icon("FinnyApple") {
-        filled {
+        filled(0.3f) {
             moveTo(12.3f, 9f)
             curveTo(15.7f, 9f, 18.5f, 11.7f, 18.5f, 15f)
             curveTo(18.5f, 18.3f, 16.2f, 20.5f, 13.2f, 20.5f)
@@ -145,7 +151,7 @@ object FinnyIcons {
 
     /** Пёрышко — показатель «Ухожен»: сова — птица, а не пушистое существо. */
     val Feather: ImageVector = icon("FinnyFeather") {
-        filled {
+        filled(0.3f) {
             moveTo(19f, 3.5f)
             curveTo(19f, 3.5f, 8f, 5.5f, 6f, 12f)
             curveTo(4.4f, 17.1f, 8.5f, 20.2f, 12.3f, 19f)
@@ -207,9 +213,13 @@ private fun icon(name: String, block: ImageVector.Builder.() -> Unit): ImageVect
         viewportHeight = VIEWPORT,
     ).apply(block).build()
 
-/** Заливка одним тоном — [androidx.compose.material3.Icon] красит через `tint`. */
-private fun ImageVector.Builder.filled(block: PathBuilder.() -> Unit) {
-    path(fill = BLACK, pathBuilder = block)
+/**
+ * Заливка. [alpha] — второй тон (DESIGN_PLAN 2.3): основа силуэта на 30%,
+ * деталь поверх — в полную силу, иначе [androidx.compose.material3.Icon]
+ * красит оба пути в один RGB и деталь пропадает на заливке того же тона.
+ */
+private fun ImageVector.Builder.filled(alpha: Float = 1f, block: PathBuilder.() -> Unit) {
+    path(fill = BLACK, fillAlpha = alpha, pathBuilder = block)
 }
 
 private fun ImageVector.Builder.outlined(width: Float = 2f, block: PathBuilder.() -> Unit) {

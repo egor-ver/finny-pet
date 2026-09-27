@@ -51,6 +51,7 @@ import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlRole
@@ -319,7 +320,7 @@ private fun Things(things: List<Thing>) {
     if (things.isEmpty()) return
     val spoken = stringResource(R.string.main_things, things.joinToString { it.title.replaceFirstChar { c -> c.lowercase() } })
     Column(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
-        things.forEach { Text(text = it.icon, style = MaterialTheme.typography.headlineMedium) }
+        things.forEach { ItemIcon(icon = it.icon, category = SpendCategory.SAVINGS) }
     }
 }
 

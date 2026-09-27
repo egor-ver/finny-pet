@@ -103,6 +103,8 @@ sealed interface PurchaseOutcome {
          */
         val toyPhrase: String? = null,
         val icon: String = "",
+        /** Направление купленного товара — тарелка [ItemIcon] под [icon] красится его цветом. */
+        val category: SpendCategory = SpendCategory.MANDATORY,
     ) : PurchaseOutcome
 
     /**
@@ -253,6 +255,7 @@ class ShopViewModel @Inject constructor(
                     changes = changes,
                     toyPhrase = if (item.isToy) toyPhraseFor(profileId) else null,
                     icon = item.icon,
+                    category = item.category,
                 )
             }
 

@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GoalId
+import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
@@ -172,7 +173,7 @@ private fun Ready(
             }
         },
     ) {
-        Owl(look = state.owl, size = 96.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Owl(look = state.owl, size = OwlRole.Standalone.size, modifier = Modifier.align(Alignment.CenterHorizontally))
         MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
 
         if (!state.canOperate) {
@@ -325,7 +326,7 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            ItemIcon(icon = goal.icon)
+            ItemIcon(icon = goal.icon, category = SpendCategory.SAVINGS)
             Column(
                 verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
                 modifier = Modifier.weight(1f),

@@ -249,7 +249,7 @@ private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?)
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
                 ) {
-                    ItemIcon(icon = done.icon)
+                    ItemIcon(icon = done.icon, category = done.category)
                     Text(text = toyPhrase, style = MaterialTheme.typography.bodyLarge)
                 }
             }
@@ -321,7 +321,7 @@ private fun ShopCard(item: ShopItemView, onClick: () -> Unit, modifier: Modifier
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(Dimens.SpaceMedium),
     ) {
-        ItemIcon(icon = item.icon)
+        ItemIcon(icon = item.icon, category = item.category)
         Text(text = item.title, style = MaterialTheme.typography.titleMedium)
         MoneyAmount(amount = item.price)
         item.effects.forEach { effect -> StatEffectLine(effect = effect) }

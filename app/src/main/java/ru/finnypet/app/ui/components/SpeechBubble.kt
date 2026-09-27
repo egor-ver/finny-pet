@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -34,7 +33,6 @@ import ru.finnypet.app.ui.theme.Dimens
 fun SpeechBubble(
     owl: OwlLook,
     modifier: Modifier = Modifier,
-    ownSize: Dp = OwlRole.WithSpeech.size,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Row(
@@ -42,20 +40,15 @@ fun SpeechBubble(
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Owl(look = owl, size = ownSize)
+        Owl(look = owl, size = OwlRole.WithSpeech.size)
         BubbleCard(modifier = Modifier.weight(1f), content = content)
     }
 }
 
 /** Частый случай — одна фраза без своей вёрстки (задание, план). */
 @Composable
-fun SpeechBubble(
-    owl: OwlLook,
-    text: String,
-    modifier: Modifier = Modifier,
-    ownSize: Dp = OwlRole.WithSpeech.size,
-) {
-    SpeechBubble(owl = owl, modifier = modifier, ownSize = ownSize) {
+fun SpeechBubble(owl: OwlLook, text: String, modifier: Modifier = Modifier) {
+    SpeechBubble(owl = owl, modifier = modifier) {
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }

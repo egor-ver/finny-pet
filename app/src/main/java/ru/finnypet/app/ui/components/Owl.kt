@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +19,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -41,6 +43,7 @@ import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.ui.text.textOf
+import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 import kotlin.math.abs
 import kotlin.math.cos
@@ -70,6 +73,9 @@ enum class OwlRole(val size: Dp) {
 
     /** Рядом с репликой в [SpeechBubble] — план, задание, магазин. */
     WithSpeech(88.dp),
+
+    /** Портрет вверху экрана без реплики и без диалога — копилка (до своей переделки в U15). */
+    Standalone(96.dp),
 }
 
 /**
@@ -120,8 +126,8 @@ fun owlLook(
 @Composable
 fun Owl(
     look: OwlLook,
+    size: Dp,
     modifier: Modifier = Modifier,
-    size: Dp = 170.dp,
     /**
      * Разовая реакция на появление совы, а не на рост показателей (U2):
      * копилка их не меняет, поэтому [shouldJump] тут не с чего сработать.
@@ -148,20 +154,49 @@ fun Owl(
             lift.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
         }
     }
-    Canvas(
-        modifier = modifier
-            .size(size)
-            .graphicsLayer { translationY = -lift.value * JUMP_HEIGHT.toPx() }
-            .semantics {
-                contentDescription = look.description
-                role = Role.Image
-            },
-    ) {
-        val k = min(this.size.width / FIELD_WIDTH, this.size.height / FIELD_HEIGHT)
-        translate((this.size.width - FIELD_WIDTH * k) / 2, (this.size.height - FIELD_HEIGHT * k) / 2) {
-            scale(k, pivot = Offset.Zero) { drawOwl(look) }
+    val meadowColor = FinnyTheme.palette.need.container
+    // Полянка — в своём Canvas, а не в том, что прыгает: иначе прыжок сдвигал
+    // бы и землю под совой, а не только сову (DESIGN_PLAN 2.6).
+    Box(modifier = modifier.size(size)) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawMeadow(meadowColor)
+        }
+        Canvas(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer { translationY = -lift.value * JUMP_HEIGHT.toPx() }
+                .semantics {
+                    contentDescription = look.description
+                    role = Role.Image
+                },
+        ) {
+            val k = min(this.size.width / FIELD_WIDTH, this.size.height / FIELD_HEIGHT)
+            translate((this.size.width - FIELD_WIDTH * k) / 2, (this.size.height - FIELD_HEIGHT * k) / 2) {
+                scale(k, pivot = Offset.Zero) { drawOwl(look) }
+            }
         }
     }
+}
+
+/**
+ * Мягкий эллипс под совой (DESIGN_PLAN 2.6): в нижних [MeadowHeight] рамки,
+ * шире совы по бокам, отдельной высоты в разметке не занимает — рисуется
+ * внутри уже выделенного под сову квадрата.
+ */
+private fun DrawScope.drawMeadow(color: Color) {
+    val heightPx = MeadowHeight.toPx()
+    val widthPx = size.width * MeadowWidthFactor
+    val topLeft = Offset(x = (size.width - widthPx) / 2f, y = size.height - heightPx)
+    val center = Offset(x = size.width / 2f, y = size.height - heightPx / 2f)
+    drawOval(
+        brush = Brush.radialGradient(
+            colors = listOf(color, color.copy(alpha = 0f)),
+            center = center,
+            radius = widthPx / 2f,
+        ),
+        topLeft = topLeft,
+        size = Size(widthPx, heightPx),
+    )
 }
 
 /**
@@ -418,6 +453,11 @@ private fun cubic(p0: Offset, p1: Offset, p2: Offset, p3: Offset, t: Float): Off
 
 private const val JUMP_UP_MS = 160
 private val JUMP_HEIGHT = 14.dp
+private val MeadowHeight = 16.dp
+
+// 1.2, а не шире: у совы рядом с репликой (88 dp) полянка не должна
+// дотягиваться до карточки через отступ SpaceMedium (12 dp) в SpeechBubble.
+private const val MeadowWidthFactor = 1.2f
 private const val FIELD_WIDTH = 240f
 private const val FIELD_HEIGHT = 262f
 private const val CX = 120f

@@ -13,6 +13,7 @@ import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.theme.FinnypetTheme
 
 /**
@@ -60,7 +61,7 @@ class OwlTest {
 
     private fun show(look: OwlLook) {
         compose.setContent {
-            FinnypetTheme { Owl(look = look) }
+            FinnypetTheme { Owl(look = look, size = OwlRole.Hero.size) }
         }
     }
 }

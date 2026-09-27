@@ -46,6 +46,14 @@ val SpendCategory.color: Color
         SpendCategory.SAVINGS -> FinnyTheme.palette.save.text
     }
 
+/** Светлый контейнер направления — фон тарелки [ItemIcon] под эмодзи товара или цели. */
+val SpendCategory.container: Color
+    @Composable get() = when (this) {
+        SpendCategory.MANDATORY -> FinnyTheme.palette.need.container
+        SpendCategory.OPTIONAL -> FinnyTheme.palette.want.container
+        SpendCategory.SAVINGS -> FinnyTheme.palette.save.container
+    }
+
 /**
  * Направление иконкой, цветом и словом. Цвет никогда не единственный
  * признак (ТЗ 3.6): TalkBack читает слово, иконка для него молчит.
