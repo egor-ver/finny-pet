@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -21,11 +22,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
+import ru.finnypet.app.ui.theme.CoinColors
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 
@@ -91,22 +94,38 @@ fun coinsText(amount: Coins): String = stringResource(
  */
 @Composable
 internal fun Coin(style: TextStyle) {
-    val size = with(LocalDensity.current) { style.fontSize.toDp() }
+    Coin(size = with(LocalDensity.current) { style.fontSize.toDp() })
+}
+
+/**
+ * Монета заданного размера — там, где размер задаёт не текст рядом, а сам
+ * экран: ручка ползунка плана и живой счётчик остатка (DESIGN_PLAN 3.2).
+ */
+@Composable
+internal fun Coin(size: Dp, modifier: Modifier = Modifier) {
     val coin = FinnyTheme.palette.coin
-    Canvas(modifier = Modifier.size(size)) {
-        // На мелком тексте десятая доля схлопнулась бы в ноль, и кант
-        // потерял бы толщину — единственный признак, не зависящий от цвета.
-        val edge = (this.size.minDimension / 10).coerceAtLeast(1.5.dp.toPx())
-        val radius = (this.size.minDimension - edge) / 2
-        drawCircle(color = coin.shadow, radius = radius, center = center)
-        drawCircle(color = coin.face, radius = radius, center = center - Offset(0f, radius * 0.12f))
-        drawCircle(color = coin.edge, radius = radius, center = center, style = Stroke(width = edge))
-        drawOval(
-            color = coin.highlight,
-            topLeft = center + Offset(-radius * 0.55f, -radius * 0.6f),
-            size = Size(radius * 0.5f, radius * 0.32f),
-        )
+    Canvas(modifier = modifier.size(size)) {
+        drawCoin(center = center, diameter = this.size.minDimension, colors = coin)
     }
+}
+
+/**
+ * Рисунок монеты для чужих `Canvas` — летящие монеты и монеты в банке
+ * копилки должны выглядеть так же, как монета у числа.
+ */
+internal fun DrawScope.drawCoin(center: Offset, diameter: Float, colors: CoinColors) {
+    // На мелком тексте десятая доля схлопнулась бы в ноль, и кант
+    // потерял бы толщину — единственный признак, не зависящий от цвета.
+    val edge = (diameter / 10).coerceAtLeast(1.5.dp.toPx())
+    val radius = (diameter - edge) / 2
+    drawCircle(color = colors.shadow, radius = radius, center = center)
+    drawCircle(color = colors.face, radius = radius, center = center - Offset(0f, radius * 0.12f))
+    drawCircle(color = colors.edge, radius = radius, center = center, style = Stroke(width = edge))
+    drawOval(
+        color = colors.highlight,
+        topLeft = center + Offset(-radius * 0.55f, -radius * 0.6f),
+        size = Size(radius * 0.5f, radius * 0.32f),
+    )
 }
 
 /**

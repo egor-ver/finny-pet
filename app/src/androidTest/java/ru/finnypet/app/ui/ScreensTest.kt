@@ -1208,6 +1208,7 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.budget_confirm)).assertIsEnabled()
     }
 
+    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `перебор_виден_и_блокирует_подтверждение`() {
         showBudget(

@@ -213,6 +213,35 @@ object FinnyIcons {
             close()
         }
     }
+
+    /** «+» у ползунка плана — точная подстройка на одну монету (DESIGN_PLAN 3.2). */
+    val Plus: ImageVector = icon("FinnyPlus") {
+        outlined(2.6f) { moveTo(12f, 5f); lineTo(12f, 19f); moveTo(5f, 12f); lineTo(19f, 12f) }
+    }
+
+    val Minus: ImageVector = icon("FinnyMinus") {
+        outlined(2.6f) { moveTo(5f, 12f); lineTo(19f, 12f) }
+    }
+
+    /** Лампочка — подсказка под банкой плана, совет дня (DESIGN_PLAN 2.3). Цоколь отделён от колбы зазором, иначе на 24 dp всё сливается в каплю. */
+    val Bulb: ImageVector = icon("FinnyBulb") {
+        filled {
+            moveTo(12f, 2.5f)
+            curveTo(8.1f, 2.5f, 5.2f, 5.4f, 5.2f, 9.1f)
+            curveTo(5.2f, 11.6f, 6.5f, 13.3f, 7.9f, 14.6f)
+            curveTo(8.6f, 15.3f, 9f, 15.9f, 9f, 16.6f)
+            lineTo(15f, 16.6f)
+            curveTo(15f, 15.9f, 15.4f, 15.3f, 16.1f, 14.6f)
+            curveTo(17.5f, 13.3f, 18.8f, 11.6f, 18.8f, 9.1f)
+            curveTo(18.8f, 5.4f, 15.9f, 2.5f, 12f, 2.5f)
+            close()
+        }
+        filled {
+            moveTo(9f, 17.9f); lineTo(15f, 17.9f); lineTo(15f, 19.3f); lineTo(9f, 19.3f); close()
+            moveTo(10f, 20.4f); lineTo(14f, 20.4f); curveTo(14f, 21.2f, 13.1f, 21.8f, 12f, 21.8f)
+            curveTo(10.9f, 21.8f, 10f, 21.2f, 10f, 20.4f); close()
+        }
+    }
 }
 
 private const val VIEWPORT = 24f

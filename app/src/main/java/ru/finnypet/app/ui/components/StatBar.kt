@@ -107,25 +107,40 @@ fun ProgressLine(
     val target = fraction.coerceIn(0f, 1f)
     val animated by animateFloatAsState(targetValue = target, label = "progress")
     val shown = if (LocalAnimationsEnabled.current) animated else target
-    val shape = RoundedCornerShape(Dimens.BarHeight)
+    ProgressTrack(
+        fraction = shown,
+        color = color,
+        modifier = modifier.then(
+            if (contentDescription == null) {
+                Modifier
+            } else {
+                Modifier.clearAndSetSemantics { this.contentDescription = contentDescription }
+            }
+        ),
+    )
+}
 
+/**
+ * Та же полоса без собственной анимации — дорожка ползунка плана: она
+ * должна идти за пальцем кадр в кадр, а пружина [ProgressLine] отставала бы.
+ */
+@Composable
+internal fun ProgressTrack(
+    fraction: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(Dimens.BarHeight)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(Dimens.BarHeight)
-            .then(
-                if (contentDescription == null) {
-                    Modifier
-                } else {
-                    Modifier.clearAndSetSemantics { this.contentDescription = contentDescription }
-                }
-            )
             .background(MaterialTheme.colorScheme.surfaceVariant, shape)
             .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), shape),
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth(shown)
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
                 .fillMaxHeight()
                 .background(color, shape)
                 .background(

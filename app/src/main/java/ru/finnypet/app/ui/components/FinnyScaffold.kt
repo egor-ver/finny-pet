@@ -2,6 +2,7 @@ package ru.finnypet.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -49,6 +51,10 @@ import ru.finnypet.app.ui.theme.Dimens
  * экран перестаёт помещаться, и без прокрутки нижняя часть просто пропала
  * бы — а ТЗ 3.6 требует сохранять читаемость при увеличенном шрифте.
  *
+ * [centered] ставит короткое содержимое по центру высоты: иначе на экране
+ * из пары блоков между ними и кнопкой внизу остаётся пустая половина
+ * (DESIGN_PLAN 1, №6). Длинное содержимое по-прежнему прокручивается.
+ *
  * Для экранов со списками есть [FinnyListScaffold]: вложить LazyColumn
  * сюда нельзя, он получит бесконечную высоту и упадёт.
  */
@@ -60,6 +66,7 @@ fun FinnyScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     bottomBar: (@Composable () -> Unit)? = null,
     spacing: Dp = Dimens.Space,
+    centered: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) = FinnyScaffold(
     title = { TitleText(title) },
@@ -68,6 +75,7 @@ fun FinnyScaffold(
     actions = actions,
     bottomBar = bottomBar,
     spacing = spacing,
+    centered = centered,
     content = content,
 )
 
@@ -84,6 +92,7 @@ fun FinnyScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     bottomBar: (@Composable () -> Unit)? = null,
     spacing: Dp = Dimens.Space,
+    centered: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     ScaffoldChrome(
@@ -93,19 +102,26 @@ fun FinnyScaffold(
         actions = actions,
         bottomBar = bottomBar,
     ) { insets ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(insets)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.Space),
-            // Одинаковый ритм на всех экранах: расстояние между блоками
-            // задаётся здесь, а не каждым экраном по-своему (ТЗ 3.6).
-            // Экран может его сузить, если блоков много — например главный,
-            // где по ТЗ 2.5.3 всё должно поместиться сразу.
-            verticalArrangement = Arrangement.spacedBy(spacing),
-            content = content,
-        )
+        // Высота окна нужна как нижняя граница высоты колонки: внутри прокрутки
+        // колонка иначе сжимается до содержимого, и центровать было бы не в чем.
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(insets)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight)
+                    .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.Space),
+                // Одинаковый ритм на всех экранах: расстояние между блоками
+                // задаётся здесь, а не каждым экраном по-своему (ТЗ 3.6).
+                // Экран может его сузить, если блоков много — например главный,
+                // где по ТЗ 2.5.3 всё должно поместиться сразу.
+                verticalArrangement = Arrangement.spacedBy(
+                    spacing,
+                    if (centered) Alignment.CenterVertically else Alignment.Top,
+                ),
+                content = content,
+            )
+        }
     }
 }
 

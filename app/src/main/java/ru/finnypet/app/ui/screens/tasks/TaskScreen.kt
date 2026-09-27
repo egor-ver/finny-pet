@@ -41,10 +41,13 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.RemainderCounter
 import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.components.liveRemainder
+import ru.finnypet.app.ui.components.rememberPlanDrafts
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -252,14 +255,18 @@ private fun Step(
                     )
                     MoneyAmount(amount = step.budget)
                 }
+                val drafts = rememberPlanDrafts()
                 PlanEditor(
                     plan = step.plan,
                     available = step.budget,
                     remainder = step.remainder,
-                    overBy = Coins.ZERO,
                     onSet = onSet,
+                    drafts = drafts,
                     jars = step.jars,
                 )
+                // Редактор остаток не рисует (его место выбирает экран); здесь —
+                // сразу под банками, как было до выноса счётчика из редактора.
+                RemainderCounter(remainder = liveRemainder(step.plan, step.remainder, drafts), overBy = Coins.ZERO)
             }
 
             is StepView.Pick -> Shelf(step = step, onToggle = onToggle)

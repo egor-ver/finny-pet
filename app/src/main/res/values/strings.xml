@@ -187,15 +187,19 @@
     <string name="budget_action_plan">Спланировать день</string>
     <string name="budget_choose_goal">Выбрать цель</string>
     <string name="budget_fill_mandatory">Положить %1$s на нужное</string>
-    <!-- Банки после подтверждения: «потрачено 14, осталось 24» -->
-    <string name="budget_jar_spent_left">потрачено %1$d, осталось %2$d</string>
+    <!-- Банки после подтверждения: «осталось 23», для TalkBack — «Нужное: осталось 23 из 37» -->
     <string name="budget_jar_left">осталось %1$d</string>
+    <string name="budget_jar_left_of">%1$s: осталось %2$d из %3$d</string>
     <string name="budget_jar_saved">отложено %1$d</string>
     <string name="budget_jar_description">%1$s: %2$s</string>
     <string name="budget_remainder">Осталось распределить</string>
-    <string name="budget_distributed">Все монеты распределены</string>
+    <string name="budget_distributed">Всё разложено</string>
     <string name="budget_over">Перебор на</string>
     <string name="budget_amount">%1$s: %2$d</string>
+    <!-- Кнопки «−» и «+» у ползунка, для TalkBack: «Нужное: на монету меньше» -->
+    <string name="budget_less">%1$s: на монету меньше</string>
+    <string name="budget_more">%1$s: на монету больше</string>
+    <string name="budget_wallet_unchanged">Кошелёк не меняется, пока не подтвердишь план</string>
     <string name="budget_confirm">Подтвердить план</string>
     <string name="budget_confirm_title">План закрепится до вечера</string>
     <string name="budget_confirm_body">Поменять его сегодня уже не получится.</string>
@@ -205,7 +209,8 @@
     <!-- «1 монета останется на завтра» — остаток не ошибка (R5) -->
     <string name="budget_left_for_tomorrow">%1$s останется на завтра</string>
     <string name="budget_needs_goal">Чтобы откладывать, выбери цель в копилке.</string>
-    <string name="budget_started">План подтверждён. Смотри, как он сходится.</string>
+    <string name="budget_started">План готов! Вот сколько в каждой банке.</string>
+    <string name="budget_go_shop">В магазин</string>
     <string name="budget_planned">План</string>
     <string name="budget_fact">Потрачено</string>
     <string name="budget_saved">Отложено</string>
