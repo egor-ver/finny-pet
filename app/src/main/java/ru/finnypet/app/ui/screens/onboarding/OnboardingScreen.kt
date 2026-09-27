@@ -17,6 +17,7 @@ import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.theme.Dimens
+import ru.finnypet.app.ui.theme.FinnyTheme
 
 /**
  * Знакомство с игрой (ТЗ 2.5.1).
@@ -52,8 +53,8 @@ fun OnboardingScreen(
         ChoiceCard(
             title = stringResource(R.string.onboarding_choice_mandatory_title),
             body = stringResource(R.string.onboarding_choice_mandatory_body),
-            container = MaterialTheme.colorScheme.primaryContainer,
-            content = MaterialTheme.colorScheme.onPrimaryContainer,
+            container = FinnyTheme.palette.need.container,
+            content = FinnyTheme.palette.need.text,
         )
         ChoiceCard(
             title = stringResource(R.string.onboarding_choice_optional_title),

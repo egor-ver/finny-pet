@@ -2,6 +2,7 @@ package ru.finnypet.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,11 +17,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.theme.Dimens
@@ -88,6 +91,11 @@ private fun RowScope.Label(text: String) {
  * Своей подписи для чтения вслух у полосы нет — её задаёт тот, кто
  * показывает: у [StatBar] это подпись с числом. При самостоятельном
  * использовании подпись обязательна, иначе озвучка пропустит полосу.
+ *
+ * Трек — не серо-зелёный `surfaceVariant`, а `surfaceSunken`: на кремовом
+ * фоне он почти не виден без рамки (DESIGN_PLAN 2.4), поэтому у трека есть
+ * тонкая рамка. Заливка получает лёгкий блеск сверху — так полоса выглядит
+ * приподнятой, а не плоской закраской.
  */
 @Composable
 fun ProgressLine(
@@ -99,6 +107,7 @@ fun ProgressLine(
     val target = fraction.coerceIn(0f, 1f)
     val animated by animateFloatAsState(targetValue = target, label = "progress")
     val shown = if (LocalAnimationsEnabled.current) animated else target
+    val shape = RoundedCornerShape(Dimens.BarHeight)
 
     Box(
         modifier = modifier
@@ -111,16 +120,18 @@ fun ProgressLine(
                     Modifier.clearAndSetSemantics { this.contentDescription = contentDescription }
                 }
             )
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(Dimens.BarHeight),
-            ),
+            .background(MaterialTheme.colorScheme.surfaceVariant, shape)
+            .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), shape),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(shown)
                 .fillMaxHeight()
-                .background(color, RoundedCornerShape(Dimens.BarHeight)),
+                .background(color, shape)
+                .background(
+                    Brush.verticalGradient(0f to Color.White.copy(alpha = 0.3f), 0.4f to Color.Transparent),
+                    shape,
+                ),
         )
     }
 }

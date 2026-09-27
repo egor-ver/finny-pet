@@ -27,7 +27,24 @@ object Dimens {
     /** Поля экрана. На 360 dp по ширине это оставляет 328 dp содержимого. */
     val ScreenPadding = 16.dp
 
+    /**
+     * Старое скругление. Экраны, ещё не переведённые на систему форм
+     * DESIGN_PLAN 2.4, продолжают использовать его; общие компоненты —
+     * [CornerCard]/[CornerTile]/[CornerDialog] ниже.
+     */
     val Corner = 16.dp
 
     val BarHeight = 12.dp
+
+    // DESIGN_PLAN 2.4: формы, тени, кнопки
+    val CornerCard = 24.dp
+    val CornerTile = 20.dp
+    val CornerDialog = 28.dp
+    val CardShadowElevation = 2.dp
+
+    /** Нижняя граница высоты лицевой грани кнопки; текст может растить её дальше. */
+    val ButtonHeight = 56.dp
+    val ButtonDepth = 4.dp
+    val ButtonPressOffset = 2.dp
+    val ButtonBorderWidth = 2.dp
 }

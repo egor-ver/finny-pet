@@ -704,5 +704,8 @@ private val GROWTH_BAR_WIDTH = 56.dp
 
 private val MAIN_BUTTON_HEIGHT = 56.dp
 
+// U4 увеличил labelLarge до 18 sp ExtraBold (было 16 sp SemiBold): «Магазин»
+// стал шире и почти не помещался в прежний отступ (Б21) — сузили ещё на
+// SpaceMedium - SpaceSmall = 4 dp с каждой стороны.
 /** Уже отступа кнопки хватает под «Магазин»/«Уложить спать» в половину строки (Б21). */
-private val DAY_BUTTON_PADDING = PaddingValues(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall)
+private val DAY_BUTTON_PADDING = PaddingValues(horizontal = Dimens.SpaceSmall, vertical = Dimens.SpaceSmall)

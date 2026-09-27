@@ -3,66 +3,75 @@ package ru.finnypet.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Палитра приложения.
+ * Палитра приложения (DESIGN_PLAN, раздел 2.1).
  *
- * Зелёный отвечает за рост и накопления, янтарный — за монеты, лиловый —
- * за задания. Красный используется только для нехватки средств и никогда
- * как единственный признак: рядом с ним всегда значок и подпись (ТЗ 3.6).
- *
- * Оттенки подобраны так, чтобы текст на них читался: тёмные цвета идут под
- * белый текст, светлые — под тёмный.
+ * Раньше зелёный был одновременно цветом главной кнопки и цветом «Нужного»,
+ * поэтому смысл цвета размывался. Теперь действие (`primary`) — синее, а
+ * каждое направление трат (`need`/`want`/`save` в `Theme.kt`) получает свой
+ * цвет и никогда не используется для кнопок. Контраст текста везде не
+ * меньше 4,5:1 на своём фоне (посчитано по WCAG 2.1 при подготовке плана).
  */
 
-// Светлая тема
-val GreenPrimary = Color(0xFF1B6B4A)
-val GreenOnPrimary = Color(0xFFFFFFFF)
-val GreenContainer = Color(0xFFB8EFD2)
-val GreenOnContainer = Color(0xFF00210F)
+// Светлая тема — общий фон и текст
+val Background = Color(0xFFFFF7EC)
+val Surface = Color(0xFFFFFFFF)
+val SurfaceSunken = Color(0xFFF1E8DA)
+val Outline = Color(0xFFE4D8C6)
+val Ink = Color(0xFF2A2140)
+val InkSoft = Color(0xFF62597A)
 
-val AmberSecondary = Color(0xFF8A5100)
-val AmberOnSecondary = Color(0xFFFFFFFF)
-val AmberContainer = Color(0xFFFFDCBE)
-val AmberOnContainer = Color(0xFF2C1600)
+// Светлая тема — действие
+val Primary = Color(0xFF1F63D6)
+val OnPrimary = Color(0xFFFFFFFF)
+val PrimaryDeep = Color(0xFF164AA6)
+val PrimaryContainer = Color(0xFFE3ECFF)
 
-val VioletTertiary = Color(0xFF55437B)
-val VioletOnTertiary = Color(0xFFFFFFFF)
-val VioletContainer = Color(0xFFDCC8FF)
-val VioletOnContainer = Color(0xFF110034)
+// Светлая тема — направления трат
+val NeedFill = Color(0xFF2A9154)
+val NeedText = Color(0xFF17733F)
+val NeedContainer = Color(0xFFDFF6E8)
+val WantFill = Color(0xFFC96500)
+val WantText = Color(0xFFA04B00)
+val WantContainer = Color(0xFFFFEBD2)
+val SaveFill = Color(0xFF9460E0)
+val SaveText = Color(0xFF7B3FC4)
+val SaveContainer = Color(0xFFEFE4FF)
 
-val RedError = Color(0xFF8C1D18)
-val RedOnError = Color(0xFFFFFFFF)
-val RedContainer = Color(0xFFFFDAD6)
-val RedOnContainer = Color(0xFF410002)
+// Светлая тема — монета (одна и та же в обеих темах)
+val CoinFace = Color(0xFFFFC933)
+val CoinShadow = Color(0xFFF2A516)
+val CoinEdge = Color(0xFFC98400)
+val CoinHighlight = Color(0xFFFFF1B3)
 
-val SurfaceLight = Color(0xFFFCFDF8)
-val OnSurfaceLight = Color(0xFF191C1A)
-val SurfaceVariantLight = Color(0xFFDCE5DC)
-val OnSurfaceVariantLight = Color(0xFF404943)
-val OutlineLight = Color(0xFF707973)
+// Светлая тема — нехватка монет (единственное место для красного)
+val ShortageText = Color(0xFFB3261E)
+val ShortageContainer = Color(0xFFFDE4E1)
 
-// Тёмная тема
-val GreenPrimaryDark = Color(0xFF9DD3B7)
-val GreenOnPrimaryDark = Color(0xFF003823)
-val GreenContainerDark = Color(0xFF005234)
-val GreenOnContainerDark = Color(0xFFB8EFD2)
+// Тёмная тема — общий фон и текст
+val BackgroundDark = Color(0xFF17131F)
+val SurfaceDark = Color(0xFF231D2E)
+val SurfaceSunkenDark = Color(0xFF332B40)
+val OutlineDark = Color(0xFF4A4058)
+val InkDark = Color(0xFFF3EEF9)
+val InkSoftDark = Color(0xFFBDB3CF)
 
-val AmberSecondaryDark = Color(0xFFFFB871)
-val AmberOnSecondaryDark = Color(0xFF4A2800)
-val AmberContainerDark = Color(0xFF693C00)
-val AmberOnContainerDark = Color(0xFFFFDCBE)
+// Тёмная тема — действие
+val PrimaryDark = Color(0xFF8DB4FF)
+val OnPrimaryDark = Color(0xFF0B2A66)
+val PrimaryDeepDark = Color(0xFF5E8AE0)
+val PrimaryContainerDark = Color(0xFF1D2F5C)
 
-val VioletTertiaryDark = Color(0xFFC0ADE8)
-val VioletOnTertiaryDark = Color(0xFF271349)
-val VioletContainerDark = Color(0xFF3D2C62)
-val VioletOnContainerDark = Color(0xFFDCC8FF)
+// Тёмная тема — направления трат
+val NeedFillDark = Color(0xFF6FD39A)
+val NeedTextDark = Color(0xFF6FD39A)
+val NeedContainerDark = Color(0xFF16392A)
+val WantFillDark = Color(0xFFFFB060)
+val WantTextDark = Color(0xFFFFB060)
+val WantContainerDark = Color(0xFF45300F)
+val SaveFillDark = Color(0xFFC9A6FF)
+val SaveTextDark = Color(0xFFC9A6FF)
+val SaveContainerDark = Color(0xFF34264F)
 
-val RedErrorDark = Color(0xFFFFB4AB)
-val RedOnErrorDark = Color(0xFF690005)
-val RedContainerDark = Color(0xFF93000A)
-val RedOnContainerDark = Color(0xFFFFDAD6)
-
-val SurfaceDark = Color(0xFF111412)
-val OnSurfaceDark = Color(0xFFE1E3DF)
-val SurfaceVariantDark = Color(0xFF404943)
-val OnSurfaceVariantDark = Color(0xFFC0C9C1)
-val OutlineDark = Color(0xFF8A938C)
+// Тёмная тема — нехватка монет
+val ShortageTextDark = Color(0xFFFFB4AB)
+val ShortageContainerDark = Color(0xFF5C1A14)

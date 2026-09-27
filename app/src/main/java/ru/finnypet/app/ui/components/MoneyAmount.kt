@@ -1,26 +1,25 @@
 package ru.finnypet.app.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
@@ -28,6 +27,7 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
+import ru.finnypet.app.ui.theme.FinnyTheme
 
 /**
  * Сумма в монетах.
@@ -54,7 +54,6 @@ fun MoneyAmount(
         Text(
             text = amount.amount.toString(),
             style = style,
-            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -83,23 +82,28 @@ fun coinsText(amount: Coins): String = stringResource(
  *
  * Размер считается от размера текста рядом, поэтому монета растёт вместе
  * с системным увеличением шрифта и не вылезает за свой кружок (ТЗ 3.6).
+ *
+ * Грань сдвинута вверх относительно тени того же радиуса — снизу остаётся
+ * полумесяц тени, дающий монете объём (DESIGN_PLAN 2.5).
  */
 @Composable
 private fun Coin(style: TextStyle) {
     val size = with(LocalDensity.current) { style.fontSize.toDp() }
-    Box(
-        modifier = Modifier
-            .size(size)
-            .background(MaterialTheme.colorScheme.secondary, CircleShape)
-            .border(
-                // На мелком тексте десятая доля схлопнулась бы в ноль,
-                // и монета потеряла бы форму — единственный признак,
-                // не зависящий от цвета (ТЗ 3.6).
-                width = (size / 10).coerceAtLeast(1.5.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = CircleShape,
-            ),
-    )
+    val coin = FinnyTheme.palette.coin
+    Canvas(modifier = Modifier.size(size)) {
+        // На мелком тексте десятая доля схлопнулась бы в ноль, и кант
+        // потерял бы толщину — единственный признак, не зависящий от цвета.
+        val edge = (this.size.minDimension / 10).coerceAtLeast(1.5.dp.toPx())
+        val radius = (this.size.minDimension - edge) / 2
+        drawCircle(color = coin.shadow, radius = radius, center = center)
+        drawCircle(color = coin.face, radius = radius, center = center - Offset(0f, radius * 0.12f))
+        drawCircle(color = coin.edge, radius = radius, center = center, style = Stroke(width = edge))
+        drawOval(
+            color = coin.highlight,
+            topLeft = center + Offset(-radius * 0.55f, -radius * 0.6f),
+            size = Size(radius * 0.5f, radius * 0.32f),
+        )
+    }
 }
 
 /**

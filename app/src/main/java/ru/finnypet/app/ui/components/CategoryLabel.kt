@@ -14,6 +14,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.theme.Dimens
+import ru.finnypet.app.ui.theme.FinnyTheme
 
 /**
  * Одна иконка на направление везде (раздел 8 плана): нужное — миска,
@@ -26,12 +27,19 @@ val SpendCategory.icon: String
         SpendCategory.SAVINGS -> "🐷"
     }
 
-/** Один цвет на направление — из темы, поэтому работает и в тёмной: зелёный, оранжевый, фиолетовый. */
+/**
+ * Один цвет на направление — из темы, поэтому работает и в тёмной: зелёный,
+ * оранжевый, фиолетовый.
+ *
+ * Не `colorScheme.primary`: тот теперь синий цвет действия (кнопки, выбор),
+ * общий для всего приложения, а не «Нужного» — иначе направление снова
+ * незаметно совпало бы цветом с кнопкой (DESIGN_PLAN 2.1).
+ */
 val SpendCategory.color: Color
     @Composable get() = when (this) {
-        SpendCategory.MANDATORY -> MaterialTheme.colorScheme.primary
-        SpendCategory.OPTIONAL -> MaterialTheme.colorScheme.secondary
-        SpendCategory.SAVINGS -> MaterialTheme.colorScheme.tertiary
+        SpendCategory.MANDATORY -> FinnyTheme.palette.need.text
+        SpendCategory.OPTIONAL -> FinnyTheme.palette.want.text
+        SpendCategory.SAVINGS -> FinnyTheme.palette.save.text
     }
 
 /**

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -286,7 +287,17 @@ private fun Toggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit)
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            // `outline` (#E4D8C6) почти сливается с кремовым фоном — 1,3:1.
+            // Выключенное состояние берёт свои цвета явно, а не outline.
+            colors = SwitchDefaults.colors(
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
     }
 }
 

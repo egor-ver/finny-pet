@@ -1,28 +1,57 @@
 package ru.finnypet.app.ui.components
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
 import ru.finnypet.app.ui.theme.Dimens
+import ru.finnypet.app.ui.theme.FinnyTheme
+import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 
 /**
  * Главное действие экрана.
  *
- * Высота не опускается ниже 48 dp: ТЗ 3.6 требует, чтобы по элементу было
- * удобно попасть ребёнку. Ограничение стоит здесь, а не на каждом экране,
- * чтобы его нельзя было случайно потерять.
+ * Плоская заливка не читалась как нажимаемая (диагноз DESIGN_PLAN, раздел 1,
+ * №1 и №5) — нижняя грань `primaryDeep` даёт кнопке объём, а при нажатии
+ * верхняя грань опускается на [Dimens.ButtonPressOffset] (DESIGN_PLAN 2.4).
+ * Своя отрисовка вместо `Button` из Material: тому неоткуда взять вторую,
+ * более тёмную грань снизу.
+ *
+ * Высота лицевой грани — не жёсткие 56 dp, а минимум [Dimens.ButtonHeight]:
+ * при крупном системном шрифте текст переносится на вторую строку, и
+ * кнопка растёт вместе с ним. Своя `Layout`, а не `Modifier.height`, —
+ * нижняя грань должна повторять фактическую высоту верхней, а не
+ * фиксированную; входящий `minHeight` (например, `Modifier.heightIn(min = …)`
+ * с главного экрана, где кнопки в паре должны быть одной высоты) измерению
+ * не мешает — своя разметка передаёт его дальше, а не обнуляет.
  */
 @Composable
 fun FinnyButton(
@@ -34,21 +63,65 @@ fun FinnyButton(
     // только те, кому тесно — например, кнопки дня в узкой половине строки (Б21).
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
 ) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(Dimens.Corner),
-        contentPadding = contentPadding,
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val topOffset by animateDpAsState(
+        targetValue = if (pressed) Dimens.ButtonDepth - Dimens.ButtonPressOffset else 0.dp,
+        animationSpec = if (LocalAnimationsEnabled.current) tween(PRESS_ANIM_MS) else snap(),
+        label = "buttonPress",
+    )
+    val shape = RoundedCornerShape(Dimens.CornerTile)
+    val deepColor = FinnyTheme.palette.buttonDeep
+    val faceColor = MaterialTheme.colorScheme.primary
+    val onFaceColor = MaterialTheme.colorScheme.onPrimary
+    val labelStyle = MaterialTheme.typography.labelLarge
+
+    Layout(
         modifier = modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = Dimens.TouchTarget),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = Dimens.SpaceSmall),
-        )
+            .alpha(if (enabled) 1f else DISABLED_ALPHA),
+        content = {
+            // Нижняя грань: видна полоской под верхней, даёт кнопке объём.
+            // Размер ей задаёт не модификатор, а измерение ниже — она всегда
+            // повторяет фактический размер верхней грани.
+            Box(Modifier.clip(shape).background(deepColor))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .defaultMinSize(minHeight = Dimens.ButtonHeight)
+                    .clip(shape)
+                    .background(faceColor)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        enabled = enabled,
+                        role = Role.Button,
+                        onClick = onClick,
+                    )
+                    .padding(contentPadding),
+            ) {
+                Text(
+                    text = text,
+                    style = labelStyle,
+                    textAlign = TextAlign.Center,
+                    color = onFaceColor,
+                )
+            }
+        },
+    ) { measurables, constraints ->
+        val (deep, face) = measurables
+        // Входящий minHeight (heightIn с вызывающего экрана) передаём как
+        // есть: обнуление стёрло бы требование к паре кнопок быть одной
+        // высоты на главном экране. Верхняя граница остаётся снятой — текст
+        // должен иметь возможность растить кнопку выше этого минимума.
+        val facePlaceable = face.measure(constraints)
+        val depthPx = Dimens.ButtonDepth.roundToPx()
+        val deepPlaceable = deep.measure(Constraints.fixed(facePlaceable.width, facePlaceable.height))
+        val offsetPx = topOffset.roundToPx()
+        layout(facePlaceable.width, facePlaceable.height + depthPx) {
+            deepPlaceable.placeRelative(0, depthPx)
+            facePlaceable.placeRelative(0, offsetPx)
+        }
     }
 }
 
@@ -64,7 +137,14 @@ fun FinnySecondaryButton(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(Dimens.Corner),
+        shape = RoundedCornerShape(Dimens.CornerTile),
+        // Рамка толще и цветом primary: `outline` даёт на белом только 1,3:1,
+        // граница второстепенной кнопки была бы почти не видна (DESIGN_PLAN 2.4).
+        border = BorderStroke(Dimens.ButtonBorderWidth, MaterialTheme.colorScheme.primary),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+        ),
         contentPadding = contentPadding,
         modifier = modifier
             .fillMaxWidth()
@@ -97,3 +177,8 @@ fun ButtonColumn(
         content()
     }
 }
+
+/** DESIGN_PLAN 2.7 задаёт «быстрое» движение в 120 мс; общий набор токенов появится в U6. */
+private const val PRESS_ANIM_MS = 120
+
+private const val DISABLED_ALPHA = 0.5f

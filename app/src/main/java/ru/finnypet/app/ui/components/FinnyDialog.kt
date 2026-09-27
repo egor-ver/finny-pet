@@ -32,8 +32,9 @@ fun FinnyDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(Dimens.Corner),
+            shape = RoundedCornerShape(Dimens.CornerDialog),
             color = MaterialTheme.colorScheme.surface,
+            shadowElevation = Dimens.CardShadowElevation,
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
