@@ -260,6 +260,15 @@ private fun ActiveGoal(state: SavingsState.Ready, goal: GoalView, onBuy: () -> U
                     .fillMaxWidth()
                     .heightIn(min = BUY_BUTTON_HEIGHT),
             )
+            // Кнопка неактивна до плана дня (canBuy = canOperate && isReached) — без
+            // строки ребёнок жмёт «Собрано!» и не понимает, почему ничего не происходит.
+            if (!state.canBuy) {
+                Text(
+                    text = stringResource(R.string.savings_buy_needs_plan),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         } else {
             LabelledLine(label = stringResource(R.string.main_goal_left), amount = goal.remaining)
             val periodsToGoal = state.periodsToGoal

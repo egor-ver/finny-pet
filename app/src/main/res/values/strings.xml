@@ -249,6 +249,7 @@
     <string name="savings_price">Стоит</string>
     <string name="savings_eta">Если откладывать как обычно, по %1$d, — через %2$s</string>
     <string name="savings_buy">Собрано! Купить %1$s</string>
+    <string name="savings_buy_needs_plan">Купить можно после плана дня</string>
     <string name="savings_buy_title">Купить %1$s?</string>
     <string name="savings_buy_text">Монеты этой цели уйдут на покупку, а %1$s встанет рядом с совой.</string>
     <string name="savings_buy_confirm">Купить</string>
@@ -264,7 +265,7 @@
     <string name="savings_withdraw_eta_unknown">Срок пока не посчитать — пополнений ещё не было.</string>
     <string name="savings_amount_more">Больше</string>
     <string name="savings_amount_less">Меньше</string>
-    <string name="savings_planning_hint">Сначала спланируй день — потом можно откладывать и брать из копилки.</string>
+    <string name="savings_planning_hint">Сначала спланируй день — потом можно откладывать, брать из копилки и покупать цель.</string>
     <string name="savings_done_title">Готово!</string>
     <string name="savings_failed">Не получилось открыть копилку. Попробуй ещё раз.</string>
     <string name="days_one">%1$d день</string>
