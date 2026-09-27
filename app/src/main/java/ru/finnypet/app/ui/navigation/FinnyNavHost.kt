@@ -23,6 +23,7 @@ import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.day.DayScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
 import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
+import ru.finnypet.app.ui.theme.Motion
 import ru.finnypet.app.ui.screens.progress.ProgressScreen
 import ru.finnypet.app.ui.screens.savings.SavingsScreen
 import ru.finnypet.app.ui.screens.shop.ShopScreen
@@ -216,9 +217,7 @@ private fun NavHostController.popOnce() {
  * сразу. 250 мс — короткий переход, который не кажется медленным (U2, Б13).
  */
 internal fun screenEnter(motion: Boolean): EnterTransition =
-    if (motion) fadeIn(tween(SCREEN_FADE_MS)) else EnterTransition.None
+    if (motion) fadeIn(tween(Motion.StandardMs)) else EnterTransition.None
 
 internal fun screenExit(motion: Boolean): ExitTransition =
-    if (motion) fadeOut(tween(SCREEN_FADE_MS)) else ExitTransition.None
-
-private const val SCREEN_FADE_MS = 250
+    if (motion) fadeOut(tween(Motion.StandardMs)) else ExitTransition.None

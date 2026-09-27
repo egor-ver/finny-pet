@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
@@ -46,9 +46,9 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanningHint
+import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.StatEffectLine
 import ru.finnypet.app.ui.components.coinsText
@@ -239,48 +239,39 @@ private fun PlanningDialog(onPlan: () -> Unit, onDismiss: () -> Unit) {
  */
 @Composable
 private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Owl(look = owl, size = 88.dp)
-        Box(modifier = Modifier.weight(1f)) {
-            FinnyCard {
-                if (done != null) {
-                    Text(text = done.title, style = MaterialTheme.typography.titleMedium)
-                    Text(text = done.text, style = MaterialTheme.typography.bodyLarge)
-                    // Игрушка — не просто цифры: короткая фраза показывает, что питомец играет с ней (U2, ТЗ 2.5.9).
-                    done.toyPhrase?.let { toyPhrase ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-                        ) {
-                            ItemIcon(icon = done.icon)
-                            Text(text = toyPhrase, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                    done.changes.forEach { change -> StatChangeLine(change = change) }
-                    if (done.effects.isNotEmpty() && done.changes.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.shop_no_change),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.shop_spent, coinsText(done.price)),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+    SpeechBubble(owl = owl) {
+        if (done != null) {
+            Text(text = done.title, style = MaterialTheme.typography.titleMedium)
+            Text(text = done.text, style = MaterialTheme.typography.bodyLarge)
+            // Игрушка — не просто цифры: короткая фраза показывает, что питомец играет с ней (U2, ТЗ 2.5.9).
+            done.toyPhrase?.let { toyPhrase ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                ) {
+                    ItemIcon(icon = done.icon)
+                    Text(text = toyPhrase, style = MaterialTheme.typography.bodyLarge)
                 }
-                Text(text = phrase, style = MaterialTheme.typography.bodyLarge)
             }
+            done.changes.forEach { change -> StatChangeLine(change = change) }
+            if (done.effects.isNotEmpty() && done.changes.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.shop_no_change),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = stringResource(R.string.shop_spent, coinsText(done.price)),
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
+        Text(text = phrase, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 /**
- * «🥣 Нужное: ещё 24» — сколько по плану ещё можно, как на главном.
+ * «Нужное: ещё 24» — сколько по плану ещё можно, как на главном.
  *
  * Столбцом, а не в ряд: в ряд без переноса при крупном шрифте вторая
  * подпись зажималась до ширины уже без места даже на одно слово и рвала
@@ -296,15 +287,21 @@ private fun JarChips(jars: JarsLeft) {
 
 @Composable
 private fun JarChip(category: SpendCategory, left: Coins) {
-    Text(
-        text = category.icon + " " + stringResource(R.string.shop_jar_left, stringResource(category.label), left.amount),
-        style = MaterialTheme.typography.bodyLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = category.color,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(Dimens.Corner))
             .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall),
-    )
+    ) {
+        Icon(imageVector = category.icon, contentDescription = null, tint = category.color)
+        Text(
+            text = stringResource(R.string.shop_jar_left, stringResource(category.label), left.amount),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = category.color,
+        )
+    }
 }
 
 /**

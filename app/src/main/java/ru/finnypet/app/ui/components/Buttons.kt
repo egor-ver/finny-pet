@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
+import ru.finnypet.app.ui.theme.Motion
 
 /**
  * Главное действие экрана.
@@ -67,7 +68,7 @@ fun FinnyButton(
     val pressed by interactionSource.collectIsPressedAsState()
     val topOffset by animateDpAsState(
         targetValue = if (pressed) Dimens.ButtonDepth - Dimens.ButtonPressOffset else 0.dp,
-        animationSpec = if (LocalAnimationsEnabled.current) tween(PRESS_ANIM_MS) else snap(),
+        animationSpec = if (LocalAnimationsEnabled.current) tween(Motion.QuickMs) else snap(),
         label = "buttonPress",
     )
     val shape = RoundedCornerShape(Dimens.CornerTile)
@@ -177,8 +178,5 @@ fun ButtonColumn(
         content()
     }
 }
-
-/** DESIGN_PLAN 2.7 задаёт «быстрое» движение в 120 мс; общий набор токенов появится в U6. */
-private const val PRESS_ANIM_MS = 120
 
 private const val DISABLED_ALPHA = 0.5f

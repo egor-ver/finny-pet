@@ -28,6 +28,7 @@ import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.Owl
+import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
@@ -99,7 +100,7 @@ fun CreatePetContent(
         },
     ) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Owl(look = state.owl(stringResource(R.string.create_pet_preview)))
+            Owl(look = state.owl(stringResource(R.string.create_pet_preview)), size = OwlRole.Create.size)
         }
 
         Text(

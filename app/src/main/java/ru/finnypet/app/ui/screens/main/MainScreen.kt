@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +31,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,9 +53,11 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
+import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.icon
+import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -190,8 +194,8 @@ private fun ReadyScreen(
         title = {},
         actions = {
             WalletChip(balance = state.balance, onOpen = { walletOpen = true })
-            TopIcon(symbol = "?", label = stringResource(R.string.help_action), onClick = onHelp)
-            TopIcon(symbol = "🔒", label = stringResource(R.string.adult_action), onClick = onAdult)
+            TopIcon(icon = FinnyIcons.Help, label = stringResource(R.string.help_action), onClick = onHelp)
+            TopIcon(icon = FinnyIcons.Grownup, label = stringResource(R.string.adult_action), onClick = onAdult)
         },
         spacing = Dimens.SpaceSmall,
         bottomBar = { DayButtons(step = state.step, onPlan = onPlan, onShop = onShop, onSleep = onFinishDay) },
@@ -219,18 +223,14 @@ private fun ReadyScreen(
  * ничего не говорят (ТЗ 3.6).
  */
 @Composable
-private fun TopIcon(symbol: String, label: String, onClick: () -> Unit) {
+private fun TopIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     TextButton(
         onClick = onClick,
         modifier = Modifier
             .defaultMinSize(minWidth = Dimens.TouchTarget, minHeight = Dimens.TouchTarget)
             .semantics { contentDescription = label },
     ) {
-        Text(
-            text = symbol,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.clearAndSetSemantics {},
-        )
+        Icon(imageVector = icon, contentDescription = null)
     }
 }
 
@@ -303,7 +303,7 @@ private fun Pet(state: MainState.Ready) {
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Owl(look = state.owl, size = OWL_SIZE)
+        Owl(look = state.owl, size = OwlRole.Hero.size)
         Text(
             text = state.phrase,
             style = MaterialTheme.typography.bodyMedium,
@@ -362,7 +362,7 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Text(text = kind.icon, style = MaterialTheme.typography.bodyLarge)
+        Icon(imageVector = kind.icon, contentDescription = null)
         ProgressLine(
             fraction = stat.value.toFloat() / Stat.RANGE.last,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -497,7 +497,7 @@ private fun GrowthRow(state: MainState.Ready, onOpen: () -> Unit) {
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
-        Text(text = "⭐", style = MaterialTheme.typography.bodyLarge)
+        Icon(imageVector = FinnyIcons.StarFilled, contentDescription = null)
         if (growth != null) {
             ProgressLine(
                 fraction = growth.points.toFloat() / growth.target,
@@ -545,17 +545,23 @@ private fun CoinsRow(jars: JarsLeft?, savings: SavingsView, onPlan: () -> Unit, 
     }
 }
 
-/** «🥣 ещё 38»: направление иконкой и цветом, для TalkBack — словом (ТЗ 3.6). */
+/** Иконка направления и «ещё 38»: цветом и словом, для TalkBack — словом (ТЗ 3.6). */
 @Composable
 private fun JarLeft(category: SpendCategory, left: Coins, modifier: Modifier = Modifier) {
     val spoken = stringResource(R.string.main_jar_left_description, stringResource(category.label), left.amount)
-    Text(
-        text = category.icon + " " + stringResource(R.string.main_jar_left, left.amount),
-        style = MaterialTheme.typography.bodyLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = category.color,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
-    )
+    ) {
+        Icon(imageVector = category.icon, contentDescription = null, tint = category.color)
+        Text(
+            text = stringResource(R.string.main_jar_left, left.amount),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = category.color,
+        )
+    }
 }
 
 /**
@@ -583,8 +589,9 @@ private fun SavingsJar(savings: SavingsView, onOpen: () -> Unit) {
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .clearAndSetSemantics { contentDescription = spoken },
     ) {
+        Icon(imageVector = SpendCategory.SAVINGS.icon, contentDescription = null, tint = SpendCategory.SAVINGS.color)
         Text(
-            text = SpendCategory.SAVINGS.icon + " " + shown,
+            text = shown,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = SpendCategory.SAVINGS.color,
@@ -634,18 +641,22 @@ private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit, modifier: Modifier = M
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(text = "🎯", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.clearAndSetSemantics {})
+            Icon(imageVector = task.topic.icon, contentDescription = null)
             Text(
                 text = stringResource(task.topic.label),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
-            Text(
-                text = if (task.rewardAvailable) "+${task.reward.amount}" else "✓",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clearAndSetSemantics { contentDescription = reward },
-            )
+            if (task.rewardAvailable) {
+                Text(
+                    text = "+${task.reward.amount}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clearAndSetSemantics { contentDescription = reward },
+                )
+            } else {
+                Icon(imageVector = FinnyIcons.Check, contentDescription = reward)
+            }
             Chevron()
         }
         if (task.allDone) {
@@ -678,26 +689,18 @@ private fun AllTasksButton(onOpen: () -> Unit) {
     }
 }
 
-/** «›» — строка нажимается; озвучке он не нужен, у строки роль кнопки. */
+/** Строка нажимается целиком; озвучке шеврон не нужен, у строки роль кнопки. */
 @Composable
 private fun Chevron() {
-    Text(
-        text = "›",
-        style = MaterialTheme.typography.titleLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.clearAndSetSemantics {},
+    Icon(
+        imageVector = FinnyIcons.Chevron,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary,
     )
 }
 
 /** Порядок как на макете: еда первой — о ней сова просит чаще всего. */
 private val STATS = listOf(PetStatKind.SATIETY, PetStatKind.MOOD, PetStatKind.CARE)
-
-/**
- * Сова на главном всегда этого размера (раздел 8 плана). На vivo раньше
- * стояла сова 170 dp — уменьшена ради высоты экрана: без остальных правок
- * этого пункта главный не помещался без прокрутки (Б5).
- */
-private val OWL_SIZE = 120.dp
 
 /** Ширина полосы роста рядом со звёздами — фиксированная, весь вес у имени. */
 private val GROWTH_BAR_WIDTH = 56.dp

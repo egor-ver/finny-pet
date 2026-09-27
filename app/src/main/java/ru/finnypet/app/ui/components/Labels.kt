@@ -1,11 +1,13 @@
 package ru.finnypet.app.ui.components
 
 import androidx.annotation.StringRes
+import androidx.compose.ui.graphics.vector.ImageVector
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskTopic
+import ru.finnypet.app.ui.components.icons.FinnyIcons
 
 /**
  * Подписи доменных понятий — одни и те же на всех экранах (ТЗ 3.6 требует
@@ -34,11 +36,11 @@ val PetStatKind.label: Int
  * (`SpendCategory.icon`) — на главном экране обе иконки стоят рядом, и цвет
  * остался бы единственным отличием (ТЗ 3.6 это запрещает, см. `TypographyTest`).
  */
-val PetStatKind.icon: String
+val PetStatKind.icon: ImageVector
     get() = when (this) {
-        PetStatKind.SATIETY -> "🍎"
-        PetStatKind.MOOD -> "😊"
-        PetStatKind.CARE -> "✨"
+        PetStatKind.SATIETY -> FinnyIcons.Apple
+        PetStatKind.MOOD -> FinnyIcons.Heart
+        PetStatKind.CARE -> FinnyIcons.Feather
     }
 
 val TaskTopic.label: Int
@@ -46,6 +48,14 @@ val TaskTopic.label: Int
         TaskTopic.PLANNING -> R.string.topic_planning
         TaskTopic.SAVING -> R.string.topic_saving
         TaskTopic.PAYMENTS -> R.string.topic_payments
+    }
+
+/** Иконка темы задания — та же, что у соответствующего направления (DESIGN_PLAN 2.3). */
+val TaskTopic.icon: ImageVector
+    get() = when (this) {
+        TaskTopic.PLANNING -> FinnyIcons.Target
+        TaskTopic.SAVING -> FinnyIcons.Piggy
+        TaskTopic.PAYMENTS -> FinnyIcons.Bag
     }
 
 val GrowthStage.label: Int

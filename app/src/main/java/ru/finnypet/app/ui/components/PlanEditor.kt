@@ -3,6 +3,8 @@ package ru.finnypet.app.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -20,6 +22,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
@@ -144,10 +147,11 @@ private fun CategoryRow(
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = category.icon,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.clearAndSetSemantics {},
+            Icon(
+                imageVector = category.icon,
+                contentDescription = null,
+                tint = category.color,
+                modifier = Modifier.size(24.dp),
             )
             Text(
                 text = title,

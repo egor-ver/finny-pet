@@ -39,10 +39,9 @@ import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.Owl
-import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StatChangeLine
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.label
@@ -174,7 +173,7 @@ private fun Intro(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        PetSpeech(text = state.intro, owl = state.owl)
+        SpeechBubble(owl = state.owl, text = state.intro)
         // Баланс на главном другой, чем в истории: без этой строки ребёнок
         // принимает монеты задания за свои.
         Text(
@@ -194,29 +193,6 @@ private fun Intro(
 
             else -> Note(text = stringResource(R.string.task_training_note))
         }
-    }
-}
-
-/** Сова и её реплика в «пузыре»: задание — это просьба питомца, а не тест. */
-@Composable
-private fun PetSpeech(text: String, owl: OwlLook) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Owl(look = owl, size = 96.dp)
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier
-                .weight(1f)
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant,
-                    RoundedCornerShape(Dimens.Corner),
-                )
-                .padding(Dimens.Space),
-        )
     }
 }
 
@@ -440,7 +416,7 @@ private fun Done(
             text = stringResource(if (outcome.correct) R.string.task_correct else R.string.task_wrong),
             style = MaterialTheme.typography.headlineMedium,
         )
-        PetSpeech(text = outcome.text, owl = state.owl)
+        SpeechBubble(owl = state.owl, text = outcome.text)
         Text(
             text = when (rewardLine(outcome.correct, outcome.reward)) {
                 RewardLine.PAID -> stringResource(R.string.task_reward_paid, coinsText(outcome.reward))

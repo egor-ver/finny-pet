@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,12 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
@@ -35,9 +32,9 @@ import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.PlanEditor
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.label
@@ -178,18 +175,7 @@ private fun Planning(
     ) {
         // Сова отвечает на каждое движение ползунка: последствие плана видно
         // до решения, а не только вечером (ТЗ 2.2).
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Owl(look = state.owl, size = 88.dp)
-            Box(modifier = Modifier.weight(1f)) {
-                FinnyCard {
-                    Text(text = state.phrase, style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-        }
+        SpeechBubble(owl = state.owl, text = state.phrase)
 
         PlanEditor(
             plan = state.plan,

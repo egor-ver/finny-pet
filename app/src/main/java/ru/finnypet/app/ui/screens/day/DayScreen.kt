@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
@@ -30,8 +30,10 @@ import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.Owl
+import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.PlanComparison
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.screens.main.GrowthView
 import ru.finnypet.app.ui.text.WordForm
@@ -210,7 +212,7 @@ private fun Closed(summary: DaySummary, onBack: () -> Unit) {
         FinnyCard {
             Text(text = summary.headline, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
-        Owl(look = summary.owl, size = 140.dp, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Owl(look = summary.owl, size = OwlRole.DayEnd.size, modifier = Modifier.align(Alignment.CenterHorizontally))
         summary.newStage?.let { stage ->
             FinnyCard(color = MaterialTheme.colorScheme.primaryContainer) {
                 Text(
@@ -228,7 +230,7 @@ private fun Closed(summary: DaySummary, onBack: () -> Unit) {
     }
 }
 
-/** ✓ или ✗ — знаком и словом для TalkBack: цвет тут не нужен вовсе (ТЗ 3.6). */
+/** Звезда заполненная или контуром — знаком и словом для TalkBack: цвет тут не нужен вовсе (ТЗ 3.6). */
 @Composable
 private fun CheckLine(check: DayCheckView) {
     val spoken = stringResource(if (check.done) R.string.day_check_done else R.string.day_check_missed) + ". " + check.text
@@ -237,7 +239,7 @@ private fun CheckLine(check: DayCheckView) {
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
         ) {
-            Text(text = if (check.done) "\u2713" else "\u2717", style = MaterialTheme.typography.titleMedium)
+            Icon(imageVector = if (check.done) FinnyIcons.StarFilled else FinnyIcons.StarOutline, contentDescription = null)
             Text(text = check.text, style = MaterialTheme.typography.bodyLarge)
         }
     }

@@ -36,6 +36,7 @@ import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StepButton
@@ -466,7 +467,7 @@ private fun OutcomeDialog(outcome: SavingsOutcomeView, owl: OwlLook, onDismiss: 
         },
     ) {
         // Показатели копилка не меняет — прыжок не про рост, а про сам факт успеха (U2).
-        Owl(look = owl, size = 72.dp, reactOnAppear = true, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Owl(look = owl, size = OwlRole.Dialog.size, reactOnAppear = true, modifier = Modifier.align(Alignment.CenterHorizontally))
         Text(text = outcome.text, style = MaterialTheme.typography.bodyLarge)
     }
 }
