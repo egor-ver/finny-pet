@@ -61,6 +61,7 @@ import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
+import ru.finnypet.app.ui.theme.FinnyTheme
 
 /**
  * Главный экран (ТЗ 2.5.3): питомец, баланс, накопления, цель, показатели
@@ -363,7 +364,7 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Icon(imageVector = kind.icon, contentDescription = null)
+        Icon(imageVector = kind.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
         ProgressLine(
             fraction = stat.value.toFloat() / Stat.RANGE.last,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -498,7 +499,7 @@ private fun GrowthRow(state: MainState.Ready, onOpen: () -> Unit) {
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
-        Icon(imageVector = FinnyIcons.StarFilled, contentDescription = null)
+        Icon(imageVector = FinnyIcons.StarFilled, contentDescription = null, tint = FinnyTheme.palette.star)
         if (growth != null) {
             ProgressLine(
                 fraction = growth.points.toFloat() / growth.target,
@@ -642,7 +643,7 @@ private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit, modifier: Modifier = M
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(imageVector = task.topic.icon, contentDescription = null)
+            Icon(imageVector = task.topic.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
             Text(
                 text = stringResource(task.topic.label),
                 style = MaterialTheme.typography.titleMedium,

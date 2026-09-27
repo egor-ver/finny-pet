@@ -43,6 +43,9 @@ val CoinShadow = Color(0xFFF2A516)
 val CoinEdge = Color(0xFFC98400)
 val CoinHighlight = Color(0xFFFFF1B3)
 
+/** Звезда роста — одна и та же в обеих темах (DESIGN_PLAN 2.1). */
+val StarFill = Color(0xFFFFC52E)
+
 // Светлая тема — нехватка монет (единственное место для красного)
 val ShortageText = Color(0xFFB3261E)
 val ShortageContainer = Color(0xFFFDE4E1)

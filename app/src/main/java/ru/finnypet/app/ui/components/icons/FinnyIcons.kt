@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.components.icons
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -10,6 +11,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Свой набор значков вместо эмодзи и текстовых знаков в коде (DESIGN_PLAN
@@ -18,12 +20,13 @@ import kotlin.math.sin
  *
  * Цвет и подпись для TalkBack задаёт вызывающий `Icon(tint=…,
  * contentDescription=…)`, поэтому пути внутри рисуются условным чёрным —
- * `Icon` красит все пути в один RGB через `ColorFilter.tint`, но альфа-канал
- * каждого пути сохраняет. Поэтому у силуэтов с деталью того же цвета поверх
- * заливки (миска, мяч, копилка, яблоко, пёрышко) основа рисуется через
- * `filled(alpha = 0.3f)` — второй тон по DESIGN_PLAN 2.3 («тот же цвет на
- * 30% прозрачности»): без него деталь полной силы на сплошной заливке той
- * же силы не отличить (была видна как один сплошной круг/пятно).
+ * `Icon` красит все пути в один RGB через `ColorFilter.tint`. Рисовать
+ * деталь тем же цветом поверх заливки нельзя: она сольётся с фигурой в одно
+ * пятно (так уже было с мячом и копилкой). Деталь внутри силуэта (шов
+ * мяча, прорезь и глаз копилки, стержень пера) — вырез в той же заливке
+ * через `PathFillType.EvenOdd`: замкнутый путь внутри другого замкнутого
+ * пути становится дыркой независимо от направления обхода. Сама фигура при
+ * этом остаётся в полную силу — так она видна на белом с нужным контрастом.
  */
 object FinnyIcons {
 
@@ -69,7 +72,7 @@ object FinnyIcons {
 
     /** Миска — «Нужное» и еда: раздел 8 плана держит одну иконку на направление везде. */
     val Bowl: ImageVector = icon("FinnyBowl") {
-        filled(0.3f) {
+        filled {
             moveTo(3.5f, 11f)
             curveTo(3.5f, 10.4f, 4f, 10f, 4.6f, 10f)
             lineTo(19.4f, 10f)
@@ -88,34 +91,52 @@ object FinnyIcons {
         }
     }
 
-    /** Мяч — «Желаемое». */
+    /** Мяч — «Желаемое»: шов — вырез в заливке, а не деталь того же цвета поверх нее. */
     val Ball: ImageVector = icon("FinnyBall") {
-        filled(0.3f) { circle(cx = 12f, cy = 12f, r = 8.5f) }
-        outlined(1.3f) {
-            moveTo(12f, 7.5f); lineTo(15.2f, 9.8f); lineTo(14f, 13.6f); lineTo(10f, 13.6f); lineTo(8.8f, 9.8f); close()
+        filled(PathFillType.EvenOdd) {
+            circle(cx = 12f, cy = 12f, r = 9.5f)
+            moveTo(12f, 7.6f); lineTo(15.4f, 10f); lineTo(14.1f, 14.1f); lineTo(9.9f, 14.1f); lineTo(8.6f, 10f); close()
         }
     }
 
-    /** Копилка — «Накопления»: используется и для направления трат, и для темы заданий. */
+    /**
+     * Копилка — «Накопления»: используется и для направления трат, и для
+     * темы заданий. Профиль анфас узнаётся по ушам, пятачку и ножкам, а не
+     * только по форме тела — иначе на 24 dp это просто гладкий овал.
+     */
     val Piggy: ImageVector = icon("FinnyPiggy") {
-        filled(0.3f) {
-            moveTo(4f, 13f)
-            curveTo(4f, 9.4f, 7.4f, 6.5f, 12f, 6.5f)
-            curveTo(15.6f, 6.5f, 18.6f, 8.3f, 19.6f, 10.8f)
-            lineTo(21.5f, 11.2f)
-            curveTo(22f, 11.3f, 22f, 12.1f, 21.5f, 12.2f)
-            lineTo(19.9f, 12.6f)
-            curveTo(19.5f, 16.2f, 16.1f, 19f, 12f, 19f)
-            curveTo(7.4f, 19f, 4f, 16.1f, 4f, 13f)
-            close()
+        filled {
+            // Уши — треугольники над телом.
+            moveTo(8.5f, 7.6f); lineTo(6.4f, 3f); lineTo(11.4f, 6.3f); close()
+            moveTo(13.4f, 6.1f); lineTo(14.2f, 2.2f); lineTo(17.2f, 5.9f); close()
         }
-        filled { circle(cx = 3.8f, cy = 12.3f, r = 1.6f) }
-        outlined(1.4f) { moveTo(15f, 13.2f); lineTo(15f, 15.4f) }
+        path(fill = BLACK, pathFillType = PathFillType.EvenOdd) {
+            // Тело.
+            ellipse(cx = 11.5f, cy = 14f, rx = 8.5f, ry = 7.5f)
+            // Прорезь для монет — вырез сверху.
+            moveTo(8.5f, 7.1f); lineTo(13.5f, 7.1f); lineTo(13.5f, 8.4f); lineTo(8.5f, 8.4f); close()
+            // Глаз — вырез.
+            circle(cx = 15.2f, cy = 11.5f, r = 1f)
+        }
+        filled {
+            // Пятачок.
+            ellipse(cx = 3f, cy = 15.5f, rx = 2.4f, ry = 2f)
+        }
+        path(fill = BLACK, pathFillType = PathFillType.EvenOdd) {
+            // Ноздри на пятачке — вырезы.
+            circle(cx = 2.2f, cy = 15.5f, r = 0.4f)
+            circle(cx = 3.6f, cy = 15.5f, r = 0.4f)
+        }
+        filled {
+            // Ножки.
+            moveTo(7f, 20.6f); lineTo(6.4f, 23.3f); lineTo(8.6f, 23.3f); lineTo(8.9f, 20.6f); close()
+            moveTo(14.5f, 20.9f); lineTo(14.1f, 23.3f); lineTo(16.3f, 23.3f); lineTo(16.8f, 20.9f); close()
+        }
     }
 
     /** Яблоко — показатель «Сыт». */
     val Apple: ImageVector = icon("FinnyApple") {
-        filled(0.3f) {
+        filled {
             moveTo(12.3f, 9f)
             curveTo(15.7f, 9f, 18.5f, 11.7f, 18.5f, 15f)
             curveTo(18.5f, 18.3f, 16.2f, 20.5f, 13.2f, 20.5f)
@@ -149,16 +170,16 @@ object FinnyIcons {
         }
     }
 
-    /** Пёрышко — показатель «Ухожен»: сова — птица, а не пушистое существо. */
+    /** Пёрышко — показатель «Ухожен»: сова — птица, а не пушистое существо. Стержень — вырез. */
     val Feather: ImageVector = icon("FinnyFeather") {
-        filled(0.3f) {
+        path(fill = BLACK, pathFillType = PathFillType.EvenOdd) {
             moveTo(19f, 3.5f)
             curveTo(19f, 3.5f, 8f, 5.5f, 6f, 12f)
             curveTo(4.4f, 17.1f, 8.5f, 20.2f, 12.3f, 19f)
             curveTo(19.8f, 16.6f, 19f, 3.5f, 19f, 3.5f)
             close()
+            thickLine(x1 = 17.3f, y1 = 5.7f, x2 = 8.4f, y2 = 17.6f, width = 1.1f)
         }
-        outlined(1.3f) { moveTo(17.5f, 5.5f); lineTo(8.3f, 17.8f) }
     }
 
     val StarFilled: ImageVector = icon("FinnyStarFilled") {
@@ -213,13 +234,9 @@ private fun icon(name: String, block: ImageVector.Builder.() -> Unit): ImageVect
         viewportHeight = VIEWPORT,
     ).apply(block).build()
 
-/**
- * Заливка. [alpha] — второй тон (DESIGN_PLAN 2.3): основа силуэта на 30%,
- * деталь поверх — в полную силу, иначе [androidx.compose.material3.Icon]
- * красит оба пути в один RGB и деталь пропадает на заливке того же тона.
- */
-private fun ImageVector.Builder.filled(alpha: Float = 1f, block: PathBuilder.() -> Unit) {
-    path(fill = BLACK, fillAlpha = alpha, pathBuilder = block)
+/** Заливка фигуры в полную силу. [fillType] — `EvenOdd`, когда внутри есть вырезы. */
+private fun ImageVector.Builder.filled(fillType: PathFillType = PathFillType.NonZero, block: PathBuilder.() -> Unit) {
+    path(fill = BLACK, pathFillType = fillType, pathBuilder = block)
 }
 
 private fun ImageVector.Builder.outlined(width: Float = 2f, block: PathBuilder.() -> Unit) {
@@ -235,12 +252,32 @@ private fun ImageVector.Builder.outlined(width: Float = 2f, block: PathBuilder.(
 
 /** Окружность через четыре кубические дуги (константа каппы для круга безье). */
 private fun PathBuilder.circle(cx: Float, cy: Float, r: Float) {
-    val k = r * 0.5523f
-    moveTo(cx + r, cy)
-    curveTo(cx + r, cy + k, cx + k, cy + r, cx, cy + r)
-    curveTo(cx - k, cy + r, cx - r, cy + k, cx - r, cy)
-    curveTo(cx - r, cy - k, cx - k, cy - r, cx, cy - r)
-    curveTo(cx + k, cy - r, cx + r, cy - k, cx + r, cy)
+    ellipse(cx, cy, r, r)
+}
+
+/** Эллипс — та же кубическая аппроксимация круга с разными полуосями. */
+private fun PathBuilder.ellipse(cx: Float, cy: Float, rx: Float, ry: Float) {
+    val kx = rx * 0.5523f
+    val ky = ry * 0.5523f
+    moveTo(cx + rx, cy)
+    curveTo(cx + rx, cy + ky, cx + kx, cy + ry, cx, cy + ry)
+    curveTo(cx - kx, cy + ry, cx - rx, cy + ky, cx - rx, cy)
+    curveTo(cx - rx, cy - ky, cx - kx, cy - ry, cx, cy - ry)
+    curveTo(cx + kx, cy - ry, cx + rx, cy - ky, cx + rx, cy)
+    close()
+}
+
+/** Тонкий прямоугольник вдоль отрезка — вырез-«канавка» (стержень пера, прорезь). */
+private fun PathBuilder.thickLine(x1: Float, y1: Float, x2: Float, y2: Float, width: Float) {
+    val dx = x2 - x1
+    val dy = y2 - y1
+    val len = sqrt(dx * dx + dy * dy)
+    val ox = -dy / len * (width / 2f)
+    val oy = dx / len * (width / 2f)
+    moveTo(x1 + ox, y1 + oy)
+    lineTo(x2 + ox, y2 + oy)
+    lineTo(x2 - ox, y2 - oy)
+    lineTo(x1 - ox, y1 - oy)
     close()
 }
 

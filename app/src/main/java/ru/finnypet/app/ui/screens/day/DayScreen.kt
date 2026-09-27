@@ -39,6 +39,7 @@ import ru.finnypet.app.ui.screens.main.GrowthView
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
+import ru.finnypet.app.ui.theme.FinnyTheme
 
 /**
  * Итоги игрового дня (ТЗ 2.5.9, 2.5.10).
@@ -239,7 +240,11 @@ private fun CheckLine(check: DayCheckView) {
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
         ) {
-            Icon(imageVector = if (check.done) FinnyIcons.StarFilled else FinnyIcons.StarOutline, contentDescription = null)
+            Icon(
+                imageVector = if (check.done) FinnyIcons.StarFilled else FinnyIcons.StarOutline,
+                contentDescription = null,
+                tint = FinnyTheme.palette.star,
+            )
             Text(text = check.text, style = MaterialTheme.typography.bodyLarge)
         }
     }

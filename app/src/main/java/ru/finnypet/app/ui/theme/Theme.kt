@@ -93,13 +93,15 @@ data class DirectionColors(val fill: Color, val text: Color, val container: Colo
 /** Четыре тона монеты: грань, тень нижним полумесяцем, кант, блик (DESIGN_PLAN 2.5). */
 data class CoinColors(val face: Color, val shadow: Color, val edge: Color, val highlight: Color)
 
-/** Цвета, которых нет среди ролей Material: монета, направления, нижняя грань кнопки. */
+/** Цвета, которых нет среди ролей Material: монета, направления, звезда, нижняя грань кнопки. */
 data class FinnyPalette(
     val coin: CoinColors,
     val need: DirectionColors,
     val want: DirectionColors,
     val save: DirectionColors,
     val buttonDeep: Color,
+    /** Звезда роста (DESIGN_PLAN 2.1, 2.5) — одна и та же в обеих темах. */
+    val star: Color,
 )
 
 private val CoinColorsShared = CoinColors(
@@ -115,6 +117,7 @@ private val FinnyPaletteLight = FinnyPalette(
     want = DirectionColors(fill = WantFill, text = WantText, container = WantContainer),
     save = DirectionColors(fill = SaveFill, text = SaveText, container = SaveContainer),
     buttonDeep = PrimaryDeep,
+    star = StarFill,
 )
 
 private val FinnyPaletteDark = FinnyPalette(
@@ -123,6 +126,7 @@ private val FinnyPaletteDark = FinnyPalette(
     want = DirectionColors(fill = WantFillDark, text = WantTextDark, container = WantContainerDark),
     save = DirectionColors(fill = SaveFillDark, text = SaveTextDark, container = SaveContainerDark),
     buttonDeep = PrimaryDeepDark,
+    star = StarFill,
 )
 
 val LocalFinnyPalette = staticCompositionLocalOf<FinnyPalette> {
