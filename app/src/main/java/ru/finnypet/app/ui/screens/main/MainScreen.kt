@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -75,12 +77,17 @@ import ru.finnypet.app.ui.theme.FinnyTheme
  *
  * Переход в раздел для взрослого появится вместе с этим экраном: кнопка,
  * ведущая в пустоту, — тупик, а ТЗ 3.4 их запрещает.
+ *
+ * Обучение (ТЗ 2.5.1, DESIGN_PLAN 3.4) — слой поверх этого же экрана.
+ * [startTutorial] берётся один раз как начальное значение, дальше шаг живёт
+ * в сохраняемом состоянии экрана: поворот и возврат с других экранов не
+ * запускают обучение заново, а «?» открывает его с первого шага.
  */
 @Composable
 fun MainScreen(
+    startTutorial: Boolean,
     onPlan: () -> Unit,
     onProgress: () -> Unit,
-    onHelp: () -> Unit,
     onAdult: () -> Unit,
     onShop: () -> Unit,
     onSavings: () -> Unit,
@@ -91,6 +98,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var tutorialStep by rememberSaveable { mutableStateOf(if (startTutorial) 0 else null) }
 
     MainContent(
         state = state,
@@ -102,9 +110,11 @@ fun MainScreen(
         onTasks = onTasks,
         onFinishDay = onFinishDay,
         onProgress = onProgress,
-        onHelp = onHelp,
+        onHelp = { tutorialStep = 0 },
         onAdult = onAdult,
         banner = banner,
+        tutorialStep = tutorialStep,
+        onTutorialStep = { tutorialStep = it },
     )
 }
 
@@ -126,6 +136,9 @@ fun MainContent(
     onHelp: () -> Unit = {},
     onAdult: () -> Unit = {},
     banner: @Composable () -> Unit = {},
+    /** Шаг обучения поверх экрана; `null` — обучения нет. */
+    tutorialStep: Int? = null,
+    onTutorialStep: (Int?) -> Unit = {},
 ) {
     when (state) {
         MainState.Loading -> LoadingScreen()
@@ -142,6 +155,8 @@ fun MainContent(
             onHelp = onHelp,
             onAdult = onAdult,
             banner = banner,
+            tutorialStep = tutorialStep,
+            onTutorialStep = onTutorialStep,
         )
     }
 }
@@ -186,21 +201,81 @@ private fun ReadyScreen(
     onHelp: () -> Unit,
     onAdult: () -> Unit,
     banner: @Composable () -> Unit,
+    tutorialStep: Int?,
+    onTutorialStep: (Int?) -> Unit,
 ) {
     var walletOpen by rememberSaveable { mutableStateOf(false) }
     if (walletOpen) {
         WalletDialog(balance = state.balance, lines = state.wallet, onDismiss = { walletOpen = false })
     }
+    val targets = remember { TutorialTargets() }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        MainLayout(
+            state = state,
+            targets = targets,
+            // Под обучением экран скрыт от TalkBack: слой модальный, иначе
+            // озвучка уводила бы на кнопки, нажать которые сейчас нельзя.
+            modifier = if (tutorialStep != null) Modifier.clearAndSetSemantics {} else Modifier,
+            onWallet = { walletOpen = true },
+            onPlan = onPlan,
+            onShop = onShop,
+            onSavings = onSavings,
+            onTask = onTask,
+            onTasks = onTasks,
+            onFinishDay = onFinishDay,
+            onProgress = onProgress,
+            onHelp = onHelp,
+            onAdult = onAdult,
+            banner = banner,
+        )
+        if (tutorialStep != null) {
+            TutorialOverlay(
+                step = tutorialStep,
+                text = state.tutorial.getOrElse(tutorialStep) { "" },
+                owl = state.owl,
+                targets = targets,
+                onNext = { onTutorialStep(nextTutorialStep(tutorialStep)) },
+                onSkip = { onTutorialStep(null) },
+            )
+        }
+    }
+}
+
+/** Сам главный — под слоем обучения он тот же, только молчит для TalkBack. */
+@Composable
+private fun MainLayout(
+    state: MainState.Ready,
+    targets: TutorialTargets,
+    modifier: Modifier,
+    onWallet: () -> Unit,
+    onPlan: () -> Unit,
+    onShop: () -> Unit,
+    onSavings: () -> Unit,
+    onTask: (TaskId) -> Unit,
+    onTasks: () -> Unit,
+    onFinishDay: () -> Unit,
+    onProgress: () -> Unit,
+    onHelp: () -> Unit,
+    onAdult: () -> Unit,
+    banner: @Composable () -> Unit,
+) {
     // Блоков много и все обязаны поместиться сразу (ТЗ 2.5.3), поэтому шаг
     // между ними меньше обычного.
     FinnyScaffold(
+        modifier = modifier,
         // Кошелёк — слева, как заголовок (DESIGN_PLAN 3.1). Раньше он стоял
         // справа именно затем, чтобы не совпасть с местом «Назад» на других
         // экранах (Б23); теперь это осознанный выбор владельца — ошибочное
         // нажатие лишь откроет безобидное окно «Кошелёк сегодня», а не уводит
         // с экрана, поэтому цена совпадения ниже, чем была у настоящей навигации.
-        title = { WalletChip(balance = state.balance, onOpen = { walletOpen = true }) },
+        title = {
+            WalletChip(
+                balance = state.balance,
+                onOpen = onWallet,
+                modifier = Modifier.tutorialTarget(targets, TutorialTarget.WALLET),
+            )
+        },
         actions = {
             banner()
             TopIcon(icon = FinnyIcons.Help, label = stringResource(R.string.help_action), onClick = onHelp)
@@ -211,6 +286,7 @@ private fun ReadyScreen(
             DayButtons(
                 step = state.step,
                 task = state.task,
+                targets = targets,
                 onTask = { state.task?.let { onTask(it.id) } },
                 onPlan = onPlan,
                 onShop = onShop,
@@ -221,8 +297,15 @@ private fun ReadyScreen(
         TopSpeechBubble(text = state.phrase)
         OwlWithThings(state = state)
         PetNameStage(state = state)
-        PetStats(state = state)
-        TileGrid(state = state, onPlan = onPlan, onSavings = onSavings, onProgress = onProgress, onTasks = onTasks)
+        PetStats(state = state, targets = targets)
+        TileGrid(
+            state = state,
+            targets = targets,
+            onPlan = onPlan,
+            onSavings = onSavings,
+            onProgress = onProgress,
+            onTasks = onTasks,
+        )
     }
 }
 
@@ -255,6 +338,7 @@ private fun TopIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 private fun DayButtons(
     step: NextStep,
     task: TaskOfDay?,
+    targets: TutorialTargets,
     onTask: () -> Unit,
     onPlan: () -> Unit,
     onShop: () -> Unit,
@@ -266,7 +350,13 @@ private fun DayButtons(
     val sleepText = stringResource(R.string.main_action_sleep)
 
     if (step == NextStep.Plan) {
-        FinnyButton(text = planText, onClick = onPlan, modifier = Modifier.heightIn(min = MAIN_BUTTON_HEIGHT))
+        FinnyButton(
+            text = planText,
+            onClick = onPlan,
+            modifier = Modifier
+                .heightIn(min = MAIN_BUTTON_HEIGHT)
+                .tutorialTarget(targets, TutorialTarget.PLAN_BUTTON),
+        )
         return
     }
 
@@ -297,9 +387,22 @@ private fun DayButtons(
     // награды — по цифре за скругление кнопки (проверено на vivo V2111,
     // 384 dp — шире эталонных 360 dp, но и там не помещается); в столбик обе
     // кнопки к тому же одной ширины, а не визуально разного размера.
+    // Обучению нужны кнопки задания и плана — вместе они есть только утром (DESIGN_PLAN 3.4).
+    val morning = step == NextStep.Task
     ButtonColumn {
-        FinnyButton(text = main, onClick = onMain, reward = reward, modifier = Modifier.heightIn(min = MAIN_BUTTON_HEIGHT))
-        FinnySecondaryButton(text = secondary, onClick = onSecondary)
+        FinnyButton(
+            text = main,
+            onClick = onMain,
+            reward = reward,
+            modifier = Modifier
+                .heightIn(min = MAIN_BUTTON_HEIGHT)
+                .then(if (morning) Modifier.tutorialTarget(targets, TutorialTarget.TASK_BUTTON) else Modifier),
+        )
+        FinnySecondaryButton(
+            text = secondary,
+            onClick = onSecondary,
+            modifier = if (morning) Modifier.tutorialTarget(targets, TutorialTarget.PLAN_BUTTON) else Modifier,
+        )
     }
 }
 
@@ -366,7 +469,7 @@ private fun PetNameStage(state: MainState.Ready) {
  * DESIGN_PLAN 3.1): цвет полосы не единственный признак (ТЗ 3.6).
  */
 @Composable
-private fun PetStats(state: MainState.Ready) {
+private fun PetStats(state: MainState.Ready, targets: TutorialTargets) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
         modifier = Modifier.fillMaxWidth(),
@@ -376,7 +479,9 @@ private fun PetStats(state: MainState.Ready) {
                 kind = kind,
                 stat = state.stats.statFor(kind),
                 needed = kind in state.needs,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .tutorialTarget(targets, kind.tutorialTarget),
             )
         }
     }
@@ -423,10 +528,10 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
  * это кнопка, не только цветом, а формой (ТЗ 3.6).
  */
 @Composable
-private fun WalletChip(balance: Coins, onOpen: () -> Unit) {
+private fun WalletChip(balance: Coins, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(Dimens.Corner))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(role = Role.Button, onClickLabel = stringResource(R.string.wallet_open), onClick = onOpen)
@@ -505,6 +610,7 @@ private fun walletLabel(line: WalletLine): String {
 @Composable
 private fun TileGrid(
     state: MainState.Ready,
+    targets: TutorialTargets,
     onPlan: () -> Unit,
     onSavings: () -> Unit,
     onProgress: () -> Unit,
@@ -512,8 +618,16 @@ private fun TileGrid(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth()) {
-            PlanTile(jars = state.jars, onOpen = onPlan, modifier = Modifier.weight(1f))
-            SavingsTile(savings = state.savings, onOpen = onSavings, modifier = Modifier.weight(1f))
+            PlanTile(
+                jars = state.jars,
+                onOpen = onPlan,
+                modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.PLAN_TILE),
+            )
+            SavingsTile(
+                savings = state.savings,
+                onOpen = onSavings,
+                modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.SAVINGS_TILE),
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth()) {
             GrowthTile(
@@ -523,7 +637,11 @@ private fun TileGrid(
                 onOpen = onProgress,
                 modifier = Modifier.weight(1f),
             )
-            TasksTile(task = state.task, onOpen = onTasks, modifier = Modifier.weight(1f))
+            TasksTile(
+                task = state.task,
+                onOpen = onTasks,
+                modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.TASKS_TILE),
+            )
         }
     }
 }
@@ -753,6 +871,13 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
         }
     }
 }
+
+private val PetStatKind.tutorialTarget: TutorialTarget
+    get() = when (this) {
+        PetStatKind.SATIETY -> TutorialTarget.SATIETY
+        PetStatKind.MOOD -> TutorialTarget.MOOD
+        PetStatKind.CARE -> TutorialTarget.CARE
+    }
 
 /** Порядок как на макете: еда первой — о ней сова просит чаще всего. */
 private val STATS = listOf(PetStatKind.SATIETY, PetStatKind.MOOD, PetStatKind.CARE)

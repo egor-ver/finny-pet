@@ -18,21 +18,18 @@ import kotlinx.serialization.Serializable
  */
 sealed interface Route
 
-/** Знакомство с игрой при первом запуске (ТЗ 2.5.1). */
-@Serializable
-data object Onboarding : Route
-
-/** То же знакомство, открытое снова с главного экрана (ТЗ 2.5.1). */
-@Serializable
-data object Help : Route
-
-/** Выбор внешности и имени питомца (ТЗ 2.5.2). */
+/** Выбор внешности и имени питомца (ТЗ 2.5.2) — первый экран новой игры. */
 @Serializable
 data object CreatePet : Route
 
-/** Главный экран (ТЗ 2.5.3). */
+/**
+ * Главный экран (ТЗ 2.5.3). [tutorial] — открыть его сразу под обучением
+ * (ТЗ 2.5.1): так приходят только из создания питомца. Экран берёт значение
+ * один раз как начальное, дальше шаг обучения живёт в его состоянии —
+ * иначе возврат на главный с других экранов запускал бы обучение заново.
+ */
 @Serializable
-data object Main : Route
+data class Main(val tutorial: Boolean = false) : Route
 
 /** План личного бюджета на игровой день (ТЗ 2.5.5). */
 @Serializable

@@ -17,6 +17,7 @@ import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
 /** Вариант внешности с уже подставленным названием из контент-пака. */
@@ -49,6 +50,8 @@ data class CreatePetState(
     val saving: Boolean = false,
     val failed: Boolean = false,
     val created: Boolean = false,
+    /** Приветствие совы над ней — первая реплика игры (`owl.say.hello`). */
+    val greeting: String = "",
 ) {
 
     val appearance: PetAppearance
@@ -137,6 +140,7 @@ class CreatePetViewModel @Inject constructor(
                 accessories = options(pets.accessories),
                 bodyId = pets.bodies.first().id,
                 colorId = pets.colors.first().id,
+                greeting = pack.texts.textOf("owl.say.hello"),
             )
         }
     }

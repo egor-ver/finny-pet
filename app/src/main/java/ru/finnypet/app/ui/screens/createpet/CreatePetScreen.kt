@@ -29,16 +29,19 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlRole
+import ru.finnypet.app.ui.components.TopSpeechBubble
 import ru.finnypet.app.ui.theme.Dimens
 
 /**
  * Создание питомца (ТЗ 2.5.2): внешность и игровые имена.
  *
  * Питомец показан на стадии детёныша — именно таким игра его и заведёт.
+ *
+ * Это первый экран новой игры (DESIGN_PLAN 3.4), поэтому кнопки «назад» нет:
+ * возвращаться некуда, а системный «назад» просто закрывает приложение.
  */
 @Composable
 fun CreatePetScreen(
-    onBack: () -> Unit,
     onCreated: () -> Unit,
     viewModel: CreatePetViewModel = hiltViewModel(),
 ) {
@@ -52,7 +55,6 @@ fun CreatePetScreen(
 
     CreatePetContent(
         state = state,
-        onBack = onBack,
         onBody = viewModel::selectBody,
         onColor = viewModel::selectColor,
         onAccessory = viewModel::selectAccessory,
@@ -69,7 +71,6 @@ fun CreatePetScreen(
 @Composable
 fun CreatePetContent(
     state: CreatePetState,
-    onBack: () -> Unit,
     onBody: (String) -> Unit,
     onColor: (String) -> Unit,
     onAccessory: (String?) -> Unit,
@@ -79,7 +80,6 @@ fun CreatePetContent(
 ) {
     FinnyScaffold(
         title = stringResource(R.string.create_pet_title),
-        onBack = onBack,
         bottomBar = {
             ButtonColumn {
                 // Сбой сохранения объясняется прямо над кнопкой, и кнопка
@@ -99,6 +99,9 @@ fun CreatePetContent(
             }
         },
     ) {
+        // Сова здоровается сама: без этого игра начиналась бы с голой формы
+        // (DESIGN_PLAN 3.3) — знакомство теперь идёт после создания.
+        TopSpeechBubble(text = state.greeting)
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Owl(look = state.owl(stringResource(R.string.create_pet_preview)), size = OwlRole.Create.size)
         }

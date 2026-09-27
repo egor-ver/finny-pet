@@ -17,9 +17,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.ui.Startup
 import ru.finnypet.app.ui.StartupViewModel
+import ru.finnypet.app.ui.navigation.CreatePet
 import ru.finnypet.app.ui.navigation.FinnyNavHost
 import ru.finnypet.app.ui.navigation.Main
-import ru.finnypet.app.ui.navigation.Onboarding
 import ru.finnypet.app.ui.theme.FinnypetTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 import ru.finnypet.app.ui.theme.LocalSoundEnabled
@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // Граф строится только когда известно, есть ли профиль:
                     // стартовый экран после сборки уже не поменять, а начать
-                    // со знакомства при готовом профиле значит нарушить
+                    // с создания питомца при готовом профиле значит нарушить
                     // ТЗ 2.5.13 о сохранении состояния.
                     when (state) {
                         // Чтение профиля занимает миллисекунды, но за них
@@ -66,8 +66,8 @@ class MainActivity : ComponentActivity() {
                                 .background(MaterialTheme.colorScheme.background),
                         )
 
-                        Startup.NoProfile -> FinnyNavHost(startDestination = Onboarding)
-                        Startup.HasProfile -> FinnyNavHost(startDestination = Main)
+                        Startup.NoProfile -> FinnyNavHost(startDestination = CreatePet)
+                        Startup.HasProfile -> FinnyNavHost(startDestination = Main())
                     }
                 }
             }

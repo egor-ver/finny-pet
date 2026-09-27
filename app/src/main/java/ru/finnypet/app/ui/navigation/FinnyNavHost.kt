@@ -7,14 +7,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import ru.finnypet.app.R
+import androidx.navigation.toRoute
 import ru.finnypet.app.ui.screens.adult.AdultGateScreen
 import ru.finnypet.app.ui.screens.adult.AdultScreen
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
@@ -22,7 +21,6 @@ import ru.finnypet.app.ui.screens.demo.DemoChip
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.day.DayScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
-import ru.finnypet.app.ui.screens.onboarding.OnboardingScreen
 import ru.finnypet.app.ui.theme.Motion
 import ru.finnypet.app.ui.screens.progress.ProgressScreen
 import ru.finnypet.app.ui.screens.savings.SavingsScreen
@@ -34,8 +32,10 @@ import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 /**
  * Граф переходов.
  *
- * Онбординг и создание питомца из стека убираются: пройдя их один раз,
- * ребёнок не должен попадать туда кнопкой «назад» с главного экрана.
+ * Создание питомца — первый экран новой игры, после него оно убирается из
+ * стека: ребёнок не должен попадать туда кнопкой «назад» с главного экрана.
+ * Обучение (ТЗ 2.5.1) — не экран, а слой поверх главного (DESIGN_PLAN 3.4):
+ * после создания главный открывается сразу под ним, а «?» включает его на месте.
  *
  * Стартовый экран задаётся снаружи: при сохранённом профиле приложение
  * открывается сразу на главном (ТЗ 2.5.13, шаг 11 Приложения А).
@@ -44,7 +44,7 @@ import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 fun FinnyNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    startDestination: Route = Onboarding,
+    startDestination: Route = CreatePet,
 ) {
     val motion = LocalAnimationsEnabled.current
     NavHost(
@@ -54,33 +54,19 @@ fun FinnyNavHost(
         enterTransition = { screenEnter(motion) },
         exitTransition = { screenExit(motion) },
     ) {
-        composable<Onboarding> {
-            OnboardingScreen(
-                onDone = { navController.navigateOnce(CreatePet) },
-            )
-        }
-
-        composable<Help> {
-            OnboardingScreen(
-                onDone = { navController.popOnce() },
-                onBack = { navController.popOnce() },
-                doneText = stringResource(R.string.action_ok),
-            )
-        }
-
         composable<CreatePet> {
             CreatePetScreen(
-                onBack = { navController.popOnce() },
                 onCreated = {
-                    navController.navigateOnce(Main) {
-                        popUpTo(Onboarding) { inclusive = true }
+                    navController.navigateOnce(Main(tutorial = true)) {
+                        popUpTo<CreatePet> { inclusive = true }
                     }
                 },
             )
         }
 
-        composable<Main> {
+        composable<Main> { entry ->
             MainScreen(
+                startTutorial = entry.toRoute<Main>().tutorial,
                 onPlan = { navController.navigateOnce(Budget) },
                 onShop = { navController.navigateOnce(Shop) },
                 onSavings = { navController.navigateOnce(Savings) },
@@ -88,11 +74,10 @@ fun FinnyNavHost(
                 onTasks = { navController.navigateOnce(Tasks) },
                 onFinishDay = { navController.navigateOnce(Day) },
                 onProgress = { navController.navigateOnce(Progress) },
-                onHelp = { navController.navigateOnce(Help) },
                 onAdult = { navController.navigateOnce(AdultGate) },
                 banner = {
                     DemoChip(onNeedsOnboarding = {
-                        navController.navigateOnce(Onboarding) { popUpTo(Main) { inclusive = true } }
+                        navController.navigateOnce(CreatePet) { popUpTo<Main> { inclusive = true } }
                     })
                 },
             )
@@ -119,10 +104,10 @@ fun FinnyNavHost(
                 // Демонстрация начинается на главном: стек раздела взрослого
                 // за спиной привёл бы «назад» в чужую уже страницу.
                 onDemoStarted = {
-                    navController.navigateOnce(Main) { popUpTo(Main) { inclusive = true } }
+                    navController.navigateOnce(Main()) { popUpTo<Main> { inclusive = true } }
                 },
                 onGameDeleted = {
-                    navController.navigateOnce(Onboarding) { popUpTo(navController.graph.id) { inclusive = true } }
+                    navController.navigateOnce(CreatePet) { popUpTo(navController.graph.id) { inclusive = true } }
                 },
             )
         }

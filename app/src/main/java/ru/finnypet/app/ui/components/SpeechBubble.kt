@@ -33,6 +33,8 @@ import ru.finnypet.app.ui.theme.Dimens
 fun SpeechBubble(
     owl: OwlLook,
     modifier: Modifier = Modifier,
+    // Сова рядом с репликой обычно 88 dp, в обучении — 112 dp (DESIGN_PLAN 2.6).
+    owlRole: OwlRole = OwlRole.WithSpeech,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Row(
@@ -40,7 +42,7 @@ fun SpeechBubble(
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Owl(look = owl, size = OwlRole.WithSpeech.size)
+        Owl(look = owl, size = owlRole.size)
         BubbleCard(modifier = Modifier.weight(1f), content = content)
     }
 }

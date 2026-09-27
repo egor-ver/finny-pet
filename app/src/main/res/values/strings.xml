@@ -9,7 +9,6 @@
 
     <!-- Навигация -->
     <string name="action_back">Назад</string>
-    <string name="action_start">Начать</string>
     <string name="action_done">Готово</string>
     <string name="action_not_now">Не сейчас</string>
 
@@ -339,16 +338,21 @@
     <string name="create_pet_no_real_name">Настоящее имя писать не нужно — придумай любое</string>
     <string name="create_pet_failed">Не получилось сохранить. Попробуй ещё раз.</string>
 
-    <!-- Знакомство с игрой -->
-    <string name="onboarding_title">Питомец Финни</string>
-    <string name="onboarding_goal">Тебе дают монеты. Ты решаешь, на что их потратить, а питомец
-        показывает, что из этого вышло.</string>
-    <string name="onboarding_choice_mandatory_title">Потратить на нужное</string>
-    <string name="onboarding_choice_mandatory_body">Еда и забота. Без этого питомцу плохо.</string>
-    <string name="onboarding_choice_optional_title">Потратить на желаемое</string>
-    <string name="onboarding_choice_optional_body">Игрушки и лакомства. Приятно, но можно и подождать.</string>
-    <string name="onboarding_choice_savings_title">Отложить</string>
-    <string name="onboarding_choice_savings_body">Спрятать монеты в копилку, чтобы собрать на мечту.</string>
-    <string name="onboarding_hint">Эту подсказку можно открыть снова с главного экрана — значком «?».</string>
+    <!-- Обучение поверх главного (DESIGN_PLAN 3.4) -->
     <string name="help_action">Как играть</string>
+    <string name="tutorial_next">Дальше</string>
+    <string name="tutorial_play">Играть!</string>
+    <string name="tutorial_skip">Пропустить</string>
+    <string name="tutorial_progress">%1$d из %2$d</string>
+    <string name="tutorial_spoken">Шаг %1$d из %2$d. %3$s</string>
+    <string name="tutorial_where">Где: %1$s.</string>
+    <string name="tutorial_where_wallet">кошелёк, вверху слева</string>
+    <string name="tutorial_where_plan_tile">плитка План, первый ряд слева</string>
+    <string name="tutorial_where_savings_tile">плитка Копилка, первый ряд справа</string>
+    <string name="tutorial_where_tasks_tile">плитка Задания, второй ряд справа</string>
+    <string name="tutorial_where_task_button">кнопка Выполнить задание внизу</string>
+    <string name="tutorial_where_plan_button">кнопка Спланировать день внизу</string>
+    <string name="tutorial_where_satiety">показатель Еда</string>
+    <string name="tutorial_where_mood">показатель Радость</string>
+    <string name="tutorial_where_care">показатель Уход</string>
 </resources>

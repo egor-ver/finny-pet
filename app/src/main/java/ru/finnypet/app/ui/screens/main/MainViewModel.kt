@@ -113,6 +113,8 @@ sealed interface MainState {
         val step: NextStep,
         /** Купленные цели рядом с совой (R13) по порядку покупки. */
         val things: List<Thing> = emptyList(),
+        /** Реплики совы в обучении по шагам [TUTORIAL_STEPS] — готовый текст из контент-пака. */
+        val tutorial: List<String> = emptyList(),
     ) : MainState
 }
 
@@ -147,6 +149,7 @@ class MainViewModel @Inject constructor(
     private val pets = content.pack().pets
     private val texts: Map<String, String> = content.pack().texts
     private val events = content.pack().events
+    private val tutorial = TUTORIAL_STEPS.map { texts.textOf(it.textKey) }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<MainState> =
@@ -232,6 +235,7 @@ class MainViewModel @Inject constructor(
                         task = task,
                         step = step,
                         things = bought.mapNotNull { id -> goals[id]?.let { Thing(it.icon, texts.textOf(it.titleKey)) } },
+                        tutorial = tutorial,
                     )
                 }
             }
