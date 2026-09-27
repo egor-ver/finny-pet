@@ -105,25 +105,22 @@ object FinnyIcons {
      * только по форме тела — иначе на 24 dp это просто гладкий овал.
      */
     val Piggy: ImageVector = icon("FinnyPiggy") {
-        filled {
-            // Уши — треугольники над телом.
-            moveTo(8.5f, 7.6f); lineTo(6.4f, 3f); lineTo(11.4f, 6.3f); close()
-            moveTo(13.4f, 6.1f); lineTo(14.2f, 2.2f); lineTo(17.2f, 5.9f); close()
-        }
         path(fill = BLACK, pathFillType = PathFillType.EvenOdd) {
             // Тело.
             ellipse(cx = 11.5f, cy = 14f, rx = 8.5f, ry = 7.5f)
-            // Прорезь для монет — вырез сверху.
-            moveTo(8.5f, 7.1f); lineTo(13.5f, 7.1f); lineTo(13.5f, 8.4f); lineTo(8.5f, 8.4f); close()
-            // Глаз — вырез.
-            circle(cx = 15.2f, cy = 11.5f, r = 1f)
+            // Прорезь для монет — вырез сверху, левее ушей и выше глаза, не бантиком под ухом.
+            moveTo(6.3f, 8.8f); lineTo(9.3f, 8.8f); lineTo(9.3f, 10.1f); lineTo(6.3f, 10.1f); close()
+            // Глаз — вырез со стороны пятачка, а не на затылке.
+            circle(cx = 6.6f, cy = 12.4f, r = 1f)
         }
         filled {
-            // Пятачок.
-            ellipse(cx = 3f, cy = 15.5f, rx = 2.4f, ry = 2f)
+            // Уши — основанием внутри контура тела у затылка (дальше от пятачка), без зазора.
+            moveTo(9.5f, 9f); lineTo(9.5f, 2.8f); lineTo(13f, 8.2f); close()
+            moveTo(13f, 8.2f); lineTo(16.5f, 2.8f); lineTo(16f, 9f); close()
         }
         path(fill = BLACK, pathFillType = PathFillType.EvenOdd) {
-            // Ноздри на пятачке — вырезы.
+            // Пятачок и ноздри — вырезы в том же пути, иначе EvenOdd их не вычтет.
+            ellipse(cx = 3f, cy = 15.5f, rx = 2.4f, ry = 2f)
             circle(cx = 2.2f, cy = 15.5f, r = 0.4f)
             circle(cx = 3.6f, cy = 15.5f, r = 0.4f)
         }

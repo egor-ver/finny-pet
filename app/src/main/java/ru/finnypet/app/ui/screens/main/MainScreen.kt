@@ -57,9 +57,11 @@ import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.color
+import ru.finnypet.app.ui.components.direction
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.components.tint
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 
@@ -364,7 +366,7 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Icon(imageVector = kind.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+        Icon(imageVector = kind.icon, contentDescription = null, tint = kind.direction.color)
         ProgressLine(
             fraction = stat.value.toFloat() / Stat.RANGE.last,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -643,7 +645,7 @@ private fun TaskCard(task: TaskOfDay, onOpen: () -> Unit, modifier: Modifier = M
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(imageVector = task.topic.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+            Icon(imageVector = task.topic.icon, contentDescription = null, tint = task.topic.tint)
             Text(
                 text = stringResource(task.topic.label),
                 style = MaterialTheme.typography.titleMedium,

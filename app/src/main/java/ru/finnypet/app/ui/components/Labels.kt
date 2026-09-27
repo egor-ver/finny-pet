@@ -1,6 +1,9 @@
 package ru.finnypet.app.ui.components
 
 import androidx.annotation.StringRes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.GrowthStage
@@ -43,6 +46,14 @@ val PetStatKind.icon: ImageVector
         PetStatKind.CARE -> FinnyIcons.Feather
     }
 
+/** Направление, которое пополняет показатель (DESIGN_PLAN 2.1): нужное чинит еду и уход, желаемое — радость. */
+val PetStatKind.direction: SpendCategory
+    get() = when (this) {
+        PetStatKind.SATIETY -> SpendCategory.MANDATORY
+        PetStatKind.CARE -> SpendCategory.MANDATORY
+        PetStatKind.MOOD -> SpendCategory.OPTIONAL
+    }
+
 val TaskTopic.label: Int
     @StringRes get() = when (this) {
         TaskTopic.PLANNING -> R.string.topic_planning
@@ -56,6 +67,17 @@ val TaskTopic.icon: ImageVector
         TaskTopic.PLANNING -> FinnyIcons.Target
         TaskTopic.SAVING -> FinnyIcons.Piggy
         TaskTopic.PAYMENTS -> FinnyIcons.Bag
+    }
+
+/**
+ * Цвет иконки темы: «Накопления» — цвет копилки (DESIGN_PLAN 2.1, `save`).
+ * У «Планирования» и «Покупок» своих токенов (`topicPlan`/`topicShop`) в
+ * палитре ещё нет — их заводят в U10+U11, а не здесь; до тех пор — цвет текста.
+ */
+val TaskTopic.tint: Color
+    @Composable get() = when (this) {
+        TaskTopic.SAVING -> SpendCategory.SAVINGS.color
+        TaskTopic.PLANNING, TaskTopic.PAYMENTS -> MaterialTheme.colorScheme.onSurface
     }
 
 val GrowthStage.label: Int
