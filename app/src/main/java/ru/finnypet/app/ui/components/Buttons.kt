@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,11 +28,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
@@ -53,6 +58,11 @@ import ru.finnypet.app.ui.theme.Motion
  * фиксированную; входящий `minHeight` (например, `Modifier.heightIn(min = …)`
  * с главного экрана, где кнопки в паре должны быть одной высоты) измерению
  * не мешает — своя разметка передаёт его дальше, а не обнуляет.
+ *
+ * [reward] — чип «+10» с монетой внутри кнопки (DESIGN_PLAN 3.1: кнопка
+ * задания на главном), `null` — кнопка без чипа, как везде. Текст и чип
+ * склеены в одну подпись для TalkBack: два отдельных узла озвучились бы
+ * двумя остановками, а чип без подписи вообще не сказал бы ничего.
  */
 @Composable
 fun FinnyButton(
@@ -63,6 +73,7 @@ fun FinnyButton(
     // Уже у обычного текста хватает места на 24 dp с каждой стороны; переопределяют
     // только те, кому тесно — например, кнопки дня в узкой половине строки (Б21).
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    reward: Coins? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -76,6 +87,7 @@ fun FinnyButton(
     val faceColor = MaterialTheme.colorScheme.primary
     val onFaceColor = MaterialTheme.colorScheme.onPrimary
     val labelStyle = MaterialTheme.typography.labelLarge
+    val spoken = reward?.let { "$text, ${coinsText(it)}" }
 
     Layout(
         modifier = modifier
@@ -99,14 +111,29 @@ fun FinnyButton(
                         role = Role.Button,
                         onClick = onClick,
                     )
-                    .padding(contentPadding),
+                    .padding(contentPadding)
+                    // Чип рядом с текстом — свой узел для TalkBack, без общей
+                    // подписи он озвучился бы отдельной немой остановкой. Без
+                    // чипа узел остаётся как был — просто подпись кнопки.
+                    .then(
+                        if (spoken == null) {
+                            Modifier
+                        } else {
+                            Modifier.semantics(mergeDescendants = true) { contentDescription = spoken }
+                        },
+                    ),
             ) {
-                Text(
-                    text = text,
-                    style = labelStyle,
-                    textAlign = TextAlign.Center,
-                    color = onFaceColor,
-                )
+                if (reward == null) {
+                    Text(text = text, style = labelStyle, textAlign = TextAlign.Center, color = onFaceColor)
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                    ) {
+                        Text(text = text, style = labelStyle, color = onFaceColor)
+                        RewardChip(reward = reward, contentColor = onFaceColor)
+                    }
+                }
             }
         },
     ) { measurables, constraints ->
@@ -179,4 +206,23 @@ fun ButtonColumn(
     }
 }
 
+/** Чип награды внутри кнопки — монета из [MoneyAmount], а не отдельный рисунок. */
+@Composable
+private fun RewardChip(reward: Coins, contentColor: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        modifier = Modifier
+            .clip(RoundedCornerShape(Dimens.CornerTile))
+            .background(contentColor.copy(alpha = REWARD_CHIP_ALPHA))
+            .padding(horizontal = Dimens.SpaceSmall, vertical = Dimens.SpaceTiny),
+    ) {
+        Coin(style = MaterialTheme.typography.labelLarge)
+        // maxLines = 1: без него цифра при нехватке ширины переносится за
+        // скругление чипа, а не остаётся числом (проверено на vivo V2111).
+        Text(text = "+${reward.amount}", style = MaterialTheme.typography.labelLarge, color = contentColor, maxLines = 1)
+    }
+}
+
 private const val DISABLED_ALPHA = 0.5f
+private const val REWARD_CHIP_ALPHA = 0.18f

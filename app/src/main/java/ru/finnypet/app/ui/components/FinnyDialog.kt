@@ -29,6 +29,20 @@ fun FinnyDialog(
     onDismiss: () -> Unit,
     buttons: @Composable () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
+) = FinnyDialog(
+    title = { Text(text = title, style = MaterialTheme.typography.titleLarge) },
+    onDismiss = onDismiss,
+    buttons = buttons,
+    content = content,
+)
+
+/** Заголовок своим составом — «Кошелёк сегодня» показывает сумму крупнее обычного [titleLarge]. */
+@Composable
+fun FinnyDialog(
+    title: @Composable () -> Unit,
+    onDismiss: () -> Unit,
+    buttons: @Composable () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -42,7 +56,7 @@ fun FinnyDialog(
                     .verticalScroll(rememberScrollState())
                     .padding(Dimens.Space),
             ) {
-                Text(text = title, style = MaterialTheme.typography.titleLarge)
+                title()
                 content()
                 ButtonColumn(content = buttons)
             }

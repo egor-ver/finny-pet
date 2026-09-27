@@ -34,10 +34,6 @@ object FinnyIcons {
         outlined { moveTo(15f, 5f); lineTo(9f, 12f); lineTo(15f, 19f) }
     }
 
-    val Chevron: ImageVector = icon("FinnyChevron") {
-        outlined { moveTo(9f, 5f); lineTo(15f, 12f); lineTo(9f, 19f) }
-    }
-
     val Check: ImageVector = icon("FinnyCheck") {
         outlined { moveTo(4f, 12.5f); lineTo(9.5f, 18f); lineTo(20f, 6f) }
     }

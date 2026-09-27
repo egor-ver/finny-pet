@@ -17,6 +17,7 @@ import ru.finnypet.app.domain.economy.PeriodEngine
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
+import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.Goal
 import ru.finnypet.app.domain.model.GoalId
@@ -52,6 +53,8 @@ data class SavingsView(
     val saved: Coins,
     val goalTitle: String? = null,
     val price: Coins? = null,
+    /** Эмодзи цели на тарелке (DESIGN_PLAN 3.1) — как у [Thing], пропавшая цель тоже без иконки. */
+    val goalIcon: String? = null,
 )
 
 /**
@@ -68,6 +71,9 @@ data class TaskOfDay(
     val allDone: Boolean,
     /** Сколько дадут за первую верную попытку дня (R8). */
     val reward: Coins,
+    /** Пройдено заданий из общего числа — плитка «Задания» на главном: «2 из 6». */
+    val completedCount: Int = 0,
+    val totalCount: Int = 0,
 )
 
 /**
@@ -93,6 +99,10 @@ sealed interface MainState {
         val phrase: String,
         /** `null` — сова взрослая. */
         val growth: GrowthView?,
+        /** «{имя} вырос!» из контент-пака — плитка «Рост» на взрослой стадии (DESIGN_PLAN 3.1). */
+        val grownMessage: String = "",
+        /** Итоговое число звёзд — там же, когда расти больше некуда и полосы уже нет. */
+        val growthPoints: Int = 0,
         val balance: Coins,
         /** Откуда пришли и куда ушли монеты за день — для «Кошелька сегодня». */
         val wallet: List<WalletLine>,
@@ -103,7 +113,6 @@ sealed interface MainState {
         val step: NextStep,
         /** Купленные цели рядом с совой (R13) по порядку покупки. */
         val things: List<Thing> = emptyList(),
-        val event: String? = null,
     ) : MainState
 }
 
@@ -186,15 +195,25 @@ class MainViewModel @Inject constructor(
                 ) { wallet, transactions, plan, bought ->
                     val task = taskOf(completed, transactions, pet.state)
                     val needs = petState.needsOf(pet.state)
-                    val step = nextStep(period.status, needs.isNotEmpty(), wallet, petState.cheapestNeeded(pet.state, shop))
+                    val taskReward = balance.taskReward.takeIf { task?.rewardAvailable == true }
+                    val step = nextStep(
+                        status = period.status,
+                        hasNeeds = needs.isNotEmpty(),
+                        wallet = wallet,
+                        cheapestNeeded = petState.cheapestNeeded(pet.state, shop),
+                        taskReward = taskReward,
+                    )
+                    val event = eventOf(transactions)
                     val phrase = owlPhrase(
                         step = step,
                         needs = needs,
                         sadAbout = petState.sadAbout(pet.state),
                         cover = petState.cheapestCover(pet.state, shop)?.totalPrice(),
                         wallet = wallet,
-                        reward = balance.taskReward.takeIf { task?.rewardAvailable == true },
+                        reward = taskReward,
                         income = balance.periodIncome,
+                        eventKey = event?.key,
+                        eventArgs = event?.args.orEmpty(),
                     )
                     MainState.Ready(
                         petName = profile.petName,
@@ -203,8 +222,9 @@ class MainViewModel @Inject constructor(
                         stats = pet.state,
                         needs = needs,
                         phrase = texts.textOf(phrase),
-                        event = eventMessage(transactions),
                         growth = growthOf(pet.growth, balance.growthThresholds),
+                        grownMessage = texts.textOf(Explanation("growth.grown", mapOf("name" to profile.petName))),
+                        growthPoints = pet.growth.points,
                         balance = wallet,
                         wallet = walletLines(period.startBalance, transactions, ::nameOf),
                         jars = jarsLeft(period.status, plan, periodEngine.factOf(transactions)),
@@ -244,25 +264,36 @@ class MainViewModel @Inject constructor(
     private fun taskOf(completed: List<CompletedTask>, transactions: List<Transaction>, pet: PetState): TaskOfDay? {
         val task = TaskSchedule.taskOfTheDay(tasks, completed, transactions, pet, balance) ?: return null
         val done = TaskSchedule.passed(tasks, completed)
+        val listed = TaskSchedule.listed(tasks)
         return TaskOfDay(
             id = task.id,
             topic = task.topic,
             rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
-            allDone = TaskSchedule.listed(tasks).all { it.id in done },
+            allDone = listed.all { it.id in done },
             reward = balance.taskReward,
+            completedCount = done.size,
+            totalCount = listed.size,
         )
     }
 
-    private fun eventMessage(transactions: List<Transaction>): String? {
+    /**
+     * Ключ и аргумент события дня (L7) для фразы совы на главном (DESIGN_PLAN
+     * 3.1): событие больше не отдельная карточка, а часть той же реплики,
+     * поэтому здесь только сырые данные — какую фразу собрать, решает [owlPhrase].
+     */
+    private fun eventOf(transactions: List<Transaction>): EventPhrase? {
         val event = events.firstOrNull { candidate ->
             transactions.any { it.reasonKey == "event.${candidate.id}" }
         } ?: return null
-        val recordedAmount = transactions.first { it.reasonKey == "event.${event.id}" }.amount.amount
-        return when (event) {
-            is DayEvent.ExtraCare -> texts.textOf(event.messageKey).replace("{care}", "$recordedAmount")
-            is DayEvent.Gift -> texts.textOf(event.messageKey).replace("{amount}", "$recordedAmount")
+        val amount = transactions.first { it.reasonKey == "event.${event.id}" }.amount.amount
+        val argKey = when (event) {
+            is DayEvent.ExtraCare -> "care"
+            is DayEvent.Gift -> "amount"
         }
+        return EventPhrase(key = event.messageKey, args = mapOf(argKey to "$amount"))
     }
+
+    private data class EventPhrase(val key: String, val args: Map<String, String>)
 
     /** Товар или цель операции словами; пропавшие из контент-пака — без имени, но с суммой. */
     private fun nameOf(transaction: Transaction): String? {
@@ -283,6 +314,7 @@ class MainViewModel @Inject constructor(
             saved = progress.saved,
             goalTitle = texts[goal.titleKey] ?: goal.titleKey,
             price = goal.price,
+            goalIcon = goal.icon,
         )
     }
 

@@ -20,17 +20,17 @@ import ru.finnypet.app.domain.model.PetStatKind.SATIETY
 class NextStepTest {
 
     @Test
-    fun `пока день планируется — план`() {
+    fun `пока день планируется и задание не ждёт — план`() {
         assertEquals(NextStep.Plan, step(PeriodStatus.PLANNING, hasNeeds = true))
     }
 
-    /** R7: сначала заработай, потом распредели — но зовёт к заданию сова, а кнопка остаётся одной дорогой. */
+    /** Правка владельца №2 (DESIGN_PLAN 3.1): пока задание ждёт награду, кнопка — задание, а не план. */
     @Test
-    fun `утром за задание платят — кнопка план, о задании говорит сова`() {
-        assertEquals(NextStep.Plan, step(PeriodStatus.PLANNING))
+    fun `утром за задание платят — кнопка задание, о нём говорит сова`() {
+        assertEquals(NextStep.Task, step(PeriodStatus.PLANNING, taskReward = 10))
         assertEquals(
             Explanation("owl.say.task", mapOf("income" to "35", "reward" to "10")),
-            phrase(NextStep.Plan, reward = 10),
+            phrase(NextStep.Task, reward = 10),
         )
     }
 
@@ -143,13 +143,46 @@ class NextStepTest {
         assertEquals(Explanation("owl.say.no_coins"), phrase(NextStep.Sleep, needs = listOf(SATIETY), wallet = 3))
     }
 
+    /** DESIGN_PLAN 3.1: событие и грусть в один день — общая фраза, а не две подряд. */
+    @Test
+    fun `событие и грусть в один день — общая фраза`() {
+        assertEquals(
+            Explanation("event.dirty_feathers.sad.SATIETY", mapOf("care" to "10")),
+            phrase(
+                NextStep.Plan,
+                needs = listOf(SATIETY, CARE),
+                sadAbout = SATIETY,
+                eventKey = "event.dirty_feathers",
+                eventArgs = mapOf("care" to "10"),
+            ),
+        )
+    }
+
+    /** Без грусти событие говорит само за себя, задание в этот день не упоминается. */
+    @Test
+    fun `событие без грусти — фраза события, а не задания`() {
+        assertEquals(
+            Explanation("event.family_gift", mapOf("amount" to "8")),
+            phrase(NextStep.Task, eventKey = "event.family_gift", eventArgs = mapOf("amount" to "8"), reward = 10),
+        )
+    }
+
+    /** Грусть без события — как раньше, событие ни при чём. */
+    @Test
+    fun `грусть без события — прежняя фраза`() {
+        assertEquals(
+            Explanation("owl.say.sad.CARE"),
+            phrase(NextStep.Task, sadAbout = CARE, reward = 10),
+        )
+    }
+
     /** Пропавшая фраза показалась бы ребёнку сырым ключом вроде «owl.say.shop.CARE». */
     @Test
     fun `у каждой фразы совы есть текст в контент-паке`() {
         val texts = ContentParser().parse(RealContent.raw()).texts
         val kinds = listOf(SATIETY, CARE)
         val keys = buildSet {
-            for (step in listOf(NextStep.Plan, NextStep.Shop, NextStep.Sleep))
+            for (step in listOf(NextStep.Task, NextStep.Plan, NextStep.Shop, NextStep.Sleep))
                 for (needs in listOf(emptyList<PetStatKind>()) + kinds.map { listOf(it) })
                     for (sad in listOf(null) + kinds)
                         for (cover in listOf(null, 5, 100))
@@ -161,11 +194,26 @@ class NextStepTest {
         assertTrue("Нет текста в explanations.json для фраз: $missing", missing.isEmpty())
     }
 
+    /** Событийные ключи (L7) собраны вручную — их не строит перебор выше, но текст всё равно обязателен. */
+    @Test
+    fun `у событийных фраз тоже есть текст в контент-паке`() {
+        val texts = ContentParser().parse(RealContent.raw()).texts
+        val keys = listOf(
+            "event.dirty_feathers", "event.family_gift",
+            "event.dirty_feathers.sad.SATIETY", "event.dirty_feathers.sad.CARE",
+            "event.family_gift.sad.SATIETY", "event.family_gift.sad.CARE",
+        )
+
+        val missing = keys.filterNot(texts::containsKey)
+        assertTrue("Нет текста в explanations.json для фраз: $missing", missing.isEmpty())
+    }
+
     private fun step(
         status: PeriodStatus = PeriodStatus.RUNNING,
         hasNeeds: Boolean = false,
         wallet: Int = 50,
-    ) = nextStep(status, hasNeeds, Coins(wallet), CHEAPEST_NEEDED)
+        taskReward: Int? = null,
+    ) = nextStep(status, hasNeeds, Coins(wallet), CHEAPEST_NEEDED, taskReward?.let(::Coins))
 
     private fun phrase(
         step: NextStep,
@@ -174,6 +222,8 @@ class NextStepTest {
         cover: Int? = null,
         wallet: Int = 50,
         reward: Int? = null,
+        eventKey: String? = null,
+        eventArgs: Map<String, String> = emptyMap(),
     ) = owlPhrase(
         step = step,
         needs = needs,
@@ -182,6 +232,8 @@ class NextStepTest {
         wallet = Coins(wallet),
         reward = reward?.let(::Coins),
         income = Coins(35),
+        eventKey = eventKey,
+        eventArgs = eventArgs,
     )
 
     private companion object {

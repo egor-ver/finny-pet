@@ -6,11 +6,17 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetStatKind
 
 /**
- * Главная кнопка по фазе дня (раздел 8 плана): спланировать, купить нужное,
- * уложить спать. Задание в кнопку не входит — о нём говорит сова, а открыть
- * его можно карточкой: кнопка остаётся одной и той же дорогой через день.
+ * Главная кнопка по фазе дня (раздел 8 плана, DESIGN_PLAN 3.1): выполнить
+ * задание, спланировать, купить нужное, уложить спать.
  */
 sealed interface NextStep {
+
+    /**
+     * Пока день не спланирован и за задание ещё дают монеты — выполнить его
+     * первым (правка владельца №2, утверждено 27.09): план всё равно ждёт
+     * следующим шагом, магазин в эту фазу не открывается.
+     */
+    data object Task : NextStep
 
     data object Plan : NextStep
 
@@ -26,14 +32,18 @@ sealed interface NextStep {
  * звала бы в магазин по цене товара, который сове не поможет (Б6: сова
  * просит уход, а хватает только на воду, поднимающую сытость), либо вела бы
  * в тупик (ТЗ 3.4).
+ *
+ * [taskReward] — награда за задание, если её сегодня ещё не забрали;
+ * `null` вне зависимости от фазы значит «кнопка задания не нужна».
  */
 fun nextStep(
     status: PeriodStatus,
     hasNeeds: Boolean,
     wallet: Coins,
     cheapestNeeded: Coins?,
+    taskReward: Coins? = null,
 ): NextStep {
-    if (status == PeriodStatus.PLANNING) return NextStep.Plan
+    if (status == PeriodStatus.PLANNING) return if (taskReward != null) NextStep.Task else NextStep.Plan
     val canBuy = cheapestNeeded != null && wallet.covers(cheapestNeeded)
     return if (hasNeeds && canBuy) NextStep.Shop else NextStep.Sleep
 }
@@ -42,15 +52,20 @@ fun nextStep(
  * Что сова говорит в облачке: почему она такая и что делать дальше
  * (ТЗ 2.5.9, 2.5.10). Слова — в `explanations.json`, здесь только выбор.
  *
- * Утром грусть объясняется раньше всего: ребёнок должен понять, что вчерашний
- * голод — следствие решения, а не случайность. Задание при этом не подаётся
- * как обязательный первый шаг — кнопка всё равно ведёт в план (Б4): фраза
- * лишь напоминает, что оно есть и сколько за него дадут. Утренние фразы
- * называют выбор между тремя направлениями, а не готовый ответ (ТЗ 8.4).
+ * Утром порядок такой (DESIGN_PLAN 3.1: грусть событие не вытесняет,
+ * объясняется раньше всего, иначе ребёнок не свяжет её со вчерашним
+ * решением):
+ * 1. событие и грусть в один день — общая фраза `<eventKey>.sad.<KIND>`;
+ * 2. грусть без события — как раньше, `owl.say.sad.*`;
+ * 3. событие без грусти — сама [eventKey];
+ * 4. дальше задание и утро, как раньше — кнопка при этом не подаёт задание
+ *    как обязательный первый шаг, план всё равно доступен (Б4). Утренние
+ *    фразы называют выбор между тремя направлениями, а не готовый ответ (ТЗ 8.4).
  *
  * [needs] — потребности по порядку важности, еда первой; [cover] — цена
  * закрытия всех потребностей, `null` — в магазине их не закрыть целиком;
- * [reward] — сколько дадут за задание, `null` — сегодня уже не дадут.
+ * [reward] — сколько дадут за задание, `null` — сегодня уже не дадут;
+ * [eventKey]/[eventArgs] — событие дня (L7), `null` — событий сегодня нет.
  */
 fun owlPhrase(
     step: NextStep,
@@ -60,13 +75,17 @@ fun owlPhrase(
     wallet: Coins,
     reward: Coins?,
     income: Coins,
+    eventKey: String? = null,
+    eventArgs: Map<String, String> = emptyMap(),
 ): Explanation {
     val first = needs.firstOrNull()
     val morning = mapOf("income" to income.amount.toString())
     return when (step) {
-        NextStep.Plan -> when {
+        NextStep.Task, NextStep.Plan -> when {
+            eventKey != null && sadAbout != null -> Explanation("$eventKey.sad.${sadAbout.name}", eventArgs)
             sadAbout != null -> Explanation("owl.say.sad.${sadAbout.name}")
-            reward != null -> Explanation("owl.say.task", morning + ("reward" to reward.amount.toString()))
+            eventKey != null -> Explanation(eventKey, eventArgs)
+            step == NextStep.Task && reward != null -> Explanation("owl.say.task", morning + ("reward" to reward.amount.toString()))
             first != null -> Explanation("owl.say.morning.${first.name}", morning)
             else -> Explanation("owl.say.morning", morning)
         }

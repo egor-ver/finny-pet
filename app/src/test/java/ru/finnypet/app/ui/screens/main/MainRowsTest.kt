@@ -51,9 +51,9 @@ class MainRowsTest {
     }
 
     @Test
-    fun `день 3 после каши — на нужное ещё 24, на желаемое ещё 2`() {
+    fun `день 3 после каши — на нужное ещё 24, на желаемое ещё 2, копилка уже отложена`() {
         assertEquals(
-            JarsLeft(mandatory = Coins(24), optional = Coins(2)),
+            JarsLeft(mandatory = Coins(24), optional = Coins(2), savings = Coins.ZERO),
             jarsLeft(PeriodStatus.RUNNING, DAY_3_PLAN, PeriodFact.of(mandatory = Coins(14), savings = Coins(8))),
         )
     }
@@ -62,7 +62,7 @@ class MainRowsTest {
     @Test
     fun `нужное сверх плана — ещё 0`() {
         assertEquals(
-            JarsLeft(mandatory = Coins.ZERO, optional = Coins(2)),
+            JarsLeft(mandatory = Coins.ZERO, optional = Coins(2), savings = Coins(8)),
             jarsLeft(PeriodStatus.RUNNING, DAY_3_PLAN, PeriodFact.of(mandatory = Coins(45))),
         )
     }

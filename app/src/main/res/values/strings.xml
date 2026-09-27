@@ -42,9 +42,12 @@
     <string name="main_pet_state">Как себя чувствует %1$s</string>
     <!-- «Пушок · детёныш» под совой -->
     <string name="main_pet_stage">%1$s · %2$s</string>
-    <!-- Подпись показателя ниже порога потребности (R2) -->
-    <string name="main_stat_need">нужно</string>
+    <!-- Подпись показателя ниже порога потребности (R2), чип на need-контейнере: род по показателю -->
+    <string name="main_stat_need_satiety">нужна</string>
+    <string name="main_stat_need_care">нужен</string>
     <string name="main_action_sleep">Уложить спать</string>
+    <!-- Главная кнопка, пока не спланировано и за задание ещё дают монеты (правка владельца №2) -->
+    <string name="main_task_action">Выполнить задание</string>
     <!-- Строка роста: «До подростка 6 из 8» -->
     <string name="main_growth_to_young">До подростка</string>
     <string name="main_growth_to_grown">До взрослого</string>
@@ -57,11 +60,16 @@
     <string name="main_jar_left_description">%1$s: ещё %2$d</string>
     <string name="main_jar_goal">%1$s %2$d/%3$d</string>
     <string name="main_jar_goal_description">Копилка: %1$s, %2$d из %3$d</string>
-    <string name="main_jar_no_goal">%1$d · выбрать цель</string>
+    <!-- Сумма 0 не нужна: без цели в копилке ещё нечего показывать числом (DESIGN_PLAN 3.1) -->
+    <string name="main_jar_no_goal">Выбери цель</string>
     <string name="main_jar_no_goal_description">Копилка: %1$d, цель не выбрана</string>
     <string name="main_tasks_all">Все задания</string>
-    <!-- Кнопка рядом с карточкой задания: «Все ›» — слово короткое, стрелку рисует Chevron -->
-    <string name="main_tasks_short">Все</string>
+    <!-- Плитка «Задания» на главном: «2 из 6» (DESIGN_PLAN 3.1) -->
+    <string name="main_tasks_progress">%1$d из %2$d</string>
+    <!-- Плитка «Рост» на взрослой стадии, для TalkBack: «Филя вырос, 12 звёзд» -->
+    <string name="main_growth_stars_one">%1$d звезда</string>
+    <string name="main_growth_stars_few">%1$d звезды</string>
+    <string name="main_growth_stars_many">%1$d звёзд</string>
     <!-- Кошелёк сегодня (ТЗ 2.5.4) -->
     <string name="main_things">Мои вещи: %1$s</string>
     <string name="wallet_open">Кошелёк сегодня</string>
@@ -147,8 +155,6 @@
     <string name="demo_badge">Демо</string>
     <string name="demo_play_day">Прожить день</string>
     <string name="demo_exit">Выйти из демонстрации</string>
-    <!-- Видимое слово на полосе; для озвучки читается demo_exit целиком -->
-    <string name="demo_exit_short">Выйти</string>
     <string name="demo_exit_confirm_title">Выйти из демонстрации?</string>
     <string name="demo_exit_confirm_text">Всё, что сделано в демонстрации, сотрётся. Игра ребёнка не изменится.</string>
     <string name="demo_exit_confirm">Выйти и стереть</string>

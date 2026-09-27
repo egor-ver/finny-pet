@@ -85,9 +85,12 @@ fun coinsText(amount: Coins): String = stringResource(
  *
  * Грань сдвинута вверх относительно тени того же радиуса — снизу остаётся
  * полумесяц тени, дающий монете объём (DESIGN_PLAN 2.5).
+ *
+ * Не `private`: тот же рисунок нужен в чипе награды у [FinnyButton]
+ * (DESIGN_PLAN 3.1) — заводить второй кружок монеты ради видимости смысла нет.
  */
 @Composable
-private fun Coin(style: TextStyle) {
+internal fun Coin(style: TextStyle) {
     val size = with(LocalDensity.current) { style.fontSize.toDp() }
     val coin = FinnyTheme.palette.coin
     Canvas(modifier = Modifier.size(size)) {

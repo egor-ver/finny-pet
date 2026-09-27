@@ -53,6 +53,44 @@ fun SpeechBubble(owl: OwlLook, text: String, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Реплика над совой (DESIGN_PLAN 3.1: главный экран) — герою в центре мало
+ * места сбоку, поэтому карточка во всю ширину, а хвостик указывает вниз, к
+ * сове под ней, а не в сторону, как у [SpeechBubble].
+ */
+@Composable
+fun TopSpeechBubble(text: String, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(Dimens.CornerCard)
+    val shadowColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    val surface = MaterialTheme.colorScheme.surface
+    Box(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(elevation = Dimens.CardShadowElevation, shape = shape, ambientColor = shadowColor, spotColor = shadowColor)
+                .clip(shape)
+                .background(surface)
+                .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
+        ) {
+            Text(text = text, style = MaterialTheme.typography.bodyLarge)
+        }
+        Canvas(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = TailWidth / 2)
+                .size(width = TailHeight, height = TailWidth),
+        ) {
+            val tail = Path().apply {
+                moveTo(0f, 0f)
+                lineTo(size.width, 0f)
+                lineTo(size.width / 2, size.height)
+                close()
+            }
+            drawPath(tail, color = surface)
+        }
+    }
+}
+
 /** Карточка с хвостиком слева, к сове (DESIGN_PLAN 2.6: «хвостик 10 dp в сторону совы»). */
 @Composable
 private fun BubbleCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {

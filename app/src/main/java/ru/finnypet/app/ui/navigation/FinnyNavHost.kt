@@ -18,7 +18,7 @@ import ru.finnypet.app.R
 import ru.finnypet.app.ui.screens.adult.AdultGateScreen
 import ru.finnypet.app.ui.screens.adult.AdultScreen
 import ru.finnypet.app.ui.screens.budget.BudgetScreen
-import ru.finnypet.app.ui.screens.demo.DemoBanner
+import ru.finnypet.app.ui.screens.demo.DemoChip
 import ru.finnypet.app.ui.screens.createpet.CreatePetScreen
 import ru.finnypet.app.ui.screens.day.DayScreen
 import ru.finnypet.app.ui.screens.main.MainScreen
@@ -91,7 +91,7 @@ fun FinnyNavHost(
                 onHelp = { navController.navigateOnce(Help) },
                 onAdult = { navController.navigateOnce(AdultGate) },
                 banner = {
-                    DemoBanner(onNeedsOnboarding = {
+                    DemoChip(onNeedsOnboarding = {
                         navController.navigateOnce(Onboarding) { popUpTo(Main) { inclusive = true } }
                     })
                 },

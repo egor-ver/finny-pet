@@ -20,8 +20,8 @@ fun growthOf(growth: PetGrowth, thresholds: List<Int>): GrowthView? {
     return GrowthView(next = next, points = growth.points, target = target)
 }
 
-/** Сколько по плану ещё осталось на нужное и желаемое. */
-data class JarsLeft(val mandatory: Coins, val optional: Coins)
+/** Сколько по плану ещё осталось разложить (DESIGN_PLAN 3.1: три мини-банки на плитке «План»). */
+data class JarsLeft(val mandatory: Coins, val optional: Coins, val savings: Coins = Coins.ZERO)
 
 /**
  * `null` — план ещё не подтверждён: черновик плана хранится и до
@@ -35,6 +35,7 @@ fun jarsLeft(status: PeriodStatus, plan: BudgetPlan?, fact: PeriodFact): JarsLef
     return JarsLeft(
         mandatory = fact.amountFor(SpendCategory.MANDATORY).shortfallTo(plan.mandatory),
         optional = fact.amountFor(SpendCategory.OPTIONAL).shortfallTo(plan.optional),
+        savings = fact.amountFor(SpendCategory.SAVINGS).shortfallTo(plan.savings),
     )
 }
 

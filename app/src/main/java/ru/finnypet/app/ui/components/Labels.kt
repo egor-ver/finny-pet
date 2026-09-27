@@ -33,6 +33,18 @@ val PetStatKind.label: Int
     }
 
 /**
+ * Чип потребности на главном — «нужна» / «нужен» по роду показателя
+ * (DESIGN_PLAN 3.1: «Еда нужно» не согласовано). `MOOD` сюда не попадает —
+ * [ru.finnypet.app.domain.economy.PetStateEngine.needsOf] отдаёт только еду и уход.
+ */
+val PetStatKind.needLabel: Int
+    @StringRes get() = when (this) {
+        PetStatKind.SATIETY -> R.string.main_stat_need_satiety
+        PetStatKind.CARE -> R.string.main_stat_need_care
+        PetStatKind.MOOD -> R.string.main_stat_need_care
+    }
+
+/**
  * Иконка показателя рядом со словом — для глаз; TalkBack читает слово (раздел 8 плана).
  *
  * У сытости не миска: она совпала бы с иконкой «Нужного» у направлений трат
