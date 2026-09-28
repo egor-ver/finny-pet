@@ -66,6 +66,10 @@
     <!-- Плитка «Задания» на главном: «2 из 6» (DESIGN_PLAN 3.1) -->
     <string name="main_tasks_progress">%1$d из %2$d</string>
     <!-- Плитка «Рост» на взрослой стадии, для TalkBack: «Филя вырос, 12 звёзд» -->
+    <!-- Строка роста в итогах дня и «Моём прогрессе» (DESIGN_PLAN 3.6, 3.10): звёзды внутри стадии -->
+    <string name="growth_to_young">%1$d из %2$d до подростка</string>
+    <string name="growth_to_grown">%1$d из %2$d до взрослого</string>
+    <string name="growth_description">Звёзды роста: %1$s</string>
     <string name="main_growth_stars_one">%1$d звезда</string>
     <string name="main_growth_stars_few">%1$d звезды</string>
     <string name="main_growth_stars_many">%1$d звёзд</string>
@@ -105,11 +109,13 @@
     <string name="progress_last_day_none">Как прошёл день</string>
     <string name="progress_no_days">Ни один день ещё не закончен. Закончи первый — и здесь появятся итоги.</string>
     <string name="progress_goal">На что копим</string>
-    <string name="progress_tasks">Пройденные задания</string>
+    <string name="progress_goal_saved">Накоплено %1$d из %2$d</string>
+    <string name="progress_stage_here">здесь</string>
+    <string name="progress_stage_now">Стадия роста: %1$s</string>
     <string name="progress_no_tasks">Заданий пока не пройдено.</string>
     <!-- Задание пройдено, но монеты за него уже не полагаются (Б22): не показываем «0 монет» как штраф -->
     <string name="progress_task_no_reward">Тренировка без награды</string>
-    <string name="progress_glossary">Что это значит</string>
+    <string name="progress_glossary">Что значат слова</string>
     <string name="progress_failed">Не получилось открыть прогресс. Попробуй ещё раз.</string>
     <string name="progress_term_opened">Свернуть «%1$s»</string>
     <string name="progress_term_closed">Открыть «%1$s»</string>
@@ -172,9 +178,14 @@
     <string name="day_not_started">День ещё планируется. Сначала распредели монеты, а закончить его можно будет потом.</string>
     <string name="day_new_stage">Вырос! Теперь %1$s</string>
     <string name="day_carry_over">На завтра</string>
-    <!-- Строки итогов для TalkBack: знак ✓ или ✗ читается словом -->
-    <string name="day_check_done">Выполнено</string>
-    <string name="day_check_missed">Не выполнено</string>
+    <!-- Три звезды дня (AD-3): подписи слотов и их чтение для TalkBack -->
+    <string name="day_star_fed">Сыт</string>
+    <string name="day_star_plan">По плану</string>
+    <string name="day_star_saved">Отложил</string>
+    <string name="day_star_earned">%1$s — звезда есть</string>
+    <string name="day_star_missed">%1$s — звезды нет</string>
+    <!-- Строка итогов со звездой для TalkBack; без звезды читается просто текст — пустой кружок не упрёк -->
+    <string name="day_check_done">Звезда: %1$s</string>
     <!-- «+3 звезды»: склонение по русскому правилу, как у монет (AD-3) -->
     <string name="day_growth_one">+%1$d звезда</string>
     <string name="day_growth_few">+%1$d звезды</string>
@@ -215,6 +226,8 @@
     <string name="budget_saved">Отложено</string>
     <string name="budget_line">%1$s: по плану %2$d, %3$s %4$d. %5$s</string>
     <string name="budget_status_ok">По плану</string>
+    <!-- «14 из 20»: сумма с монетой, затем план -->
+    <string name="plan_fact_of">из %1$d</string>
     <string name="budget_status_short">Не хватает %1$s</string>
     <string name="budget_status_over">Сверх плана на %1$s</string>
     <string name="budget_failed">Не получилось сохранить план. Попробуй ещё раз.</string>

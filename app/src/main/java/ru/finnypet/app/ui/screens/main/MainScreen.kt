@@ -50,6 +50,7 @@ import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
+import ru.finnypet.app.ui.components.GrowthView
 import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
@@ -66,8 +67,7 @@ import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.needLabel
-import ru.finnypet.app.ui.text.WordForm
-import ru.finnypet.app.ui.text.wordFormOf
+import ru.finnypet.app.ui.components.starsText
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 
@@ -810,17 +810,6 @@ private fun GrowthTile(
         }
     }
 }
-
-/** «12 звёзд» — форма слова по русскому правилу ([wordFormOf]), не по локали устройства. */
-@Composable
-private fun starsText(amount: Int): String = stringResource(
-    when (wordFormOf(amount)) {
-        WordForm.ONE -> R.string.main_growth_stars_one
-        WordForm.FEW -> R.string.main_growth_stars_few
-        WordForm.MANY -> R.string.main_growth_stars_many
-    },
-    amount,
-)
 
 /**
  * Тема, «2 из 6» и чип «+10» (пока за задание дают монеты, в любой фазе дня

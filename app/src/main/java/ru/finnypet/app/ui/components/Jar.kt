@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
+import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 import ru.finnypet.app.ui.theme.Motion
@@ -94,6 +95,15 @@ fun Jar(
         )
     }
 }
+
+/**
+ * Доля пути к цели — одна формула на все экраны, чтобы полоса на главном,
+ * в копилке и банка цели в прогрессе не разошлись.
+ *
+ * Цена в домене больше нуля, но экран не должен падать и на выдуманной.
+ */
+fun goalFraction(saved: Coins, price: Coins): Float =
+    if (price.amount == 0) 1f else (saved.amount.toFloat() / price.amount).coerceAtMost(1f)
 
 // Крупно: после подтверждения банки — главный элемент экрана плана, а
 // пропорции 7:9 прежние, чтобы крышка и монеты на дне не поплыли.

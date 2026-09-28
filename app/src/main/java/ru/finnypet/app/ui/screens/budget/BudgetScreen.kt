@@ -35,6 +35,7 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.jarLevel
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.CoinFlight
 import ru.finnypet.app.ui.components.FinnyButton
@@ -372,16 +373,6 @@ private fun JarColumn(line: BudgetLine, onPlaced: (Offset) -> Unit) {
             textAlign = TextAlign.Center,
         )
     }
-}
-
-/**
- * Уровень банки трат — доля плана, которая ещё осталась: полная утром,
- * пустеет с каждой покупкой. Перерасход — пустая банка, а не «минус».
- * Пустой план — пустая банка: делить на ноль нечего.
- */
-internal fun jarLevel(line: BudgetLine): Float {
-    if (line.planned == Coins.ZERO) return 0f
-    return line.actual.shortfallTo(line.planned).amount.toFloat() / line.planned.amount
 }
 
 // Три колонки по 104 dp с зазорами влезают в 328 dp (экран 360 dp без полей):

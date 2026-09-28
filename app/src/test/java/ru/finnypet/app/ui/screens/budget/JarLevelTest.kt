@@ -5,6 +5,7 @@ import org.junit.Test
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.jarLevel
 
 /**
  * Уровень банки после подтверждения (DESIGN_PLAN 3.2): «осталось / было».

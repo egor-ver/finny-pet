@@ -1,22 +1,25 @@
 package ru.finnypet.app.ui.screens.day
 
 import ru.finnypet.app.domain.economy.GrowthEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PlanFactReport
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.PetMood
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
+import ru.finnypet.app.ui.components.BudgetLine
 
-/** Строка итогов дня: ✓ или ✗ и пояснение словами (раздел 8 плана). */
+/** Строка итогов дня: звезда или пустой кружок и пояснение словами (DESIGN_PLAN 3.6). */
 data class DayCheck(val done: Boolean, val text: Explanation)
 
 /**
  * Три строки итогов — три звезды дня (AD-3): «Сыт», «По плану», «Отложил».
- * ✓ ставится ровно по [GrowthEngine.starsFor] — тем же звёздам, что растят
+ * Звезда строки ставится ровно по [GrowthEngine.starsFor] — тем же звёздам, что растят
  * сову, поэтому итоги не спорят с ростом.
  *
  * В день с незакрытой потребностью звёзд нет. Соблюдённые части плана и
@@ -74,6 +77,31 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
         ),
     )
 }
+
+/**
+ * О чём грустит сова в итогах — о первой потребности вечером, до ночи (AD-2).
+ * Ночь снижает все показатели, и по утреннему состоянию сова, у которой
+ * не закрыт только уход, «хотела бы есть» — итог назвал бы не ту причину.
+ */
+fun eveningNeed(evening: PetState, pet: PetStateEngine): PetStatKind? = pet.needsOf(evening).firstOrNull()
+
+/**
+ * Одна строка итога под полосами (DESIGN_PLAN 3.6) вместо карточек «План» и
+ * «Потрачено»: потраченное и отложенное — раздельно. Общая сумма складывала
+ * покупки с копилкой, и «Потрачено 31» при покупках на 14 путало ребёнка.
+ */
+data class DayTotals(val spent: Coins, val saved: Coins)
+
+fun dayTotals(lines: List<BudgetLine>): DayTotals = DayTotals(
+    spent = lines.filter { it.category != SpendCategory.SAVINGS }.fold(Coins.ZERO) { sum, line -> sum + line.actual },
+    saved = lines.filter { it.category == SpendCategory.SAVINGS }.fold(Coins.ZERO) { sum, line -> sum + line.actual },
+)
+
+/** Звезда появляется после стольких заработанных перед ней: заработанные загораются по очереди (DESIGN_PLAN 2.7). */
+fun starDelayMs(done: List<Boolean>, index: Int): Int = done.take(index).count { it } * STAR_STAGGER_MS
+
+/** 150 мс между звёздами — из DESIGN_PLAN 2.7. */
+const val STAR_STAGGER_MS = 150
 
 /**
  * Выражение совы за день: грустит, только если осталась без нужного — это

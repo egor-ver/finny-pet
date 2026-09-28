@@ -16,9 +16,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import ru.finnypet.app.domain.economy.BudgetEngine
 import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.CompletedTask
 import ru.finnypet.app.domain.model.GoalProgress
+import ru.finnypet.app.domain.model.LearningTask
+import ru.finnypet.app.domain.model.Pet
+import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.domain.model.TaskTopic
@@ -29,24 +33,32 @@ import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.GrowthSummary
+import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.goalFraction
+import ru.finnypet.app.ui.components.growthSummary
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
-/** Итоги последнего завершённого дня. */
+/** Итоги последнего завершённого дня: строки плана и факта по направлениям. */
 data class LastDay(
     val number: Int,
     val lines: List<BudgetLine>,
-    val planTotal: Coins,
-    val factTotal: Coins,
 )
 
 /** Цель, на которую копят сейчас. */
 data class GoalSummary(
     val title: String,
+    /** Эмодзи из контента (AD-11) — на тарелке, как на главном. */
+    val icon: String,
     val saved: Coins,
     val price: Coins,
-)
+) {
+    val fraction: Float get() = goalFraction(saved, price)
+}
 
 /**
  * Пройденное задание: что это было и сколько всего принесло.
@@ -61,6 +73,9 @@ data class PassedTask(
     val topic: TaskTopic?,
     val reward: Coins,
 )
+
+/** Сколько заданий темы пройдено из скольких — чип на свёрнутой строке заданий. */
+data class TopicCount(val topic: TaskTopic, val passed: Int, val total: Int)
 
 /** Термин из справочника. */
 data class Term(
@@ -78,22 +93,28 @@ sealed interface ProgressState {
     data object Failed : ProgressState
 
     data class Ready(
-        /** Пусто, пока ни один день не закрыт. */
-        val lastDay: LastDay?,
+        /** Сова текущей стадии — на тропинке роста. */
+        val owl: OwlLook,
+        val growth: GrowthSummary,
         /** Пусто, пока цель не выбрана. */
         val goal: GoalSummary?,
+        /** Пусто, пока ни один день не закрыт. */
+        val lastDay: LastDay?,
         val passed: List<PassedTask>,
+        /** Темы в порядке списка заданий; сумма `total` — все задания списка. */
+        val topics: List<TopicCount>,
         val terms: List<Term>,
     ) : ProgressState
 }
 
 /**
- * История и учебный прогресс (ТЗ 2.5.11): завершённые задания, прогресс по
- * цели, итоги последнего дня и справочник терминов.
+ * История и учебный прогресс (ТЗ 2.5.11): рост питомца, прогресс по цели,
+ * итоги последнего дня, пройденные задания и справочник терминов.
  *
  * Экран только читает. Итоги последнего дня пересчитываются из плана и
  * операций — отдельно их не храним, чтобы не заводить второй источник правды
- * рядом с операциями.
+ * рядом с операциями. Стадия и звёзды — из того же питомца и тех же порогов
+ * `balance.json`, что у главного экрана (DESIGN_PLAN 3.10).
  */
 @HiltViewModel
 class ProgressViewModel @Inject constructor(
@@ -103,17 +124,20 @@ class ProgressViewModel @Inject constructor(
     private val tasks: TaskProgressRepository,
     private val budget: BudgetEngine,
     private val periodEngine: PeriodEngine,
+    private val petState: PetStateEngine,
     content: ContentRepository,
 ) : ProfileViewModel(profiles) {
 
-    private val texts: Map<String, String> = content.pack().texts
-    private val allTasks = content.pack().tasks
+    private val pack = content.pack()
+    private val texts: Map<String, String> = pack.texts
+    private val allTasks = pack.tasks
+    private val listed: List<LearningTask> = TaskSchedule.listed(allTasks)
     private val taskTopics = allTasks.associate { it.id to it.topic }
-    private val taskTitles = content.pack().tasks.associate { it.id to texts.textOf(it.introKey) }
-    private val goals = content.pack().goals.associateBy { it.id }
+    private val taskTitles = allTasks.associate { it.id to texts.textOf(it.introKey) }
+    private val goals = pack.goals.associateBy { it.id }
 
     /** Справочник не меняется во время игры — собирается один раз. */
-    private val terms: List<Term> = content.pack().glossary.map { term ->
+    private val terms: List<Term> = pack.glossary.map { term ->
         Term(id = term.id, title = texts.textOf(term.titleKey), body = texts.textOf(term.bodyKey))
     }
 
@@ -137,7 +161,7 @@ class ProgressViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun screen(): Flow<ProgressState> = profiles.observeActive()
         .flatMapLatest { profile ->
-            if (profile == null) flowOf(ProgressState.Loading) else forProfile(profile.id)
+            if (profile == null) flowOf(ProgressState.Loading) else forProfile(profile)
         }
         // Итоги читаются прямо в потоке, и отказ базы иначе ушёл бы в
         // необработанные исключения viewModelScope, то есть в падение.
@@ -149,24 +173,45 @@ class ProgressViewModel @Inject constructor(
      * задания меняются часто и к итогам отношения не имеют.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun forProfile(profileId: ProfileId): Flow<ProgressState> =
-        periods.observeCurrent(profileId)
+    private fun forProfile(profile: Profile): Flow<ProgressState> =
+        periods.observeCurrent(profile.id)
             .map { it?.number }
             .distinctUntilChanged()
             .flatMapLatest {
-                val lastDay = lastDay(profileId)
+                val lastDay = lastDay(profile.id)
                 combine(
-                    savings.observeActive(profileId),
-                    tasks.observeCompleted(profileId),
-                ) { progress, completed ->
-                    ProgressState.Ready(
-                        lastDay = lastDay,
-                        goal = goalOf(progress),
-                        passed = passed(completed),
-                        terms = terms,
-                    )
+                    profiles.observePet(profile.id),
+                    savings.observeActive(profile.id),
+                    tasks.observeCompleted(profile.id),
+                ) { pet, progress, completed ->
+                    if (pet == null) {
+                        ProgressState.Loading
+                    } else {
+                        val passed = passed(completed)
+                        ProgressState.Ready(
+                            owl = owlOf(profile, pet),
+                            growth = growthSummary(pet.growth, pack.balance.growthThresholds, texts, profile.petName),
+                            goal = goalOf(progress),
+                            lastDay = lastDay,
+                            passed = passed,
+                            topics = topicCounts(listed, passed.map { it.id }.toSet()),
+                            terms = terms,
+                        )
+                    }
                 }
             }
+
+    /** Сова та же, что на главном: стадия, окрас и настроение по показателям. */
+    private fun owlOf(profile: Profile, pet: Pet): OwlLook {
+        val mood = petState.moodOf(pet.state)
+        return owlLook(
+            pets = pack.pets,
+            appearance = profile.appearance,
+            stage = pet.growth.stage,
+            mood = mood,
+            description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+        )
+    }
 
     private suspend fun lastDay(profileId: ProfileId): LastDay? {
         val period = periods.lastClosed(profileId) ?: return null
@@ -182,8 +227,6 @@ class ProgressViewModel @Inject constructor(
                     followed = line.followed,
                 )
             },
-            planTotal = report.planTotal,
-            factTotal = report.factTotal,
         )
     }
 
@@ -195,6 +238,7 @@ class ProgressViewModel @Inject constructor(
         val goal = progress?.let { goals[it.goalId] } ?: return null
         return GoalSummary(
             title = texts.textOf(goal.titleKey),
+            icon = goal.icon,
             saved = progress.saved,
             price = goal.price,
         )
@@ -208,7 +252,7 @@ class ProgressViewModel @Inject constructor(
      * пройденные обычные задания: разбор и ошибки пройденными не считаются.
      */
     private fun passed(completed: List<CompletedTask>): List<PassedTask> {
-        val passedIds = TaskSchedule.passed(TaskSchedule.listed(allTasks), completed)
+        val passedIds = TaskSchedule.passed(listed, completed)
         return completed.filter { it.taskId in passedIds }.groupBy { it.taskId }.map { (taskId, passes) ->
             PassedTask(
                 id = taskId,
@@ -223,3 +267,13 @@ class ProgressViewModel @Inject constructor(
         const val STOP_TIMEOUT_MS = 5_000L
     }
 }
+
+/**
+ * «1 из 2» по каждой теме списка заданий — в порядке тем ТЗ 2.5.8, как в
+ * списке. Разбор (AD-7) в список не входит и сюда не попадает.
+ */
+fun topicCounts(listed: List<LearningTask>, passed: Set<TaskId>): List<TopicCount> =
+    TaskTopic.entries.mapNotNull { topic ->
+        val ofTopic = listed.filter { it.topic == topic }
+        if (ofTopic.isEmpty()) null else TopicCount(topic, passed = ofTopic.count { it.id in passed }, total = ofTopic.size)
+    }

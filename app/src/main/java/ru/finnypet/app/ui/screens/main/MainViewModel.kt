@@ -40,7 +40,9 @@ import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
+import ru.finnypet.app.ui.components.GrowthView
 import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.growthOf
 import ru.finnypet.app.ui.components.owlDescription
 import ru.finnypet.app.ui.components.owlLook
 import ru.finnypet.app.ui.components.wellbeing

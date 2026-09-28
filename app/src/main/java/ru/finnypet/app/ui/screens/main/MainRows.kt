@@ -2,23 +2,11 @@ package ru.finnypet.app.ui.screens.main
 
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
-import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PeriodStatus
-import ru.finnypet.app.domain.model.PetGrowth
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
-
-/** Строка роста: «До подростка 6 из 8». Очки и порог — от нуля, как в «Моём прогрессе». */
-data class GrowthView(val next: GrowthStage, val points: Int, val target: Int)
-
-/** `null` — сова взрослая, дальше расти некуда. */
-fun growthOf(growth: PetGrowth, thresholds: List<Int>): GrowthView? {
-    val next = GrowthStage.entries.getOrNull(growth.stage.ordinal + 1) ?: return null
-    val target = thresholds.getOrNull(next.ordinal) ?: return null
-    return GrowthView(next = next, points = growth.points, target = target)
-}
 
 /** Сколько по плану ещё осталось разложить (DESIGN_PLAN 3.1: три мини-банки на плитке «План»). */
 data class JarsLeft(val mandatory: Coins, val optional: Coins, val savings: Coins = Coins.ZERO)

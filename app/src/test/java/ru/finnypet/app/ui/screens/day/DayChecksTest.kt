@@ -8,6 +8,7 @@ import ru.finnypet.app.data.content.ContentParser
 import ru.finnypet.app.data.content.RealContent
 import ru.finnypet.app.domain.economy.BudgetEngine
 import ru.finnypet.app.domain.economy.GrowthEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
@@ -15,9 +16,13 @@ import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PetMood
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.text.textOf
 
 /**
@@ -223,6 +228,64 @@ class DayChecksTest {
         val keys = listOf("day.tip.needs_first", "day.tip.plan", "day.tip.savings", "day.tip.feed_daily", "day.tip.keep")
         val missing = keys.filterNot(texts::containsKey)
         assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
+    }
+
+    // --- Конец дня без повторов (DESIGN_PLAN 3.6) ---
+
+    /**
+     * День 2 эталона: в голодный день причина нуля звучит один раз — в
+     * строке «Сыт» и строкой роста, — а строки плана и копилки её не повторяют
+     * и признают сделанное (раздел 3 плана).
+     */
+    @Test
+    fun `голодный день — строки плана и копилки не повторяют причину`() {
+        val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = null, goalLeft = null)
+        val lines = checks.map { texts.textOf(it.text) }
+
+        assertEquals("Нужное и желаемое — по плану.", lines[1])
+        assertEquals("Копилка +8 — монеты уже ближе к цели.", lines[2])
+        assertTrue(lines.drop(1).none { "незакрыт" in it || "звёзд" in it })
+        assertEquals("Звёзды растут, только когда питомец сыт. Прогресс никуда не делся.", texts.textOf("growth.no_points"))
+    }
+
+    /** Итог «День закончился» не называет день успешным: сова в такой день бывает и спокойной. */
+    @Test
+    fun `итог обычного дня не хвалит за успех`() {
+        assertEquals("День закончился. Посмотрим, что получилось!", texts.textOf("period.closed"))
+    }
+
+    /**
+     * Вечером сыта (70), но уход 60 — не закрыт. Ночь снизит еду до 45, и по
+     * утреннему состоянию сова «хотела бы есть»; итог называет вечернюю причину.
+     */
+    @Test
+    fun `сова в итогах грустит о том, что не закрыто вечером, а не после ночи`() {
+        val balance = ContentParser().parse(RealContent.raw()).balance
+        val pet = PetStateEngine(balance)
+        val evening = PetState(mood = Stat(80), satiety = Stat(70), care = Stat(60))
+
+        assertEquals(PetStatKind.CARE, eveningNeed(evening, pet))
+        assertEquals(PetStatKind.SATIETY, pet.needsOf(pet.onPeriodClosed(evening).value).first())
+    }
+
+    /** Эталон, день 3: куплено на 37, в копилку 8 — не «Потрачено 45». */
+    @Test
+    fun `итог под полосами — потраченное и отложенное раздельно`() {
+        val lines = listOf(
+            BudgetLine(SpendCategory.MANDATORY, Coins(38), Coins(37), followed = true),
+            BudgetLine(SpendCategory.OPTIONAL, Coins(2), Coins(0), followed = true),
+            BudgetLine(SpendCategory.SAVINGS, Coins(8), Coins(8), followed = true),
+        )
+
+        assertEquals(DayTotals(spent = Coins(37), saved = Coins(8)), dayTotals(lines))
+    }
+
+    /** Заработанные звёзды загораются по очереди через 150 мс; пустой слот очередь не занимает. */
+    @Test
+    fun `звёзды дня загораются по очереди, пропуская пустые слоты`() {
+        val done = listOf(true, false, true)
+
+        assertEquals(listOf(0, 150, 150), done.indices.map { starDelayMs(done, it) })
     }
 
     private fun buy(id: Long, item: String, price: Int) = Transaction(

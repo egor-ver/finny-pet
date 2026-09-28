@@ -34,6 +34,29 @@ object FinnyIcons {
         outlined { moveTo(15f, 5f); lineTo(9f, 12f); lineTo(15f, 19f) }
     }
 
+    /** Шеврон вправо — сворачиваемые строки «Моего прогресса» (DESIGN_PLAN 2.3, 3.10); открытость — поворотом. */
+    val Chevron: ImageVector = icon("FinnyChevron") {
+        outlined { moveTo(9f, 5f); lineTo(15f, 12f); lineTo(9f, 19f) }
+    }
+
+    /** Открытая книга — словарик «Что значат слова» (DESIGN_PLAN 2.3, 3.10). */
+    val Book: ImageVector = icon("FinnyBook") {
+        filled {
+            moveTo(11.2f, 6.2f)
+            curveTo(9.2f, 4.9f, 6.3f, 4.5f, 3f, 5f)
+            lineTo(3f, 18.5f)
+            curveTo(6.3f, 18f, 9.2f, 18.4f, 11.2f, 19.7f)
+            close()
+        }
+        filled {
+            moveTo(12.8f, 6.2f)
+            curveTo(14.8f, 4.9f, 17.7f, 4.5f, 21f, 5f)
+            lineTo(21f, 18.5f)
+            curveTo(17.7f, 18f, 14.8f, 18.4f, 12.8f, 19.7f)
+            close()
+        }
+    }
+
     val Check: ImageVector = icon("FinnyCheck") {
         outlined { moveTo(4f, 12.5f); lineTo(9.5f, 18f); lineTo(20f, 6f) }
     }

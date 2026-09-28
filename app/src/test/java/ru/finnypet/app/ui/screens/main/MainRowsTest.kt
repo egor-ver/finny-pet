@@ -13,6 +13,8 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetGrowth
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.ui.components.GrowthView
+import ru.finnypet.app.ui.components.growthOf
 
 /**
  * Строки главного экрана на эталонном сценарии (раздел 4 плана): рост,
@@ -27,9 +29,22 @@ class MainRowsTest {
         assertEquals(GrowthView(GrowthStage.YOUNG, points = 6, target = 8), growthOf(PetGrowth(6, GrowthStage.CUB), THRESHOLDS))
     }
 
+    /** Звёзды считаются внутри стадии (DESIGN_PLAN 3.1): 12 очков при пороге 8 — это 4 из 12 до взрослого. */
     @Test
-    fun `вырос — до взрослого 12 из 20`() {
-        assertEquals(GrowthView(GrowthStage.GROWN, points = 12, target = 20), growthOf(PetGrowth(12, GrowthStage.YOUNG), THRESHOLDS))
+    fun `вырос — до взрослого 4 из 12`() {
+        assertEquals(GrowthView(GrowthStage.GROWN, points = 4, target = 12), growthOf(PetGrowth(12, GrowthStage.YOUNG), THRESHOLDS))
+    }
+
+    /** Настоящие пороги 0/4/10: эталон, день 3 — 6 очков, подросток; до взрослого 2 из 6. */
+    @Test
+    fun `на настоящих порогах подросток с 6 очками — 2 из 6 до взрослого`() {
+        assertEquals(GrowthView(GrowthStage.GROWN, points = 2, target = 6), growthOf(PetGrowth(6, GrowthStage.YOUNG), listOf(0, 4, 10)))
+    }
+
+    /** Пороги подняли после сохранения: стадия не падает, а до следующей — ноль, не минус. */
+    @Test
+    fun `очков меньше порога своей стадии — ноль, а не минус`() {
+        assertEquals(GrowthView(GrowthStage.GROWN, points = 0, target = 12), growthOf(PetGrowth(5, GrowthStage.YOUNG), THRESHOLDS))
     }
 
     @Test

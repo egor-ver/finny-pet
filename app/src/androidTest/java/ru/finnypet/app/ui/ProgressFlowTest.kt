@@ -157,7 +157,7 @@ class ProgressFlowTest {
 
         val lastDay = ready.lastDay!!
         assertEquals(1, lastDay.number)
-        assertEquals(Coins(80), lastDay.planTotal)
+        assertEquals(Coins(80), lastDay.lines.fold(Coins.ZERO) { sum, line -> sum + line.planned })
         assertEquals(3, lastDay.lines.size)
         assertEquals(Coins(40), lastDay.lines.first { it.category == SpendCategory.MANDATORY }.planned)
     }
@@ -236,6 +236,7 @@ class ProgressFlowTest {
             tasks = tasks,
             budget = BudgetEngine(),
             periodEngine = periodEngine(),
+            petState = PetStateEngine(balance),
             content = content(),
         ).also { viewModel = it }
         return withTimeout(TIMEOUT_MS) {

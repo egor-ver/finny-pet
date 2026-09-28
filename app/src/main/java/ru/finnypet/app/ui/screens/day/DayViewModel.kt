@@ -25,6 +25,7 @@ import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.Transaction
@@ -36,22 +37,22 @@ import ru.finnypet.app.domain.usecase.CloseDay
 import ru.finnypet.app.domain.usecase.ClosedDay
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.GrowthSummary
 import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.growthSummary
 import ru.finnypet.app.ui.components.owlDescription
 import ru.finnypet.app.ui.components.owlLook
 import ru.finnypet.app.ui.screens.ProfileViewModel
-import ru.finnypet.app.ui.screens.main.GrowthView
-import ru.finnypet.app.ui.screens.main.growthOf
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-/** Строка итогов, готовая к показу: ✓ или ✗ и пояснение. */
+/** Строка итогов, готовая к показу: есть ли звезда и пояснение. */
 data class DayCheckView(val done: Boolean, val text: String)
 
 /**
- * Итоги закрытого дня одним экраном (раздел 8 плана): облачко, сова с
- * выражением дня, три строки ✓/✗, звёзды дня и что перешло на завтра.
+ * Итоги закрытого дня одним экраном (DESIGN_PLAN 3.6): реплика-итог, сова с
+ * выражением дня, три звезды со строками объяснения, рост и что перешло на завтра.
  */
 data class DaySummary(
     val number: Int,
@@ -63,8 +64,12 @@ data class DaySummary(
     /** Один совет на завтра. */
     val tip: String,
     val earnedPoints: Int,
-    /** `null` — сова взрослая, расти некуда. */
-    val growth: GrowthView?,
+    val growth: GrowthSummary,
+    /**
+     * Почему звёзд нет (`growth.no_points`) — только при пустом слоте «Сыт»:
+     * причина нуля говорится ровно один раз, строкой роста (DESIGN_PLAN 3.6).
+     */
+    val noStarsReason: String?,
     val newStage: GrowthStage?,
     val carryOver: Coins,
 )
@@ -86,8 +91,6 @@ sealed interface DayState {
     data class Running(
         val number: Int,
         val lines: List<BudgetLine>,
-        val planTotal: Coins,
-        val factTotal: Coins,
         /** Закрытие уже идёт: кнопка гаснет, второе нажатие не нужно. */
         val closing: Boolean = false,
         /** «Я ещё голодный. Уложить так?» (R14); `null` — переспрашивать не о чем. */
@@ -162,6 +165,9 @@ class DayViewModel @Inject constructor(
                     // Профиль нужен итогам — внешность и имя совы. Читается до
                     // закрытия: закрыть день и не суметь показать итоги хуже.
                     val profile = profiles.observeActive().first() ?: return@withLock
+                    // Вечернее состояние — до ночи, которую сделает закрытие:
+                    // по нему итоги называют, о чём грустит сова.
+                    val evening = profiles.pet(profileId)?.state ?: return@withLock
 
                     // Пусто — значит закрывать нечего: день уже не идёт или
                     // план не подтверждён. Отдельного сообщения не нужно,
@@ -189,7 +195,7 @@ class DayViewModel @Inject constructor(
                         // Начислится при следующем входе на любой экран игры.
                     }
 
-                    summary.value = summaryOf(profile, result.value, result.explanation, result.changes)
+                    summary.value = summaryOf(profile, evening, result.value, result.explanation, result.changes)
                 }
             } finally {
                 working.value = false
@@ -199,6 +205,7 @@ class DayViewModel @Inject constructor(
 
     private suspend fun summaryOf(
         profile: Profile,
+        evening: PetState,
         closed: ClosedDay,
         explanation: Explanation,
         changes: List<Change>,
@@ -222,13 +229,13 @@ class DayViewModel @Inject constructor(
                 appearance = profile.appearance,
                 stage = outcome.growth.stage,
                 mood = mood,
-                // Грустит сова в итогах от голодного дня — первой потребности.
-                description = owlDescription(texts, profile.petName, mood, petState.needsOf(outcome.state).firstOrNull()),
+                description = owlDescription(texts, profile.petName, mood, eveningNeed(evening, petState)),
             ),
             checks = checks.map { DayCheckView(done = it.done, text = texts.textOf(it.text)) },
             tip = texts.textOf(dayTip(checks, foodSpent(periods.transactions(outcome.closedPeriod.id), pack.shop), pack.shop)),
             earnedPoints = closed.earnedPoints,
-            growth = growthOf(outcome.growth, balance.growthThresholds),
+            growth = growthSummary(outcome.growth, balance.growthThresholds, texts, profile.petName),
+            noStarsReason = texts.textOf("growth.no_points").takeUnless { checks.first().done },
             newStage = changes.filterIsInstance<Change.Stage>().firstOrNull()?.to,
             carryOver = outcome.carryOver,
         )
@@ -282,8 +289,6 @@ class DayViewModel @Inject constructor(
                         followed = line.followed,
                     )
                 },
-                planTotal = report.planTotal,
-                factTotal = report.factTotal,
                 closing = isWorking,
                 warning = warning,
             )
