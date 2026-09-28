@@ -1100,6 +1100,7 @@ class ScreensTest {
     private val scooter = GoalView(
         id = GoalId("scooter"),
         title = "Самокат",
+        buyTitle = "самокат",
         price = Coins(30),
         saved = Coins(10),
         isActive = true,
@@ -1109,6 +1110,7 @@ class ScreensTest {
     private val book = GoalView(
         id = GoalId("book"),
         title = "Книжка",
+        buyTitle = "книжку",
         price = Coins(15),
         saved = Coins.ZERO,
         isActive = false,

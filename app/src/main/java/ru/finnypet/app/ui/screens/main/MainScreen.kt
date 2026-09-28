@@ -815,8 +815,8 @@ private fun GrowthTile(
             }
         } else {
             // Звёзды кусочками, как в итогах и «Моём прогрессе»: сосчитать их
-            // проще, чем оценить долю полосы. Мельче, чтобы шесть уместились
-            // в половину 360 dp одной строкой.
+            // проще, чем оценить долю полосы. Мельче, чем в итогах, чтобы шесть
+            // уместились в половину 360 dp одной строкой.
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(TILE_STAR_GAP),
                 verticalArrangement = Arrangement.spacedBy(TILE_STAR_GAP),
@@ -907,6 +907,10 @@ private val CHIP_PADDING = 2.dp
 /** Минимальная высота плитки 2 × 2 (DESIGN_PLAN 3.1: бюджет высот главного). */
 private val TILE_HEIGHT = 84.dp
 
-/** Звёзды роста на плитке: шесть по 16 dp с зазором 2 dp — 106 dp, в плитку 360 dp помещаются. */
-private val TILE_STAR = 16.dp
-private val TILE_STAR_GAP = 2.dp
+/**
+ * Звёзды роста на плитке: шесть по 20 dp с зазором 1 dp — 125 dp. На экране 360 dp
+ * внутри плитки 128 dp, так что крупнее или шире зазор — и шестая звезда уйдёт
+ * на вторую строку. По 16 dp звёзды выглядели бледно.
+ */
+private val TILE_STAR = 20.dp
+private val TILE_STAR_GAP = 1.dp

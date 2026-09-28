@@ -1,8 +1,11 @@
 package ru.finnypet.app.ui.screens.savings
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import ru.finnypet.app.data.content.ContentParser
+import ru.finnypet.app.data.content.RealContent
 import ru.finnypet.app.domain.content.ContentOption
 import ru.finnypet.app.domain.content.PetColor
 import ru.finnypet.app.domain.model.Coins
@@ -10,6 +13,7 @@ import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.text.textOf
 
 /**
  * Цели без тупика (L5, Б7): пока есть некупленная цель, купленную выбрать
@@ -21,6 +25,7 @@ class SavingsStateTest {
     private fun goal(id: String, bought: Boolean, active: Boolean = false, saved: Coins = Coins.ZERO) = GoalView(
         id = GoalId(id),
         title = id,
+        buyTitle = id,
         price = Coins(10),
         saved = saved,
         isActive = active,
@@ -76,5 +81,15 @@ class SavingsStateTest {
     @Test
     fun `у собранной цели главное действие — купить`() {
         assertTrue(state(listOf(goal("bike", bought = false, active = true, saved = Coins(10)))).buyIsMain)
+    }
+
+    /** F3-fix: «Собрано! Купить настольная игра» — у каждой цели своё название в винительном падеже. */
+    @Test
+    fun `у каждой цели есть название для кнопки купить`() {
+        val pack = ContentParser().parse(RealContent.raw())
+        val missing = pack.goals.map { buyTitleKey(it.titleKey) }.filterNot(pack.texts::containsKey)
+
+        assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
+        assertEquals("настольную игру", pack.texts.textOf(buyTitleKey("goal.board_game")))
     }
 }

@@ -61,7 +61,7 @@ class DayChecksTest {
      */
     @Test
     fun `день 2 — потребности не закрыты, звёзд нет, сова грустит`() {
-        val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = null, goalLeft = null)
+        val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = "Набор комиксов", goalLeft = Coins(22))
 
         assertEquals(listOf(false, false, false), checks.map { it.done })
         assertEquals(Explanation("day.needs.missed"), checks[0].text)
@@ -148,7 +148,7 @@ class DayChecksTest {
 
     @Test
     fun `в день без роста соблюдённое желаемое названо даже при перерасходе нужного`() {
-        val checks = dayChecks(false, report(plan(15, 5, 5), fact(23, 0, 5)), null, null)
+        val checks = dayChecks(false, report(plan(15, 5, 5), fact(23, 0, 5)), "Набор комиксов", Coins(20))
         assertEquals(listOf(false, false, false), checks.map { it.done })
         assertEquals(Explanation("day.plan.over_mandatory", mapOf("over" to "8")), checks[1].text)
         assertEquals(Explanation("day.savings.hungry", mapOf("saved" to "5")), checks[2].text)
@@ -240,7 +240,7 @@ class DayChecksTest {
      */
     @Test
     fun `голодный день — строки плана и копилки не повторяют причину`() {
-        val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = null, goalLeft = null)
+        val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = "Набор комиксов", goalLeft = Coins(22))
         val lines = checks.map { texts.textOf(it.text) }
 
         assertEquals("Нужное и желаемое — по плану.", lines[1])
@@ -303,6 +303,16 @@ class DayChecksTest {
         assertTrue(savedOnlyFor(board, onlyBoard))
         assertEquals(false, savedOnlyFor(board, withBought))
         assertEquals(false, savedOnlyFor(board, listOf(deposit(1, GoalId("goal-book"), 5))))
+    }
+
+    /** F3-fix: голодный день, монеты дня ушли и в купленную цель — «уже ближе к цели» врало бы, только сумма. */
+    @Test
+    fun `голодный день без остатка до цели — копилка без слов о цели`() {
+        val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = null, goalLeft = null)
+
+        assertEquals(false, checks[2].done)
+        assertEquals(Explanation("day.savings.kept", mapOf("saved" to "8")), checks[2].text)
+        assertEquals("Копилка +8.", texts.textOf(checks[2].text))
     }
 
     /** «Накопления тоже по плану» при плане 5 и копилке +35 звучало как «ровно 5» — фраза говорит «не меньше». */

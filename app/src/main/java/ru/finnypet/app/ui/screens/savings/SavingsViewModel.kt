@@ -47,6 +47,11 @@ import javax.inject.Inject
 data class GoalView(
     val id: GoalId,
     val title: String,
+    /**
+     * Название для «Купить …» — в винительном падеже из контента: «Купить
+     * настольную игру», а не «Купить настольная игра».
+     */
+    val buyTitle: String,
     val price: Coins,
     val saved: Coins,
     val isActive: Boolean,
@@ -61,6 +66,9 @@ data class GoalView(
 
     val fraction: Float get() = goalFraction(saved, price)
 }
+
+/** Ключ названия цели для кнопки «Купить …»: рядом с ключом названия, чтобы новая цель не забыла его. */
+fun buyTitleKey(titleKey: String): String = "$titleKey.buy"
 
 /**
  * Сумма, которую ребёнок набирает кнопками, и что домен про неё говорит.
@@ -439,6 +447,7 @@ class SavingsViewModel @Inject constructor(
             GoalView(
                 id = goal.id,
                 title = texts.textOf(goal.titleKey),
+                buyTitle = texts.textOf(buyTitleKey(goal.titleKey)),
                 price = goal.price,
                 saved = progress?.saved ?: Coins.ZERO,
                 isActive = progress?.isActive == true,

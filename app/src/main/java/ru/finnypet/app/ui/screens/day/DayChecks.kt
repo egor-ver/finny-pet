@@ -30,7 +30,8 @@ data class DayCheck(val done: Boolean, val text: Explanation)
  * [goalTitle] и [goalLeft] — цель и сколько до неё осталось после этого дня;
  * `null` — цели нет или монеты дня ушли не только в неё ([savedOnlyFor]).
  * Осталось ноль — цель собрана, и строка так и говорит, а не «осталось 0»
- * или «монеты уже ближе к цели».
+ * или «монеты уже ближе к цели». Без цели «ближе к цели» в голодный день
+ * тоже врёт: монеты могли уйти в купленную днём цель — тогда только сумма.
  */
 fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goalLeft: Coins?): List<DayCheck> {
     val stars = GrowthEngine.starsFor(report, needsMet)
@@ -75,7 +76,7 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
                     "day.savings.reached",
                     mapOf("saved" to "${savings.actual.amount}", "goal" to goalTitle),
                 )
-                !needsMet -> Explanation("day.savings.hungry", mapOf("saved" to "${savings.actual.amount}"))
+                !needsMet && goalTitle != null -> Explanation("day.savings.hungry", mapOf("saved" to "${savings.actual.amount}"))
                 goalTitle != null && goalLeft != null -> Explanation(
                     "day.savings.kept_goal",
                     mapOf("saved" to "${savings.actual.amount}", "goal" to goalTitle, "left" to "${goalLeft.amount}"),

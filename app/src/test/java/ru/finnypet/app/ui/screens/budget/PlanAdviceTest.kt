@@ -147,10 +147,10 @@ class PlanAdviceTest {
     /** Раздел 8 плана: копилка 16 из 40, по 8 в день — три дня. */
     @Test
     fun `копилка — срок до цели при такой сумме`() {
-        assertEquals("Если откладывать по 8 в день — Комиксы через 3 дня.", savingsHint(texts, Coins(8), "Комиксы", days = 3))
-        assertEquals("Если откладывать по 24 в день — Комиксы через 1 день.", savingsHint(texts, Coins(24), "Комиксы", days = 1))
-        assertEquals("Если откладывать по 1 в день — Комиксы через 24 дня.", savingsHint(texts, Coins(1), "Комиксы", days = 24))
-        assertEquals("Если откладывать по 2 в день — Комиксы через 12 дней.", savingsHint(texts, Coins(2), "Комиксы", days = 12))
+        assertEquals("Если откладывать по 8 в день — цель «Комиксы» через 3 дня.", savingsHint(texts, Coins(8), "Комиксы", days = 3))
+        assertEquals("Если откладывать по 24 в день — цель «Комиксы» через 1 день.", savingsHint(texts, Coins(24), "Комиксы", days = 1))
+        assertEquals("Если откладывать по 1 в день — цель «Комиксы» через 24 дня.", savingsHint(texts, Coins(1), "Комиксы", days = 24))
+        assertEquals("Если откладывать по 2 в день — цель «Комиксы» через 12 дней.", savingsHint(texts, Coins(2), "Комиксы", days = 12))
     }
 
     @Test

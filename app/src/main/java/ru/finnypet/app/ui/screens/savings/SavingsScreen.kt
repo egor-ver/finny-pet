@@ -288,8 +288,6 @@ private fun ActiveGoal(
     onJarPlaced: (Offset) -> Unit,
 ) {
     var askingBuy by rememberSaveable { mutableStateOf(false) }
-    // «Купить набор комиксов», а не «Купить Набор комиксов»: название стоит внутри фразы.
-    val thing = goal.title.replaceFirstChar { it.lowercase() }
     FinnyCard {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -326,7 +324,7 @@ private fun ActiveGoal(
         )
         if (goal.isReached) {
             FinnyButton(
-                text = stringResource(R.string.savings_buy, thing),
+                text = stringResource(R.string.savings_buy, goal.buyTitle),
                 onClick = { askingBuy = true },
                 enabled = state.canBuy,
                 modifier = Modifier.fillMaxWidth(),
