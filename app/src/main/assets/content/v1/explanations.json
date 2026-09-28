@@ -1,5 +1,5 @@
 {
-  "purchase.done": "Отличная покупка! В кошельке осталось: {coins:balance}.",
+  "purchase.done": "Отличная покупка! Осталось {coins:balance}.",
   "purchase.rejected": "Не хватает: {coins:shortfall}. Ничего страшного, давай решим, как поступить:",
   "word.coins.ONE": "монета",
   "word.coins.FEW": "монеты",
@@ -123,7 +123,7 @@
   "shop.care_brush": "Щёточка для перьев",
   "shop.care_vitamins": "Витаминки",
   "shop.treat_berry": "Лесные ягоды",
-  "shop.sticker_star": "Звёздочка-наклейка",
+  "shop.sticker_star": "Наклейка",
   "shop.toy_ball": "Яркий мячик",
   "shop.toy_book": "Детская энциклопедия",
   "shop.toy_playing": "{name} играет с новой игрушкой!",

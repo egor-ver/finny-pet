@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.TaskId
 import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.CoinChip
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyListScaffold

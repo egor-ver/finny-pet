@@ -24,29 +24,33 @@ import ru.finnypet.app.domain.model.SpendCategory
  * ложкой») звучало бы вместо «каша» и путало ребёнка.
  */
 @Composable
-fun ItemIcon(icon: String, category: SpendCategory, modifier: Modifier = Modifier) {
-    ItemIcon(icon = icon, plate = category.container, modifier = modifier)
+fun ItemIcon(icon: String, category: SpendCategory, modifier: Modifier = Modifier, large: Boolean = false) {
+    ItemIcon(icon = icon, plate = category.container, modifier = modifier, large = large)
 }
 
 /**
  * Та же тарелка другого цвета — на полке задания она цвета темы, а не
  * направления: направление там и есть ответ, который ищет ребёнок (DESIGN_PLAN 3.8).
+ *
+ * [large] — крупная тарелка 72 dp в окне покупки (DESIGN_PLAN 3.5): там товар
+ * один и главный, а не один из многих в списке.
  */
 @Composable
-fun ItemIcon(icon: String, plate: Color, modifier: Modifier = Modifier) {
+fun ItemIcon(icon: String, plate: Color, modifier: Modifier = Modifier, large: Boolean = false) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .size(PLATE_SIZE)
+            .size(if (large) LARGE_PLATE_SIZE else PLATE_SIZE)
             .clip(CircleShape)
             .background(plate),
     ) {
         Text(
             text = icon,
-            style = MaterialTheme.typography.headlineMedium,
+            style = if (large) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
             modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }
 
 private val PLATE_SIZE = 56.dp
+private val LARGE_PLATE_SIZE = 72.dp

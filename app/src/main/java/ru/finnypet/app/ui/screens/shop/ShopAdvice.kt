@@ -1,6 +1,9 @@
 package ru.finnypet.app.ui.screens.shop
 
+import androidx.annotation.StringRes
+import ru.finnypet.app.R
 import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PetState
@@ -9,6 +12,9 @@ import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.ui.screens.main.JarsLeft
+import ru.finnypet.app.ui.text.WordForm
+import ru.finnypet.app.ui.text.textOf
+import ru.finnypet.app.ui.text.wordFormOf
 
 /** Метка на карточке товара (раздел 8 плана). Цвет не единственный признак — метка словами. */
 enum class ItemMark { NEEDED_NOW, NOT_NEEDED, NOT_IN_PLAN, NONE }
@@ -71,3 +77,32 @@ fun shopPhrase(needs: List<PetStatKind>): Explanation =
  */
 fun notNeededPhrase(item: ShopItem): Explanation? =
     item.effects.firstOrNull { it.delta > 0 }?.let { Explanation("owl.shop.not_needed.${it.stat.name}") }
+
+/**
+ * Нехватка для окна товара (DESIGN_PLAN 3.5) — из того же отказа
+ * [ru.finnypet.app.domain.economy.WalletEngine.purchase], что приходил
+ * вторым окном после «Купить»: варианты и их порядок решает домен, здесь
+ * только подписи из контент-пака. `null` — покупка по карману.
+ */
+fun shortageOf(result: PurchaseResult, texts: Map<String, String>): ItemShortage? {
+    val rejected = result as? PurchaseResult.Rejected ?: return null
+    return ItemShortage(
+        shortfall = rejected.shortfall,
+        options = rejected.options.map { option ->
+            RecoveryChoice(option = option, label = texts.textOf("recovery.${option.name}"))
+        },
+        recommended = rejected.explanation.nextStep,
+    )
+}
+
+/**
+ * «Не хватает 2 монет»: после «не хватает» число в родительном падеже, и
+ * общая строка «2 монеты» ([ru.finnypet.app.ui.components.coinsText]) здесь
+ * была бы ошибкой. Форма — по русскому правилу, как у монет.
+ */
+@StringRes
+fun shortageLine(shortfall: Coins): Int = when (wordFormOf(shortfall.amount)) {
+    WordForm.ONE -> R.string.shop_shortage_one
+    WordForm.FEW -> R.string.shop_shortage_few
+    WordForm.MANY -> R.string.shop_shortage_many
+}

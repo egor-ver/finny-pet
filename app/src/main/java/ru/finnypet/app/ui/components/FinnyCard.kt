@@ -72,15 +72,17 @@ fun FinnyCard(
  * Белая плитка с тенью, как карточка; отмеченная (выбранный вариант, товар в
  * корзине, аксессуар совы) — рамкой `primary`. Серо-зелёная заливка ушла из
  * карточек совсем (DESIGN_PLAN 2.4).
+ *
+ * [markColor] меняет магазин: там рамка значит не «выбрано», а «нужно сейчас»,
+ * и она цвета «Нужного», как чип рядом (DESIGN_PLAN 3.5).
  */
 @Composable
-fun Modifier.tile(marked: Boolean): Modifier {
+fun Modifier.tile(marked: Boolean, markColor: Color = MaterialTheme.colorScheme.primary): Modifier {
     val shape = RoundedCornerShape(Dimens.CornerTile)
     val shadowColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-    val primary = MaterialTheme.colorScheme.primary
     return this
         .shadow(elevation = Dimens.CardShadowElevation, shape = shape, ambientColor = shadowColor, spotColor = shadowColor)
         .clip(shape)
         .background(MaterialTheme.colorScheme.surface)
-        .then(if (marked) Modifier.border(Dimens.ButtonBorderWidth, primary, shape) else Modifier)
+        .then(if (marked) Modifier.border(Dimens.ButtonBorderWidth, markColor, shape) else Modifier)
 }

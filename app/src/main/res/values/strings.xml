@@ -236,8 +236,11 @@
     <string name="shop_pet_change">Что изменится у питомца</string>
     <string name="shop_buy">Купить</string>
     <string name="shop_done_title">Готово!</string>
-    <string name="shop_no_change">Питомцу и так хорошо — показатели не изменились.</string>
-    <string name="shop_rejected_title">Монет не хватает</string>
+    <string name="shop_no_change">Мне и так хорошо — ничего не изменилось.</string>
+    <!-- Нехватка в окне товара (DESIGN_PLAN 3.5): «не хватает» требует родительного падежа — «2 монет», а не «2 монеты» -->
+    <string name="shop_shortage_one">Не хватает %1$d монеты</string>
+    <string name="shop_shortage_few">Не хватает %1$d монет</string>
+    <string name="shop_shortage_many">Не хватает %1$d монет</string>
     <!-- Мягкий план (AD-4): в подтверждении покупки, а не отдельным запретом -->
     <string name="shop_over_plan">Сверх плана</string>
     <string name="shop_balance_after">В кошельке останется</string>

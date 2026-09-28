@@ -212,7 +212,7 @@ class ShopPurchaseTest {
         viewModel.buy(food.id)
 
         val done = awaitOutcome<PurchaseOutcome.Done>()
-        assertEquals("Вкусная каша", done.title)
+        assertEquals(food.id, done.itemId)
         assertEquals("Осталось 68 монет.", done.text)
         assertEquals(food.effects, done.effects)
         // Каша — не игрушка: сова с ней не «играет» (U2).
@@ -247,7 +247,6 @@ class ShopPurchaseTest {
 
         val done = awaitOutcome<PurchaseOutcome.Done>()
         assertEquals("Пушок играет с новой игрушкой!", done.toyPhrase)
-        assertEquals(toy.icon, done.icon)
     }
 
     /**
@@ -270,24 +269,31 @@ class ShopPurchaseTest {
         assertEquals(Stat.MAX, profiles.pet(profileId)!!.state.satiety)
     }
 
-    /** ТЗ 2.5.6: отказ объясняется и предлагает выход, но ничего не списывает. */
+    /**
+     * ТЗ 2.5.6, DESIGN_PLAN 3.5: нехватка и выход видны в окне товара ещё до
+     * «Купить» — и ничего не списано: запись идёт только при покупке.
+     */
     @Test
-    fun нехватка_объясняется_и_ничего_не_списывает() = runBlocking {
+    fun нехватка_видна_заранее_и_ничего_не_списывает() = runBlocking {
         startDay()
-        val before = awaitReady()
+        // Нехватка считается от кошелька на экране — ждём, пока доход дня дойдёт до него.
+        val before = await { it.balance == balance.startingBalance + balance.periodIncome }
+
+        val shortage = before.items.single { it.id == castle.id }.shortage!!
+        assertEquals(Coins(20), shortage.shortfall)
+        assertEquals(
+            listOf(RecoveryOption.DO_TASK, RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER),
+            shortage.options.map { it.option },
+        )
+        assertEquals("Выполнить задание", shortage.options.first().label)
+        assertEquals(RecoveryOption.DO_TASK, shortage.recommended)
+        // По карману — окно с «Купить», без нехватки.
+        assertNull(before.items.single { it.id == food.id }.shortage)
+        assertEquals(emptyList<TransactionType>(), purchases())
 
         viewModel.buy(castle.id)
 
-        val rejected = awaitOutcome<PurchaseOutcome.Rejected>()
-        assertEquals("Замок", rejected.title)
-        assertEquals("Не хватает 20 монет.", rejected.text)
-        assertEquals(
-            listOf(RecoveryOption.DO_TASK, RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER),
-            rejected.options.map { it.option },
-        )
-        assertEquals("Выполнить задание", rejected.options.first().label)
-        assertEquals(RecoveryOption.DO_TASK, rejected.recommended)
-
+        assertEquals(castle.id, awaitOutcome<PurchaseOutcome.Rejected>().itemId)
         assertEquals(before.balance, settle().balance)
         assertEquals(emptyList<TransactionType>(), purchases())
         assertEquals(Stat(balance.initialStat), profiles.pet(profileId)!!.state.mood)
@@ -302,16 +308,15 @@ class ShopPurchaseTest {
     fun при_нехватке_на_обязательное_предлагается_копилка() = runBlocking {
         startDay()
         savings.save(profileId, GoalProgress(goalId = GoalId("bike"), saved = Coins(30), isActive = true))
-        awaitReady()
 
-        viewModel.buy(vet.id)
-
-        val rejected = awaitOutcome<PurchaseOutcome.Rejected>()
+        // Копилка наблюдается: варианты окна товара обновляются сами, без покупки.
+        val shortage = await { state -> state.items.single { it.id == vet.id }.shortage?.options?.size == 3 }
+            .items.single { it.id == vet.id }.shortage!!
         assertEquals(
             listOf(RecoveryOption.DO_TASK, RecoveryOption.WITHDRAW_FROM_SAVINGS, RecoveryOption.CHOOSE_CHEAPER),
-            rejected.options.map { it.option },
+            shortage.options.map { it.option },
         )
-        assertEquals("Взять из копилки", rejected.options[1].label)
+        assertEquals("Взять из копилки", shortage.options[1].label)
     }
 
     /**

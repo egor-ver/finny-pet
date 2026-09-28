@@ -31,6 +31,7 @@ import ru.finnypet.app.domain.model.ProfileId
 import ru.finnypet.app.domain.model.RecoveryOption
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.repository.ActionOutcome
 import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.OutcomeRecorder
@@ -55,6 +56,8 @@ import javax.inject.Inject
  * для нужного, которое ей пока не нужно (R12). [needsCostAfter] — цена
  * самого дешёвого набора, закрывающего потребности совы, если этот товар уже
  * куплен (раздел 3 плана, «доступность нужного»); ноль — нечего закрывать.
+ * [shortage] — товар не по карману: окно товара сразу показывает нехватку и
+ * варианты вместо «Купить» (DESIGN_PLAN 3.5); `null` — кошелька хватает.
  */
 data class ShopItemView(
     val id: ItemId,
@@ -66,6 +69,7 @@ data class ShopItemView(
     val mark: ItemMark = ItemMark.NONE,
     val warning: String? = null,
     val needsCostAfter: Coins = Coins.ZERO,
+    val shortage: ItemShortage? = null,
 )
 
 /** Вариант выхода при нехватке денег с подписью из контент-пака. */
@@ -75,11 +79,23 @@ data class RecoveryChoice(
 )
 
 /**
+ * Сколько не хватает и что можно сделать — ровно те варианты, что домен
+ * даёт при отказе ([WalletEngine.purchase]). [recommended] — вариант, который
+ * домен считает лучшим: он становится главной кнопкой.
+ */
+data class ItemShortage(
+    val shortfall: Coins,
+    val options: List<RecoveryChoice>,
+    val recommended: RecoveryOption?,
+)
+
+/**
  * Итог попытки купить.
  *
  * Лежит в состоянии, а не улетает событием: экран читает его после поворота
  * и показывает, пока ребёнок сам не закроет. Объяснение обязательно в обоих
- * случаях — ТЗ 2.5.6 и 2.5.9 требуют объяснить и покупку, и отказ.
+ * случаях — ТЗ 2.5.6 и 2.5.9 требуют объяснить и покупку, и отказ: покупку —
+ * облачко совы, отказ — окно товара с нехваткой ([ShopItemView.shortage]).
  */
 sealed interface PurchaseOutcome {
 
@@ -90,7 +106,10 @@ sealed interface PurchaseOutcome {
      * чтобы отличить «товар ни на что не влияет» от «влияет, но упёрлось».
      */
     data class Done(
-        val title: String,
+        /** Номер покупки за жизнь экрана: две одинаковые покупки подряд — два полёта монет, а не один. */
+        val number: Int,
+        /** Куда летят монеты из кошелька (DESIGN_PLAN 2.7) — к плитке купленного товара. */
+        val itemId: ItemId,
         val text: String,
         val price: Coins,
         val effects: List<PetEffect>,
@@ -102,21 +121,15 @@ sealed interface PurchaseOutcome {
          * имени питомца.
          */
         val toyPhrase: String? = null,
-        val icon: String = "",
-        /** Направление купленного товара — тарелка [ItemIcon] под [icon] красится его цветом. */
-        val category: SpendCategory = SpendCategory.MANDATORY,
     ) : PurchaseOutcome
 
     /**
-     * [recommended] — вариант, который домен считает лучшим. Экран делает
-     * его главной кнопкой, как только у варианта появляется экран.
+     * Кошелёк не покрыл цену уже после «Купить» — например, второе быстрое
+     * нажатие, когда первая покупка забрала монеты. Экран снова открывает
+     * окно этого товара: нехватку и варианты он уже показывает по
+     * [ShopItemView.shortage], второго окна отказа нет (DESIGN_PLAN 3.5).
      */
-    data class Rejected(
-        val title: String,
-        val text: String,
-        val options: List<RecoveryChoice>,
-        val recommended: RecoveryOption?,
-    ) : PurchaseOutcome
+    data class Rejected(val itemId: ItemId) : PurchaseOutcome
 }
 
 sealed interface ShopState {
@@ -174,6 +187,7 @@ class ShopViewModel @Inject constructor(
     private val texts: Map<String, String> = content.pack().texts
 
     private val outcome = MutableStateFlow<PurchaseOutcome?>(null)
+    private var purchases = 0
 
     /**
      * Покупки идут по одной. Два быстрых нажатия при деньгах на одну покупку
@@ -231,16 +245,7 @@ class ShopViewModel @Inject constructor(
         if (period.status != PeriodStatus.RUNNING) return
 
         val saved = savings.activeProgress(profileId)?.saved ?: Coins.ZERO
-        val transactions = periods.transactions(period.id)
-        val result = wallet.purchase(
-            item = item,
-            currentBalance = periods.balance(period),
-            periodId = period.id,
-            savings = saved,
-            // «Выполнить задание» обещает монеты — только пока лимит дня не выбран.
-            taskRewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
-        )
-        val title = texts.textOf(item.titleKey)
+        val result = attempt(item, periods.balance(period), period.id, saved, periods.transactions(period.id))
         outcome.value = when (result) {
             is PurchaseResult.Success -> {
                 val changes = recorder.record(
@@ -248,27 +253,40 @@ class ShopViewModel @Inject constructor(
                     ActionOutcome(transaction = result.transaction, effects = result.effects),
                 )
                 PurchaseOutcome.Done(
-                    title = title,
+                    number = ++purchases,
+                    itemId = item.id,
                     text = texts.textOf(result.explanation),
                     price = item.price,
                     effects = result.effects,
                     changes = changes,
                     toyPhrase = if (item.isToy) toyPhraseFor(profileId) else null,
-                    icon = item.icon,
-                    category = item.category,
                 )
             }
 
-            is PurchaseResult.Rejected -> PurchaseOutcome.Rejected(
-                title = title,
-                text = texts.textOf(result.explanation),
-                options = result.options.map { option ->
-                    RecoveryChoice(option = option, label = texts.textOf("recovery.${option.name}"))
-                },
-                recommended = result.explanation.nextStep,
-            )
+            // Ничего не записано: запись идёт только в ветке покупки.
+            is PurchaseResult.Rejected -> PurchaseOutcome.Rejected(item.id)
         }
     }
+
+    /**
+     * Одна и та же проверка для покупки и для окна товара заранее
+     * (DESIGN_PLAN 3.5): нехватку и варианты показывает тот же отказ домена,
+     * который пришёл бы после «Купить».
+     */
+    private fun attempt(
+        item: ShopItem,
+        coins: Coins,
+        periodId: Long,
+        saved: Coins,
+        transactions: List<Transaction>,
+    ): PurchaseResult = wallet.purchase(
+        item = item,
+        currentBalance = coins,
+        periodId = periodId,
+        savings = saved,
+        // «Выполнить задание» обещает монеты — только пока лимит дня не выбран.
+        taskRewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun forProfile(profile: Profile): Flow<ShopState> = combine(
@@ -279,14 +297,21 @@ class ShopViewModel @Inject constructor(
             if (period == null || pet == null) {
                 flowOf(ShopState.Loading)
             } else {
-                // Операции и план — ради остатков по банкам и меток «не в плане».
+                // Операции и план — ради остатков по банкам и меток «не в плане»;
+                // операции и копилка — ещё и ради вариантов при нехватке монет.
                 combine(
                     periods.observeBalance(period),
                     periods.observeTransactions(period.id),
                     periods.observePlan(period.id),
+                    savings.observeActive(profile.id),
                     outcome,
-                ) { wallet, transactions, plan, outcome ->
-                    ready(profile, pet, period, wallet, jarsLeft(period.status, plan, periodEngine.factOf(transactions)), outcome)
+                ) { coins, transactions, plan, goal, outcome ->
+                    val saved = goal?.saved ?: Coins.ZERO
+                    ready(profile, pet, period, coins, jarsLeft(period.status, plan, periodEngine.factOf(transactions)), outcome) { item ->
+                        // Отказ считается только для того, что не по карману: удачная
+                        // проверка собрала бы операцию покупки, которой нет.
+                        if (coins.covers(item.price)) null else shortageOf(attempt(item, coins, period.id, saved, transactions), texts)
+                    }
                 }
             }
         }
@@ -295,14 +320,15 @@ class ShopViewModel @Inject constructor(
         profile: Profile,
         pet: Pet,
         period: GamePeriod,
-        wallet: Coins,
+        coins: Coins,
         jars: JarsLeft?,
         outcome: PurchaseOutcome?,
+        shortage: (ShopItem) -> ItemShortage?,
     ): ShopState.Ready {
         val mood = petState.moodOf(pet.state)
         return ShopState.Ready(
-            items = items.map { viewOf(it, pet.state, jars) },
-            balance = wallet,
+            items = items.map { viewOf(it, pet.state, jars, shortage(it)) },
+            balance = coins,
             canBuy = period.status == PeriodStatus.RUNNING,
             owl = owlLook(
                 pets = pets,
@@ -318,7 +344,7 @@ class ShopViewModel @Inject constructor(
         )
     }
 
-    private fun viewOf(item: ShopItem, state: PetState, jars: JarsLeft?): ShopItemView {
+    private fun viewOf(item: ShopItem, state: PetState, jars: JarsLeft?, shortage: ItemShortage?): ShopItemView {
         val mark = markOf(item, petState.neededNow(state, item), jars?.optional)
         return ShopItemView(
             id = item.id,
@@ -330,6 +356,7 @@ class ShopViewModel @Inject constructor(
             mark = mark,
             warning = notNeededPhrase(item)?.takeIf { mark == ItemMark.NOT_NEEDED }?.let(texts::textOf),
             needsCostAfter = needsCostAfter(petState, state, item, items),
+            shortage = shortage,
         )
     }
 

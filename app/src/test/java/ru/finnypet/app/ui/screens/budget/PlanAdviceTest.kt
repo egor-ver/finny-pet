@@ -123,7 +123,7 @@ class PlanAdviceTest {
     @Test
     fun `желаемое — самое дорогое, на что хватает`() {
         assertEquals("Хватит на покупку: ⚽ Яркий мячик", optionalHint(texts, Coins(30), wants))
-        assertEquals("Хватит на покупку: ⭐ Звёздочка-наклейка", optionalHint(texts, Coins(10), wants))
+        assertEquals("Хватит на покупку: ⭐ Наклейка", optionalHint(texts, Coins(10), wants))
     }
 
     /** Эталон дня 3: на желаемое 2 — пока ни на что, и это не ошибка. */

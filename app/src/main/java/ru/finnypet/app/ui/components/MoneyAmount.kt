@@ -1,16 +1,21 @@
 package ru.finnypet.app.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -79,6 +84,35 @@ fun coinsText(amount: Coins): String = stringResource(
 )
 
 /**
+ * Чип с монетой: «+10», «Сегодня: +10», «−8». Число без слова «монет» — его
+ * говорит монета; подпись для TalkBack задаёт тот, кто показывает чип, одной
+ * фразой со склонением. Общий для заданий и магазина (DESIGN_PLAN 3.5, 3.8,
+ * 3.9): второй рисунок одной и той же пилюли разошёлся бы в отступах.
+ */
+@Composable
+fun CoinChip(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.surface,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        modifier = modifier
+            .clip(RoundedCornerShape(Dimens.CornerTile))
+            .background(color)
+            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceTiny),
+    ) {
+        Coin(style = MaterialTheme.typography.labelLarge)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+/**
  * Монета нарисована формой, а не символом: знаки валют есть не во всех
  * шрифтах, и на части устройств вместо монеты появился бы пустой
  * прямоугольник.
@@ -90,7 +124,8 @@ fun coinsText(amount: Coins): String = stringResource(
  * полумесяц тени, дающий монете объём (DESIGN_PLAN 2.5).
  *
  * Не `private`: тот же рисунок нужен в чипе награды у [FinnyButton]
- * (DESIGN_PLAN 3.1) — заводить второй кружок монеты ради видимости смысла нет.
+ * (DESIGN_PLAN 3.1) и в [CoinChip] — заводить второй кружок монеты ради
+ * видимости смысла нет.
  */
 @Composable
 internal fun Coin(style: TextStyle) {

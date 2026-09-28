@@ -61,6 +61,7 @@ import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.Coin
+import ru.finnypet.app.ui.components.CoinChip
 import ru.finnypet.app.ui.components.CoinFlight
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
@@ -401,7 +402,7 @@ private fun Shelf(step: StepView.Pick, topic: TaskTopic, onToggle: (String) -> U
         )
     }
 
-    val columns = if (LocalDensity.current.fontScale > WIDE_FONT_SCALE) 1 else 2
+    val columns = if (LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE) 1 else 2
     step.items.chunked(columns).forEach { row ->
         Row(
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
@@ -639,6 +640,4 @@ private const val SPARK_STAGGER_MS = 150L
 /** Варианты ответа выше общего минимума (раздел 8 плана): ребёнок не промахивается между соседними. */
 private val OPTION_HEIGHT = 52.dp
 
-/** С этого масштаба шрифта полка идёт в один столбец: в половине ширины слова рвались бы. */
-private const val WIDE_FONT_SCALE = 1.3f
 private val BADGE_ICON_SIZE = 18.dp
