@@ -1,23 +1,36 @@
 package ru.finnypet.app.ui.screens.savings
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,21 +39,26 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.ui.components.ButtonColumn
+import ru.finnypet.app.ui.components.Coin
+import ru.finnypet.app.ui.components.CoinFlight
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyDialog
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.ItemIcon
+import ru.finnypet.app.ui.components.Jar
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.MoneyCard
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.PlanningHint
-import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StepButton
+import ru.finnypet.app.ui.components.coinsText
+import ru.finnypet.app.ui.components.color
+import ru.finnypet.app.ui.components.fill
+import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
@@ -156,53 +174,83 @@ private fun Ready(
     onDismiss: () -> Unit,
     onBuy: () -> Unit,
 ) {
-    Screen(
-        onBack = onBack,
-        bottomBar = {
-            ButtonColumn {
-                FinnyButton(
-                    text = stringResource(R.string.savings_deposit),
-                    onClick = onDeposit,
-                    enabled = state.canDeposit,
-                )
-                FinnySecondaryButton(
-                    text = stringResource(R.string.savings_withdraw),
-                    onClick = onWithdraw,
-                    enabled = state.canWithdraw,
+    // Откуда и куда летят отложенные монеты: сумма кошелька и банка цели.
+    var wallet by remember { mutableStateOf<Offset?>(null) }
+    var jar by remember { mutableStateOf<Offset?>(null) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Screen(
+            onBack = onBack,
+            bottomBar = {
+                ButtonColumn {
+                    if (state.buyIsMain) {
+                        FinnySecondaryButton(
+                            text = stringResource(R.string.savings_deposit),
+                            onClick = onDeposit,
+                            enabled = state.canDeposit,
+                        )
+                    } else {
+                        FinnyButton(
+                            text = stringResource(R.string.savings_deposit),
+                            onClick = onDeposit,
+                            enabled = state.canDeposit,
+                        )
+                    }
+                    FinnySecondaryButton(
+                        text = stringResource(R.string.savings_withdraw),
+                        onClick = onWithdraw,
+                        enabled = state.canWithdraw,
+                    )
+                }
+            },
+        ) {
+            // Кошелёк — строка с монетой, а не отдельная карточка (DESIGN_PLAN 3.7):
+            // он нужен как источник «Отложить», а не как второй герой экрана.
+            LabelledLine(label = stringResource(R.string.main_balance)) {
+                MoneyAmount(
+                    amount = state.balance,
+                    modifier = Modifier.onGloballyPositioned { wallet = it.boundsInRoot().center },
                 )
             }
-        },
-    ) {
-        Owl(look = state.owl, size = OwlRole.Standalone.size, modifier = Modifier.align(Alignment.CenterHorizontally))
-        MoneyCard(label = stringResource(R.string.main_balance), amount = state.balance)
 
-        if (!state.canOperate) {
-            PlanningHint(text = stringResource(R.string.savings_planning_hint), onPlan = onPlan)
-        }
+            if (!state.canOperate) {
+                PlanningHint(text = stringResource(R.string.savings_planning_hint), onPlan = onPlan)
+            }
 
-        val active = state.active
-        if (active == null) {
+            val active = state.active
+            if (active == null) {
+                FinnyCard {
+                    Text(
+                        text = stringResource(R.string.savings_goal_none),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            } else {
+                ActiveGoal(
+                    state = state,
+                    goal = active,
+                    onBuy = onBuy,
+                    onJarPlaced = { jar = it },
+                )
+            }
+
             Text(
-                text = stringResource(R.string.savings_goal_none),
-                style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(R.string.savings_goal_choose),
+                style = MaterialTheme.typography.titleMedium,
             )
-        } else {
-            ActiveGoal(state = state, goal = active, onBuy = onBuy)
+            if (state.goals.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.savings_goals_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            state.goals.forEach { goal ->
+                GoalRow(goal = goal, selectable = state.canChoose(goal), onClick = { onChoose(goal.id) })
+            }
         }
-
-        Text(
-            text = stringResource(R.string.savings_goal_choose),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        if (state.goals.isEmpty()) {
-            Text(
-                text = stringResource(R.string.savings_goals_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        state.goals.forEach { goal ->
-            GoalRow(goal = goal, selectable = state.canChoose(goal), onClick = { onChoose(goal.id) })
+        state.outcome?.let { outcome ->
+            Outcome(outcome = outcome, owl = state.reactionOwl, from = wallet, to = jar, onDismiss = onDismiss)
         }
     }
 
@@ -224,41 +272,63 @@ private fun Ready(
             onCancel = onCancel,
         )
     }
-    state.outcome?.let { OutcomeDialog(outcome = it, owl = state.reactionOwl, onDismiss = onDismiss) }
 }
 
-/** Пока день планируется, копилка закрыта — и дорога в план тут же (ТЗ 3.4). */
-
 /**
- * Выбранная цель: стоимость, накоплено, остаток и срок — всё, что требует
- * ТЗ 2.5.7 показать ребёнку о цели.
+ * Выбранная цель — герой экрана (DESIGN_PLAN 3.7): тарелка 72 dp, большая
+ * банка с уровнем и рядом сова, «Накоплено 6 из 40», остаток и срок словами
+ * под банкой — всё, что требует ТЗ 2.5.7 показать ребёнку о цели.
  */
 @Composable
-private fun ActiveGoal(state: SavingsState.Ready, goal: GoalView, onBuy: () -> Unit) {
+private fun ActiveGoal(
+    state: SavingsState.Ready,
+    goal: GoalView,
+    onBuy: () -> Unit,
+    onJarPlaced: (Offset) -> Unit,
+) {
     var askingBuy by rememberSaveable { mutableStateOf(false) }
-    // «Купить комиксы», а не «Купить Комиксы»: название стоит внутри фразы.
+    // «Купить набор комиксов», а не «Купить Набор комиксов»: название стоит внутри фразы.
     val thing = goal.title.replaceFirstChar { it.lowercase() }
     FinnyCard {
-        Text(text = goal.title, style = MaterialTheme.typography.titleLarge)
-        LabelledLine(label = stringResource(R.string.savings_price), amount = goal.price)
-        LabelledLine(label = stringResource(R.string.main_savings), amount = goal.saved)
-        ProgressLine(
-            fraction = goal.fraction,
-            contentDescription = stringResource(
-                R.string.main_goal_progress,
-                goal.title,
-                goal.saved.amount,
-                goal.price.amount,
-            ),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
+        ) {
+            ItemIcon(icon = goal.icon, category = SpendCategory.SAVINGS, large = true)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(text = goal.title, style = MaterialTheme.typography.titleLarge)
+                LabelledLine(label = stringResource(R.string.savings_price), amount = goal.price)
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space, Alignment.CenterHorizontally),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Jar(
+                level = goal.fraction,
+                color = SpendCategory.SAVINGS.fill,
+                modifier = Modifier
+                    .size(HERO_JAR_WIDTH, HERO_JAR_HEIGHT)
+                    .onGloballyPositioned { onJarPlaced(it.boundsInRoot().center) },
+            )
+            Owl(look = state.owl, size = OwlRole.Standalone.size)
+        }
+        Text(
+            text = stringResource(R.string.progress_goal_saved, goal.saved.amount, goal.price.amount),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
         if (goal.isReached) {
             FinnyButton(
                 text = stringResource(R.string.savings_buy, thing),
                 onClick = { askingBuy = true },
                 enabled = state.canBuy,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = BUY_BUTTON_HEIGHT),
+                modifier = Modifier.fillMaxWidth(),
             )
             // Кнопка неактивна до плана дня (canBuy = canOperate && isReached) — без
             // строки ребёнок жмёт «Собрано!» и не понимает, почему ничего не происходит.
@@ -286,7 +356,8 @@ private fun ActiveGoal(state: SavingsState.Ready, goal: GoalView, onBuy: () -> U
     // Покупка необратима и опустошает копилку — сначала переспрашиваем.
     if (askingBuy) {
         FinnyDialog(
-            title = stringResource(R.string.savings_buy_title, thing),
+            // «Набор комиксов — покупаем?»: название в начале фразы, с большой буквы.
+            title = stringResource(R.string.savings_buy_title, goal.title),
             onDismiss = { askingBuy = false },
             buttons = {
                 FinnyButton(
@@ -304,13 +375,18 @@ private fun ActiveGoal(state: SavingsState.Ready, goal: GoalView, onBuy: () -> U
     }
 }
 
-/** Покупка — главное действие цели: кнопка крупнее обычной (раздел 8 плана). */
-private val BUY_BUTTON_HEIGHT = 56.dp
+/**
+ * Большая банка цели: пропорции 7:9, как у банок плана, чтобы крышка и
+ * уровень не поплыли; крупнее них — здесь банка одна и она главная.
+ */
+private val HERO_JAR_WIDTH = 112.dp
+private val HERO_JAR_HEIGHT = 144.dp
 
 /**
- * Цель в списке — кнопка выбора. Выбранная подписана словом, а не только
- * выделена цветом (ТЗ 3.6). Накопленное показывается у каждой: отложенное на
- * прежнюю цель не пропадает из виду при смене.
+ * Цель в списке — белая строка с тарелкой и ценой (DESIGN_PLAN 3.7), кнопка
+ * выбора. Выбранная — рамкой цвета копилки и словом «Выбрана»: не только
+ * цветом (ТЗ 3.6). Накопленное показывается у каждой: отложенное на прежнюю
+ * цель не пропадает из виду при смене.
  *
  * Купленную цель нельзя выбрать снова, пока есть некупленная (`selectable`
  * приходит из [SavingsState.Ready.canChoose]) — иначе один клик стирал бы
@@ -319,16 +395,17 @@ private val BUY_BUTTON_HEIGHT = 56.dp
  */
 @Composable
 private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
-    val container = if (goal.isActive) {
-        MaterialTheme.colorScheme.primaryContainer
+    val mark = if (goal.isActive) {
+        Modifier.border(Dimens.ButtonBorderWidth, SpendCategory.SAVINGS.fill, RoundedCornerShape(Dimens.CornerCard))
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        Modifier
     }
     FinnyCard(
-        color = container,
         onClick = onClick,
         enabled = selectable,
-        modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget),
+        modifier = Modifier
+            .defaultMinSize(minHeight = Dimens.TouchTarget)
+            .then(mark),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -340,11 +417,7 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
                 modifier = Modifier.weight(1f),
             ) {
-                Text(
-                    text = goal.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (goal.isActive) FontWeight.Bold else FontWeight.Normal,
-                )
+                Text(text = goal.title, style = MaterialTheme.typography.titleMedium)
                 if (goal.isActive || goal.isBought) {
                     val labelRes = when {
                         // Активна и куплена — значит копит на ещё один экземпляр (L5).
@@ -355,7 +428,7 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
                     Text(
                         text = stringResource(labelRes),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (goal.isActive) SpendCategory.SAVINGS.color else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (goal.saved > Coins.ZERO) {
@@ -434,34 +507,74 @@ private fun WithdrawDialog(
     }
 }
 
+/**
+ * Сумма в окне — крупным числом с монетой, по бокам «−» и «+» 48 dp
+ * (DESIGN_PLAN 3.7), как у ползунков плана. Число — живая область: после
+ * «+» TalkBack сам скажет новую сумму, иначе ребёнок нажимает вслепую.
+ */
 @Composable
 private fun AmountStepper(
     draft: SavingsDraft,
     onAdd: () -> Unit,
     onRemove: () -> Unit,
 ) {
+    val spoken = coinsText(draft.amount)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = Modifier.fillMaxWidth(),
     ) {
         StepButton(
-            symbol = "−",
+            icon = FinnyIcons.Minus,
             description = stringResource(R.string.savings_amount_less),
             enabled = draft.canRemove,
             onClick = onRemove,
         )
-        MoneyAmount(
-            amount = draft.amount,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall, Alignment.CenterHorizontally),
+            modifier = Modifier
+                .weight(1f)
+                .clearAndSetSemantics {
+                    contentDescription = spoken
+                    liveRegion = LiveRegionMode.Polite
+                },
+        ) {
+            Coin(size = STEPPER_COIN)
+            Text(
+                text = draft.amount.amount.toString(),
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        }
         StepButton(
-            symbol = "+",
+            icon = FinnyIcons.Plus,
             description = stringResource(R.string.savings_amount_more),
             enabled = draft.canAdd,
             onClick = onAdd,
         )
+    }
+}
+
+/** Монета у крупного числа суммы — та же, что у живого счётчика плана (DESIGN_PLAN 3.2). */
+private val STEPPER_COIN = 36.dp
+
+/**
+ * Итог операции. После «Отложить» монеты сначала летят из кошелька в банку
+ * цели, а «Готово!» с радостной совой — когда они легли (DESIGN_PLAN 2.7, 3.7):
+ * окно поверх полёта спрятало бы, куда ушли монеты. Полёт один раз на
+ * пополнение — после поворота экрана монеты уже в банке. Без движения полёта
+ * нет, и окно открывается сразу; снятие и покупка цели не летят.
+ */
+@Composable
+private fun Outcome(outcome: SavingsOutcomeView, owl: OwlLook, from: Offset?, to: Offset?, onDismiss: () -> Unit) {
+    var landed by rememberSaveable(outcome.number) { mutableStateOf(!outcome.intoJar) }
+    when {
+        landed -> OutcomeDialog(outcome = outcome, owl = owl, onDismiss = onDismiss)
+        from != null && to != null -> CoinFlight(from = from, to = listOf(to), onFinished = { landed = true })
+        // Банки или кошелька не видно в разметке — лететь неоткуда, итог важнее полёта.
+        else -> LaunchedEffect(Unit) { landed = true }
     }
 }
 

@@ -276,7 +276,7 @@
     <string name="savings_eta">Если откладывать как обычно, по %1$d, — через %2$s</string>
     <string name="savings_buy">Собрано! Купить %1$s</string>
     <string name="savings_buy_needs_plan">Купить можно после плана дня</string>
-    <string name="savings_buy_title">Купить %1$s?</string>
+    <string name="savings_buy_title">%1$s — покупаем?</string>
     <string name="savings_buy_text">Монеты этой цели уйдут на покупку, а %1$s встанет рядом с совой.</string>
     <string name="savings_buy_confirm">Купить</string>
     <string name="savings_eta_unknown">Отложи первые монеты — и я посчитаю, когда соберём.</string>

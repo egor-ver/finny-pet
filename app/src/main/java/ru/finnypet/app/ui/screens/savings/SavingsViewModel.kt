@@ -94,10 +94,18 @@ sealed interface SavingsDraft {
     ) : SavingsDraft
 }
 
-/** Итог пополнения или снятия: объяснение из контент-пака. */
+/**
+ * Итог пополнения, снятия или покупки цели: объяснение из контент-пака.
+ *
+ * [intoJar] — монеты легли в копилку: сначала они летят из кошелька в банку,
+ * потом «Готово!» (DESIGN_PLAN 2.7, 3.7). [number] различает пополнения,
+ * чтобы полёт был один раз на пополнение: после поворота монеты уже в банке.
+ */
 data class SavingsOutcomeView(
     val text: String,
     val goalReached: Boolean,
+    val intoJar: Boolean = false,
+    val number: Int = 0,
 )
 
 sealed interface SavingsState {
@@ -143,6 +151,13 @@ sealed interface SavingsState {
         val canWithdraw: Boolean get() = canOperate && (active?.saved ?: Coins.ZERO) > Coins.ZERO
 
         val canBuy: Boolean get() = canOperate && active?.isReached == true
+
+        /**
+         * Главная кнопка экрана — одна (DESIGN_PLAN 2.4). Обычно это
+         * «Отложить», а у собранной цели — «Купить»: звать копить ещё на уже
+         * собранное значило бы спрятать то, ради чего копили.
+         */
+        val buyIsMain: Boolean get() = active?.isReached == true
 
         /** Цели без тупика (L5): доступна, если не куплена, либо куплены уже все. */
         fun canChoose(goal: GoalView): Boolean =
@@ -201,6 +216,9 @@ class SavingsViewModel @Inject constructor(
 
     /** Операции по одной: два быстрых «отложить» иначе списали бы баланс дважды. */
     private val editing = Mutex()
+
+    /** Сколько раз откладывали за жизнь экрана — номер полёта монет в банку. */
+    private var deposits = 0
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: StateFlow<SavingsState> =
@@ -350,9 +368,12 @@ class SavingsViewModel @Inject constructor(
             profileId,
             ActionOutcome(transaction = result.value.transaction, savings = result.value.progress),
         )
+        val intoJar = kind == OperationKind.DEPOSIT
         outcome.value = SavingsOutcomeView(
             text = texts.textOf(result.explanation),
             goalReached = result.value.goalReached,
+            intoJar = intoJar,
+            number = if (intoJar) ++deposits else 0,
         )
     }
 

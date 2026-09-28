@@ -4,8 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,9 +22,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
@@ -160,45 +156,5 @@ internal fun DrawScope.drawCoin(center: Offset, diameter: Float, colors: CoinCol
         color = colors.highlight,
         topLeft = center + Offset(-radius * 0.55f, -radius * 0.6f),
         size = Size(radius * 0.5f, radius * 0.32f),
-    )
-}
-
-/**
- * Сумма на подложке — для главного экрана, где баланс и накопления должны
- * читаться с одного взгляда (ТЗ 2.5.3).
- *
- * Подпись занимает всё свободное место и при нехватке ширины сокращается
- * многоточием: при системном увеличении шрифта длинная подпись иначе
- * вытолкнула бы саму сумму за край.
- */
-@Composable
-fun MoneyCard(
-    label: String,
-    amount: Coins,
-    modifier: Modifier = Modifier,
-) {
-    // Иначе озвучка произнесёт подпись и сумму двумя остановками, и связь
-    // между ними потеряется.
-    FinnyCard(modifier = modifier.semantics(mergeDescendants = true) {}) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Label(text = label)
-            MoneyAmount(amount = amount)
-        }
-    }
-}
-
-@Composable
-private fun RowScope.Label(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.weight(1f),
     )
 }

@@ -4,7 +4,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
@@ -15,9 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -366,7 +362,7 @@ private fun AmountSlider(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
     ) {
-        StepIconButton(
+        StepButton(
             icon = FinnyIcons.Minus,
             description = stringResource(R.string.budget_less, title),
             enabled = enabled && shown > Coins.ZERO,
@@ -392,7 +388,7 @@ private fun AmountSlider(
                     stateDescription = spoken
                 },
         )
-        StepIconButton(
+        StepButton(
             icon = FinnyIcons.Plus,
             description = stringResource(R.string.budget_more, title),
             enabled = enabled,
@@ -401,25 +397,5 @@ private fun AmountSlider(
     }
 }
 
-/** Круглая кнопка 48 dp в стиле второстепенной: белая, рамка и значок `primary`. */
-@Composable
-private fun StepIconButton(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit) {
-    val primary = MaterialTheme.colorScheme.primary
-    OutlinedIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        border = BorderStroke(Dimens.ButtonBorderWidth, if (enabled) primary else primary.copy(alpha = DISABLED_ALPHA)),
-        colors = IconButtonDefaults.outlinedIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = primary,
-            disabledContainerColor = MaterialTheme.colorScheme.surface,
-        ),
-        modifier = Modifier.size(Dimens.TouchTarget),
-    ) {
-        Icon(imageVector = icon, contentDescription = description)
-    }
-}
-
 private val THUMB_SIZE = 32.dp
 private val COUNTER_COIN = 36.dp
-private const val DISABLED_ALPHA = 0.38f

@@ -1,11 +1,9 @@
 package ru.finnypet.app.ui
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -33,9 +31,10 @@ import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.MoneyAmount
-import ru.finnypet.app.ui.components.MoneyCard
+import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.StatBar
 import ru.finnypet.app.ui.components.StepButton
+import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.screens.shop.ShopContent
 import ru.finnypet.app.ui.screens.shop.ShopItemView
 import ru.finnypet.app.ui.screens.shop.ShopState
@@ -106,7 +105,7 @@ class DesignSystemTest {
     fun кнопка_шага_не_меньше_48_dp() {
         compose.setContent {
             FinnypetTheme {
-                StepButton(symbol = "+", description = "Больше", enabled = true, onClick = {})
+                StepButton(icon = FinnyIcons.Plus, description = "Больше", enabled = true, onClick = {})
             }
         }
 
@@ -207,10 +206,9 @@ class DesignSystemTest {
             FinnypetTheme {
                 FinnyScaffold(title = "Экран") {
                     repeat(30) { index ->
-                        MoneyCard(
+                        LabelledLine(
                             label = "Строка $index",
                             amount = Coins(index),
-                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     Text("Последний элемент")
@@ -253,7 +251,7 @@ class DesignSystemTest {
     fun сумма_читается_вслух_одной_фразой() {
         compose.setContent {
             FinnypetTheme {
-                MoneyCard(label = "Баланс", amount = Coins(80))
+                LabelledLine(label = "Баланс", amount = Coins(80))
             }
         }
 
@@ -270,10 +268,9 @@ class DesignSystemTest {
                 // и падал. Для списков заведён отдельный каркас.
                 FinnyListScaffold(title = "Список") {
                     items(count = 40, key = { it }) { index ->
-                        MoneyCard(
+                        LabelledLine(
                             label = "Строка $index",
                             amount = Coins(index),
-                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     item(key = "last") { Text("Последняя строка") }

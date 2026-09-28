@@ -186,6 +186,9 @@ class SavingsFlowTest {
         val after = await { it.outcome != null && it.active?.saved == Coins(10) }
         assertEquals("Отложили 10, всего 10, осталось 20.", after.outcome?.text)
         assertEquals(false, after.outcome?.goalReached)
+        // Отложенные монеты летят из кошелька в банку — один полёт на пополнение (U15).
+        assertEquals(true, after.outcome?.intoJar)
+        assertEquals(1, after.outcome?.number)
         assertEquals(before.balance - Coins(10), after.balance)
         assertNull("черновик закрыт после подтверждения", after.draft)
 
@@ -284,6 +287,7 @@ class SavingsFlowTest {
 
         val after = await { it.active?.saved == Coins(5) }
         assertEquals("Взяли 5, осталось 5.", after.outcome?.text)
+        assertEquals("снятые монеты в банку не летят", false, after.outcome?.intoJar)
         assertEquals(saved.balance + Coins(5), after.balance)
         val period = periods.current(profileId)!!
         assertTrue(periods.transactions(period.id).any { it.type == TransactionType.SAVINGS_WITHDRAW })

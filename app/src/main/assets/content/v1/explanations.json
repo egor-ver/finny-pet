@@ -15,7 +15,7 @@
   
   "balance.credited": "Ура, в кошелёк прилетели монетки: +{amount}!",
   
-  "savings.deposited": "Отложили в копилку: {coins:amount}! Всего накоплено {saved}, до мечты осталось {remaining}.",
+  "savings.deposited": "Отложили в копилку: {coins:amount}! Всего накоплено {saved}, до цели осталось {remaining}.",
   "savings.goal_reached": "Ура! Цель собрана! В копилке уже {coins:saved}!",
   "savings.withdrawn": "Взяли из копилки: {coins:amount}. Там осталось {saved}, до цели теперь {remaining}.",
   "savings.goal_bought": "Ура! {icon} теперь рядом со мной. Выбери новую цель.",

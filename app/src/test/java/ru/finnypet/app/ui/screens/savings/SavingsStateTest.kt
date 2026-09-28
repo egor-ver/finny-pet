@@ -18,11 +18,11 @@ import ru.finnypet.app.ui.components.OwlLook
  */
 class SavingsStateTest {
 
-    private fun goal(id: String, bought: Boolean, active: Boolean = false) = GoalView(
+    private fun goal(id: String, bought: Boolean, active: Boolean = false, saved: Coins = Coins.ZERO) = GoalView(
         id = GoalId(id),
         title = id,
         price = Coins(10),
-        saved = Coins.ZERO,
+        saved = saved,
         isActive = active,
         icon = "🎁",
         isBought = bought,
@@ -64,5 +64,17 @@ class SavingsStateTest {
         val ready = state(listOf(goal("book", bought = true), goal("bike", bought = true)))
 
         ready.goals.forEach { assertTrue(ready.canChoose(it)) }
+    }
+
+    /** Главная кнопка одна (DESIGN_PLAN 2.4): у собранной цели это «Купить», а не «Отложить». */
+    @Test
+    fun `пока цель не собрана, главное действие — отложить`() {
+        assertFalse(state(listOf(goal("bike", bought = false, active = true, saved = Coins(9)))).buyIsMain)
+        assertFalse("без цели покупать нечего", state(listOf(goal("bike", bought = false))).buyIsMain)
+    }
+
+    @Test
+    fun `у собранной цели главное действие — купить`() {
+        assertTrue(state(listOf(goal("bike", bought = false, active = true, saved = Coins(10)))).buyIsMain)
     }
 }
