@@ -150,14 +150,14 @@ private fun Screen(
 /**
  * День идёт: видно, к чему ребёнок пришёл, и можно закончить.
  *
- * Окно «Закончить день?» открывается сразу, до экрана (раздел 8 плана): сюда
- * приходят по «Уложить спать», и вопрос — единственное, что тут решается.
+ * Окно «Закончить день?» — по кнопке, а не сразу: иначе полосы плана и
+ * факта, ради которых сюда пришли, были видны только под затемнением.
  * День не вернуть, поэтому подтверждение обязательно (ТЗ 3.6). Если сова
  * голодна, а монеты на нужное есть, она переспрашивает сама (R14).
  */
 @Composable
 private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> Unit) {
-    var asking by rememberSaveable { mutableStateOf(true) }
+    var asking by rememberSaveable { mutableStateOf(false) }
 
     Screen(
         onBack = onBack,
@@ -193,13 +193,10 @@ private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> 
                         onClose()
                     },
                 )
-                // Передумал — обратно на главный: итогов ещё нет, смотреть здесь нечего.
+                // Передумал — остаётся на итогах; на главный ведёт «Назад» в шапке.
                 FinnySecondaryButton(
-                    text = stringResource(R.string.action_back),
-                    onClick = {
-                        asking = false
-                        onBack()
-                    },
+                    text = stringResource(R.string.action_not_now),
+                    onClick = { asking = false },
                 )
             },
         ) {
@@ -283,12 +280,15 @@ private fun Closed(summary: DaySummary, onBack: () -> Unit) {
             }
         }
         DayStars(done = summary.checks.map { it.done })
-        FinnyCard {
-            summary.checks.forEach { check -> CheckLine(check) }
-        }
+        // Рост — сразу под звёздами, которые его и дают: ниже строк объяснения
+        // карточка роста оказывалась под кнопкой «Начать день» и без прокрутки
+        // не читалась.
         FinnyCard {
             GrowthLine(summary = summary.growth)
             GrowthNote(summary)
+        }
+        FinnyCard {
+            summary.checks.forEach { check -> CheckLine(check) }
         }
         LabelledLine(label = stringResource(R.string.day_carry_over), amount = summary.carryOver)
         Tip(summary.tip)

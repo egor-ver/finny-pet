@@ -28,4 +28,12 @@ class TaskResultTest {
     fun `верно без монет — без правила первой попытки`() {
         assertEquals(RewardLine.NO_COINS, rewardLine(correct = true, paid = Coins.ZERO))
     }
+
+    /** U10+U11: число в кошельке меняется, когда монеты долетели, а не до полёта. */
+    @Test
+    fun `кошелёк в шапке — без награды до прилёта монет`() {
+        assertEquals(Coins(45), shownBalance(Coins(55), reward = Coins(10), landed = false))
+        assertEquals(Coins(55), shownBalance(Coins(55), reward = Coins(10), landed = true))
+        assertEquals(Coins(55), shownBalance(Coins(55), reward = Coins.ZERO, landed = false))
+    }
 }

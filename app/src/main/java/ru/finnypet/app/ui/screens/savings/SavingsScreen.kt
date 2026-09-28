@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +55,7 @@ import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.PlanningHint
+import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StepButton
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
@@ -178,32 +180,36 @@ private fun Ready(
     var wallet by remember { mutableStateOf<Offset?>(null) }
     var jar by remember { mutableStateOf<Offset?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Screen(
-            onBack = onBack,
-            bottomBar = {
-                ButtonColumn {
-                    if (state.buyIsMain) {
-                        FinnySecondaryButton(
-                            text = stringResource(R.string.savings_deposit),
-                            onClick = onDeposit,
-                            enabled = state.canDeposit,
-                        )
-                    } else {
-                        FinnyButton(
-                            text = stringResource(R.string.savings_deposit),
-                            onClick = onDeposit,
-                            enabled = state.canDeposit,
-                        )
-                    }
+    // Без цели откладывать некуда и брать нечего: вместо двух бледных кнопок
+    // внизу главное действие — выбрать цель в списке, о чём и говорит сова.
+    val bottomBar: (@Composable () -> Unit)? = if (state.active == null) {
+        null
+    } else {
+        {
+            ButtonColumn {
+                if (state.buyIsMain) {
                     FinnySecondaryButton(
-                        text = stringResource(R.string.savings_withdraw),
-                        onClick = onWithdraw,
-                        enabled = state.canWithdraw,
+                        text = stringResource(R.string.savings_deposit),
+                        onClick = onDeposit,
+                        enabled = state.canDeposit,
+                    )
+                } else {
+                    FinnyButton(
+                        text = stringResource(R.string.savings_deposit),
+                        onClick = onDeposit,
+                        enabled = state.canDeposit,
                     )
                 }
-            },
-        ) {
+                FinnySecondaryButton(
+                    text = stringResource(R.string.savings_withdraw),
+                    onClick = onWithdraw,
+                    enabled = state.canWithdraw,
+                )
+            }
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Screen(onBack = onBack, bottomBar = bottomBar) {
             // Кошелёк — строка с монетой, а не отдельная карточка (DESIGN_PLAN 3.7):
             // он нужен как источник «Отложить», а не как второй герой экрана.
             LabelledLine(label = stringResource(R.string.main_balance)) {
@@ -219,12 +225,7 @@ private fun Ready(
 
             val active = state.active
             if (active == null) {
-                FinnyCard {
-                    Text(
-                        text = stringResource(R.string.savings_goal_none),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
+                SpeechBubble(owl = state.owl, text = stringResource(R.string.savings_goal_none))
             } else {
                 ActiveGoal(
                     state = state,
@@ -541,11 +542,18 @@ private fun AmountStepper(
                 },
         ) {
             Coin(size = STEPPER_COIN)
+            // При шрифте 2,0 трёхзначная сумма не помещается между «−» и «+»:
+            // число уменьшается до ширины, а не обрезается (ТЗ 3.6).
             Text(
                 text = draft.amount.amount.toString(),
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = MaterialTheme.typography.titleLarge.fontSize,
+                    maxFontSize = MaterialTheme.typography.displayMedium.fontSize,
+                ),
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
         StepButton(

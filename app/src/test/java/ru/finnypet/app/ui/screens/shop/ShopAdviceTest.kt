@@ -179,4 +179,37 @@ class ShopAdviceTest {
         val missing = keys.map { it.key }.filterNot(pack.texts::containsKey)
         assertTrue("Нет текста в explanations.json для фраз: $missing", missing.isEmpty())
     }
+
+    /** U13: окно товара не обещает «Радость +25» при радости 100 — прирост с учётом верхней границы. */
+    @Test
+    fun `прирост в окне товара — не выше верхней границы`() {
+        val full = PetState(mood = Stat(100), satiety = Stat(90), care = Stat(90))
+        val almost = PetState(mood = Stat(90), satiety = Stat(90), care = Stat(90))
+
+        assertTrue(petGains(petState, full, ball).isEmpty())
+        assertEquals(listOf(PetStatKind.MOOD to 10), petGains(petState, almost, ball).map { it.kind to it.delta })
+        assertEquals(listOf(PetStatKind.SATIETY to 25), petGains(petState, hungry, porridge).map { it.kind to it.delta })
+    }
+
+    /** U13: у каждой игрушки своя фраза — энциклопедию не называют «новой игрушкой». */
+    @Test
+    fun `у каждой игрушки своя фраза в контенте`() {
+        val toys = pack.shop.filter { it.isToy }
+        val missing = toys.map(::toyPhraseKey).filterNot(pack.texts::containsKey)
+
+        assertTrue("Нет фразы для игрушек: $missing", toys.isNotEmpty() && missing.isEmpty())
+        assertEquals(
+            "{name} листает новую энциклопедию!",
+            pack.texts[toyPhraseKey(pack.shop.single { it.id.value == "toy-book" })],
+        )
+    }
+
+    /** U10+U11: фраза совы в магазине не начинает строку с тире — перед ним неразрывный пробел. */
+    @Test
+    fun `фразы совы в магазине — тире не отрывается от слова`() {
+        val phrases = pack.texts.filterKeys { it.startsWith("owl.shop.") }.values
+
+        assertTrue(phrases.isNotEmpty())
+        assertTrue(phrases.none { " —" in it })
+    }
 }

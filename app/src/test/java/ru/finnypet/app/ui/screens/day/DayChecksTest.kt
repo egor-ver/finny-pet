@@ -12,6 +12,7 @@ import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PeriodFact
@@ -280,6 +281,39 @@ class DayChecksTest {
         assertEquals(DayTotals(spent = Coins(37), saved = Coins(8)), dayTotals(lines))
     }
 
+    /** U14+U16: цель собрана — строка так и говорит, а не «осталось 0» или «монеты уже ближе к цели». */
+    @Test
+    fun `цель собрана — копилка говорит, что собрана`() {
+        val fed = dayChecks(needsMet = true, report = report(plan(38, 2, 8), fact(37, 0, 8)), goalTitle = "Набор комиксов", goalLeft = Coins.ZERO)
+        val hungry = dayChecks(needsMet = false, report = report(plan(38, 2, 4), fact(0, 0, 4)), goalTitle = "Набор комиксов", goalLeft = Coins.ZERO)
+
+        val reached = Explanation("day.savings.reached", mapOf("saved" to "8", "goal" to "Набор комиксов"))
+        assertEquals(DayCheck(true, reached), fed[2])
+        assertEquals(Explanation("day.savings.reached", mapOf("saved" to "4", "goal" to "Набор комиксов")), hungry[2].text)
+        assertEquals("Копилка +4: цель «Набор комиксов» собрана!", texts.textOf(hungry[2].text))
+    }
+
+    /** U15: 35 из копилки дня ушли и в купленную днём цель — остаток до новой цели рядом с ними врал бы. */
+    @Test
+    fun `монеты дня ушли не только в текущую цель — без остатка до неё`() {
+        val board = GoalId("goal-board")
+        val onlyBoard = listOf(deposit(1, board, 5), buy(2, "food-porridge", 14))
+        val withBought = listOf(deposit(1, GoalId("goal-book"), 30), goalPurchase(2, GoalId("goal-book")), deposit(3, board, 5))
+
+        assertTrue(savedOnlyFor(board, onlyBoard))
+        assertEquals(false, savedOnlyFor(board, withBought))
+        assertEquals(false, savedOnlyFor(board, listOf(deposit(1, GoalId("goal-book"), 5))))
+    }
+
+    /** «Накопления тоже по плану» при плане 5 и копилке +35 звучало как «ровно 5» — фраза говорит «не меньше». */
+    @Test
+    fun `итог дня по плану не спорит с копилкой больше плана`() {
+        assertEquals(
+            "Всё по плану: потратили не больше задуманного, а отложили не меньше!",
+            texts.textOf("period.plan_followed"),
+        )
+    }
+
     /** Заработанные звёзды загораются по очереди через 150 мс; пустой слот очередь не занимает. */
     @Test
     fun `звёзды дня загораются по очереди, пропуская пустые слоты`() {
@@ -296,6 +330,26 @@ class DayChecksTest {
         reasonKey = "purchase.done",
         createdAt = id,
         itemId = ItemId(item),
+    )
+
+    private fun deposit(id: Long, goal: GoalId, amount: Int) = Transaction(
+        id = id,
+        periodId = 3,
+        type = TransactionType.SAVINGS_DEPOSIT,
+        amount = Coins(amount),
+        reasonKey = "savings.deposited",
+        createdAt = id,
+        goalId = goal,
+    )
+
+    private fun goalPurchase(id: Long, goal: GoalId) = Transaction(
+        id = id,
+        periodId = 3,
+        type = TransactionType.GOAL_PURCHASE,
+        amount = Coins.ZERO,
+        reasonKey = "savings.goal_bought",
+        createdAt = id,
+        goalId = goal,
     )
 
     private fun plan(mandatory: Int, optional: Int, savings: Int) =

@@ -629,6 +629,7 @@ class ScreensTest {
         category = SpendCategory.MANDATORY,
         effects = listOf(PetEffect(PetStatKind.SATIETY, 20)),
         icon = "🥣",
+        gains = listOf(Change.PetStat(PetStatKind.SATIETY, Stat(50), Stat(70))),
     )
 
     private val toy = ShopItemView(
@@ -638,6 +639,7 @@ class ScreensTest {
         category = SpendCategory.OPTIONAL,
         effects = listOf(PetEffect(PetStatKind.MOOD, 15)),
         icon = "⚽",
+        gains = listOf(Change.PetStat(PetStatKind.MOOD, Stat(50), Stat(65))),
     )
 
     private fun ready(

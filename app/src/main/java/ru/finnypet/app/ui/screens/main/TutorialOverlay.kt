@@ -254,7 +254,9 @@ private fun TutorialPanel(
     val places = where.map { stringResource(it.where) }
     val spoken = buildString {
         append(stringResource(R.string.tutorial_spoken, step + 1, count, text))
-        if (places.isNotEmpty()) append(' ').append(stringResource(R.string.tutorial_where, places.joinToString()))
+        // Места через «;»: в каждом уже есть запятая («кошелёк, вверху слева»),
+        // и TalkBack склеил бы два места в одно перечисление.
+        if (places.isNotEmpty()) append(' ').append(stringResource(R.string.tutorial_where, places.joinToString("; ")))
     }
     val last = nextTutorialStep(step) == null
     val placed = Modifier.onGloballyPositioned { onBubble(it.boundsInRoot()) }

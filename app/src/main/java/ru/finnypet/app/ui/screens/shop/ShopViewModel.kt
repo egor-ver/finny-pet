@@ -58,6 +58,8 @@ import javax.inject.Inject
  * куплен (раздел 3 плана, «доступность нужного»); ноль — нечего закрывать.
  * [shortage] — товар не по карману: окно товара сразу показывает нехватку и
  * варианты вместо «Купить» (DESIGN_PLAN 3.5); `null` — кошелька хватает.
+ * [gains] — что покупка изменит у питомца сейчас, с учётом верхней границы
+ * ([petGains]); [effects] — что товар даёт вообще, для плитки.
  */
 data class ShopItemView(
     val id: ItemId,
@@ -70,6 +72,7 @@ data class ShopItemView(
     val warning: String? = null,
     val needsCostAfter: Coins = Coins.ZERO,
     val shortage: ItemShortage? = null,
+    val gains: List<Change.PetStat> = emptyList(),
 )
 
 /** Вариант выхода при нехватке денег с подписью из контент-пака. */
@@ -229,10 +232,10 @@ class ShopViewModel @Inject constructor(
         outcome.value = null
     }
 
-    /** «{name} играет с новой игрушкой!» — без рода конкретного товара (U2). */
-    private suspend fun toyPhraseFor(profileId: ProfileId): String {
+    /** «{name} листает новую энциклопедию!» — фраза своя у каждой игрушки ([toyPhraseKey]). */
+    private suspend fun toyPhraseFor(profileId: ProfileId, item: ShopItem): String {
         val petName = profiles.byId(profileId)?.petName.orEmpty()
-        return texts.textOf(TOY_PLAYING_KEY).replace("{name}", petName)
+        return texts.textOf(toyPhraseKey(item)).replace("{name}", petName)
     }
 
     /**
@@ -259,7 +262,7 @@ class ShopViewModel @Inject constructor(
                     price = item.price,
                     effects = result.effects,
                     changes = changes,
-                    toyPhrase = if (item.isToy) toyPhraseFor(profileId) else null,
+                    toyPhrase = if (item.isToy) toyPhraseFor(profileId, item) else null,
                 )
             }
 
@@ -357,11 +360,11 @@ class ShopViewModel @Inject constructor(
             warning = notNeededPhrase(item)?.takeIf { mark == ItemMark.NOT_NEEDED }?.let(texts::textOf),
             needsCostAfter = needsCostAfter(petState, state, item, items),
             shortage = shortage,
+            gains = petGains(petState, state, item),
         )
     }
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
-        const val TOY_PLAYING_KEY = "shop.toy_playing"
     }
 }

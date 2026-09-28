@@ -107,6 +107,10 @@
     <string name="progress_title">Мой прогресс</string>
     <string name="progress_last_day">Как прошёл день %1$d</string>
     <string name="progress_last_day_none">Как прошёл день</string>
+    <!-- Свёрнутая строка вчерашнего дня: по направлению — соблюдён ли план -->
+    <string name="progress_day_kept">по плану</string>
+    <string name="progress_day_over">сверх плана</string>
+    <string name="progress_day_short">меньше плана</string>
     <string name="progress_no_days">Ни один день ещё не закончен. Закончи первый — и здесь появятся итоги.</string>
     <string name="progress_goal">На что копим</string>
     <string name="progress_goal_saved">Накоплено %1$d из %2$d</string>
@@ -224,7 +228,6 @@
     <string name="budget_needs_goal">Чтобы откладывать, выбери цель в копилке.</string>
     <string name="budget_started">План готов! Вот сколько в каждой банке.</string>
     <string name="budget_go_shop">В магазин</string>
-    <string name="budget_planned">План</string>
     <string name="budget_fact">Потрачено</string>
     <string name="budget_saved">Отложено</string>
     <string name="budget_line">%1$s: по плану %2$d, %3$s %4$d. %5$s</string>
@@ -250,6 +253,7 @@
     <string name="shop_empty">В магазине пока пусто.</string>
     <string name="shop_price">Цена</string>
     <string name="shop_pet_change">Что изменится у питомца</string>
+    <string name="shop_pet_change_none">Ничего — и так на максимуме.</string>
     <string name="shop_buy">Купить</string>
     <string name="shop_done_title">Готово!</string>
     <string name="shop_no_change">Мне и так хорошо — ничего не изменилось.</string>
@@ -356,7 +360,7 @@
     <!-- «Окрас · кремовый»: название окраса строчными, из контент-пака. -->
     <string name="create_pet_color">Окрас · %1$s</string>
     <string name="create_pet_accessory">Аксессуар</string>
-    <string name="create_pet_no_accessory">Без</string>
+    <string name="create_pet_no_accessory">Ничего</string>
     <string name="create_pet_names">Как вас зовут?</string>
     <string name="create_pet_child_name">Твоё игровое имя</string>
     <string name="create_pet_pet_name">Имя питомца</string>

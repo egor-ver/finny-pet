@@ -5,12 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +59,7 @@ import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
+import ru.finnypet.app.ui.components.StarMark
 import ru.finnypet.app.ui.components.TopSpeechBubble
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.container
@@ -794,36 +797,40 @@ private fun GrowthTile(
             .defaultMinSize(minHeight = TILE_HEIGHT)
             .clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(imageVector = FinnyIcons.StarFilled, contentDescription = null, tint = FinnyTheme.palette.star)
-            Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
-                if (growth == null) {
+        if (growth == null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(imageVector = FinnyIcons.StarFilled, contentDescription = null, tint = FinnyTheme.palette.star)
+                Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
                     Text(text = grownMessage, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         text = growthPoints.toString(),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
-                } else {
-                    val toStage = stringResource(
-                        if (growth.next == GrowthStage.GROWN) R.string.main_growth_to_grown else R.string.main_growth_to_young,
-                    )
-                    ProgressLine(
-                        fraction = growth.points.toFloat() / growth.target,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(text = toStage, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        text = stringResource(R.string.main_growth_points_short, growth.points, growth.target),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
                 }
             }
+        } else {
+            // Звёзды кусочками, как в итогах и «Моём прогрессе»: сосчитать их
+            // проще, чем оценить долю полосы. Мельче, чтобы шесть уместились
+            // в половину 360 dp одной строкой.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(TILE_STAR_GAP),
+                verticalArrangement = Arrangement.spacedBy(TILE_STAR_GAP),
+            ) {
+                repeat(growth.target) { index ->
+                    StarMark(filled = index < growth.points, modifier = Modifier.size(TILE_STAR))
+                }
+            }
+            Text(
+                text = stringResource(
+                    if (growth.next == GrowthStage.GROWN) R.string.main_growth_to_grown else R.string.main_growth_to_young,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }
@@ -899,3 +906,7 @@ private val CHIP_PADDING = 2.dp
 
 /** Минимальная высота плитки 2 × 2 (DESIGN_PLAN 3.1: бюджет высот главного). */
 private val TILE_HEIGHT = 84.dp
+
+/** Звёзды роста на плитке: шесть по 16 dp с зазором 2 dp — 106 dp, в плитку 360 dp помещаются. */
+private val TILE_STAR = 16.dp
+private val TILE_STAR_GAP = 2.dp

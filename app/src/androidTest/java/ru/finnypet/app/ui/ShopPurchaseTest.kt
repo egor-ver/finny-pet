@@ -407,7 +407,7 @@ class ShopPurchaseTest {
                 "shop.vet" to "Ветеринар",
                 "purchase.done" to "Осталось {balance} монет.",
                 "purchase.rejected" to "Не хватает {shortfall} монет.",
-                "shop.toy_playing" to "{name} играет с новой игрушкой!",
+                "shop.toy.playing" to "{name} играет с новой игрушкой!",
                 "recovery.DO_TASK" to "Выполнить задание",
                 "recovery.POSTPONE_PURCHASE" to "Купить попозже",
                 "recovery.WITHDRAW_FROM_SAVINGS" to "Взять из копилки",

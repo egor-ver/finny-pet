@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +43,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.ItemId
@@ -72,6 +75,7 @@ import ru.finnypet.app.ui.components.tile
 import ru.finnypet.app.ui.screens.main.JarsLeft
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
+import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 
 /**
  * Магазин (ТЗ 2.5.6): товары с ценой, направлением и влиянием на питомца.
@@ -171,6 +175,15 @@ private fun Ready(
     val tiles = remember { mutableMapOf<ItemId, Offset>() }
     val columns = if (LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE) 1 else 2
     val done = state.outcome as? PurchaseOutcome.Done
+    // Итог покупки — в облачке совы наверху списка. Купили снизу — облачко
+    // за краем, и ребёнок не видит, что изменилось: после полёта монет
+    // список сам возвращается к нему.
+    val list = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val motion = LocalAnimationsEnabled.current
+    val showOutcome: () -> Unit = {
+        scope.launch { if (motion) list.animateScrollToItem(0) else list.scrollToItem(0) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Ключи с префиксами: идентификаторы товаров пишет напарник в shop.json,
@@ -178,6 +191,7 @@ private fun Ready(
         FinnyListScaffold(
             title = stringResource(R.string.shop_title),
             onBack = onBack,
+            listState = list,
             actions = {
                 Box(
                     modifier = Modifier
@@ -232,7 +246,7 @@ private fun Ready(
                 }
             }
         }
-        done?.let { PurchaseFlight(done = it, from = wallet, to = tiles[it.itemId]) }
+        done?.let { PurchaseFlight(done = it, from = wallet, to = tiles[it.itemId], onLanded = showOutcome) }
     }
 
     when {
@@ -272,13 +286,21 @@ private fun Ready(
 /**
  * Монеты летят из кошелька к купленному товару (DESIGN_PLAN 2.7) — один раз
  * на покупку: после поворота экрана они уже потрачены. Без движения полёта
- * нет, а смысл остаётся в облачке совы и кошельке.
+ * нет, а смысл остаётся в облачке совы и кошельке. [onLanded] — монеты
+ * легли (без движения — сразу).
  */
 @Composable
-private fun PurchaseFlight(done: PurchaseOutcome.Done, from: Offset?, to: Offset?) {
+private fun PurchaseFlight(done: PurchaseOutcome.Done, from: Offset?, to: Offset?, onLanded: () -> Unit) {
     var landed by rememberSaveable(done.number) { mutableStateOf(false) }
     if (!landed && from != null && to != null) {
-        CoinFlight(from = from, to = listOf(to), onFinished = { landed = true })
+        CoinFlight(
+            from = from,
+            to = listOf(to),
+            onFinished = {
+                landed = true
+                onLanded()
+            },
+        )
     }
 }
 
@@ -506,11 +528,16 @@ private fun ItemDialog(
         CategoryLabel(category = item.category)
         if (item.effects.isNotEmpty()) {
             Text(text = stringResource(R.string.shop_pet_change), style = MaterialTheme.typography.titleMedium)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-                verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-            ) {
-                item.effects.forEach { effect -> StatChip(kind = effect.stat, delta = effect.delta) }
+            // Прирост — настоящий, с учётом верхней границы: обещать «+15» при 100 из 100 было бы неправдой.
+            if (item.gains.isEmpty()) {
+                Text(text = stringResource(R.string.shop_pet_change_none), style = MaterialTheme.typography.bodyLarge)
+            } else {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                ) {
+                    item.gains.forEach { gain -> StatChip(kind = gain.kind, delta = gain.delta) }
+                }
             }
         }
         // Нужное, которое сове пока не нужно: купить можно, но сова спрашивает (R12).

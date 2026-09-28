@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -138,6 +140,9 @@ fun FinnyScaffold(
  * нужны магазину (ТЗ 2.5.6), заданиям (2.5.8) и истории (2.5.11), поэтому
  * вариант заведён сразу, а не когда упадёт.
  *
+ * [listState] — чтобы экран мог сам прокрутить список: магазин после
+ * покупки возвращает к облачку совы с итогом.
+ *
  * Элементам списка обязательно давать key — иначе при изменении данных
  * Compose пересоберёт весь список вместо изменившихся строк.
  */
@@ -149,6 +154,7 @@ fun FinnyListScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     bottomBar: (@Composable () -> Unit)? = null,
     spacing: Dp = Dimens.SpaceMedium,
+    listState: LazyListState = rememberLazyListState(),
     content: LazyListScope.() -> Unit,
 ) {
     ScaffoldChrome(
@@ -159,6 +165,7 @@ fun FinnyListScaffold(
         bottomBar = bottomBar,
     ) { insets ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(insets),

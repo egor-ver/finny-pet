@@ -12,6 +12,7 @@ import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.ui.text.textOf
 
 /**
  * Сова и пояснения на экране плана — на эталонном дне 3 (раздел 4 плана):
@@ -87,6 +88,16 @@ class PlanAdviceTest {
         )
     }
 
+    /** U15: цель уже собрана — сова не зовёт копить на неё, а текст не ставит название с большой буквы посреди фразы. */
+    @Test
+    fun `цель собрана — отложить на неё не предлагает`() {
+        assertEquals(PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good")), owl(plan(38, 10, 0), reached = true))
+        assertEquals(
+            "А на цель «Набор комиксов» не отложим?",
+            texts.textOf(Explanation("owl.plan.no_savings", mapOf("goal" to "Набор комиксов"))),
+        )
+    }
+
     @Test
     fun `без цели копилка не обязательна`() {
         assertEquals(PetMood.HAPPY, owl(plan(38, 10, 0), goal = null).mood)
@@ -122,8 +133,8 @@ class PlanAdviceTest {
 
     @Test
     fun `желаемое — самое дорогое, на что хватает`() {
-        assertEquals("Хватит на покупку: ⚽ Яркий мячик", optionalHint(texts, Coins(30), wants))
-        assertEquals("Хватит на покупку: ⭐ Наклейка", optionalHint(texts, Coins(10), wants))
+        assertEquals("Хватит на покупку: Яркий мячик", optionalHint(texts, Coins(30), wants))
+        assertEquals("Хватит на покупку: Наклейка", optionalHint(texts, Coins(10), wants))
     }
 
     /** Эталон дня 3: на желаемое 2 — пока ни на что, и это не ошибка. */
@@ -168,6 +179,7 @@ class PlanAdviceTest {
         plan: BudgetPlan,
         cover: Coins? = Coins(37),
         goal: String? = "Комиксы",
+        reached: Boolean = false,
         hitLimit: Boolean = false,
-    ) = planOwl(plan, wallet = Coins(48), cover = cover, slack = 9, goalTitle = goal, hitLimit = hitLimit)
+    ) = planOwl(plan, wallet = Coins(48), cover = cover, slack = 9, goalTitle = goal, goalReached = reached, hitLimit = hitLimit)
 }

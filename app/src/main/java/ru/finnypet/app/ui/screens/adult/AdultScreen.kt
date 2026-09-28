@@ -2,6 +2,7 @@ package ru.finnypet.app.ui.screens.adult
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
@@ -218,8 +220,11 @@ private fun About(about: List<String>) {
         Heading(stringResource(R.string.adult_about))
         aboutShown(about, open).forEach { line -> Explanation(line) }
         if (about.size > 1) {
+            // Без внутренних полей кнопки: слово стоит ровно по левому краю
+            // абзаца, а не сдвинуто на 12 dp; высота нажатия — те же 48 dp.
             TextButton(
                 onClick = { open = !open },
+                contentPadding = PaddingValues(0.dp),
                 modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget),
             ) {
                 Text(

@@ -25,6 +25,13 @@ fun rewardLine(correct: Boolean, paid: Coins): RewardLine = when {
     else -> RewardLine.NO_COINS
 }
 
+/**
+ * Кошелёк в шапке итога: награда уже записана в базу, но показывается,
+ * только когда монеты долетели, — иначе число менялось бы раньше полёта.
+ */
+fun shownBalance(balance: Coins, reward: Coins, landed: Boolean): Coins =
+    if (!landed && balance.covers(reward)) balance - reward else balance
+
 /** Ошибка — повод разобраться, а не грустить (раздел 8 плана): сова спокойна. */
 fun taskMood(correct: Boolean): PetMood = if (correct) PetMood.HAPPY else PetMood.CALM
 

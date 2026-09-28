@@ -19,7 +19,8 @@ data class PlanOwl(val mood: PetMood, val phrase: Explanation)
  *
  * [cover] — цена закрытия потребностей, `null` — в магазине их не закрыть
  * целиком, тогда о нужном сова молчит. [hitLimit] — ползунок только что
- * упёрся в конец кошелька. [goalTitle] — цель, `null` — её нет.
+ * упёрся в конец кошелька. [goalTitle] — цель, `null` — её нет;
+ * [goalReached] — она уже собрана, и звать копить на неё незачем.
  */
 fun planOwl(
     plan: BudgetPlan,
@@ -27,6 +28,7 @@ fun planOwl(
     cover: Coins?,
     slack: Int,
     goalTitle: String?,
+    goalReached: Boolean,
     hitLimit: Boolean,
 ): PlanOwl = when {
     hitLimit -> PlanOwl(PetMood.CALM, Explanation("owl.plan.limit"))
@@ -42,7 +44,7 @@ fun planOwl(
         PlanOwl(PetMood.SAD, Explanation("owl.plan.not_enough", mapOf("need" to "${cover.amount}")))
     // Лазейка «всё в нужное»: план соблюдён, а выбора не было (раздел 3 плана).
     cover != null && plan.mandatory.amount > cover.amount + slack -> PlanOwl(PetMood.CALM, Explanation("owl.plan.too_much"))
-    goalTitle != null && plan.savings == Coins.ZERO ->
+    goalTitle != null && !goalReached && plan.savings == Coins.ZERO ->
         PlanOwl(PetMood.CALM, Explanation("owl.plan.no_savings", mapOf("goal" to goalTitle)))
     else -> PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good"))
 }
@@ -65,13 +67,14 @@ fun mandatoryHint(texts: Map<String, String>, coverByNeed: Map<PetStatKind, Coin
 /**
  * Что можно купить на желаемое — самое дорогое, на что хватает: так видно,
  * на что именно ребёнок копит внутри дня. Ноль — не ошибка (термины ТЗ).
+ * Название без эмодзи: картинка товара — на тарелке в магазине (AD-11), а в
+ * строке подсказки она выбивалась из текста.
  */
 fun optionalHint(texts: Map<String, String>, amount: Coins, wants: List<ShopItem>): String {
     if (amount == Coins.ZERO) return texts.textOf("plan.hint.optional_zero")
     val best = wants.filter { amount.covers(it.price) }.maxByOrNull { it.price }
     if (best != null) {
-        val item = "${best.icon} ${texts.textOf(best.titleKey)}".trim()
-        return texts.textOf(Explanation("plan.hint.optional_enough", mapOf("item" to item)))
+        return texts.textOf(Explanation("plan.hint.optional_enough", mapOf("item" to texts.textOf(best.titleKey))))
     }
     val cheapest = wants.minOfOrNull { it.price } ?: return texts.textOf("plan.hint.optional_zero")
     return texts.textOf(Explanation("plan.hint.optional_none", mapOf("price" to "${cheapest.amount}")))

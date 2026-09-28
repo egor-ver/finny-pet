@@ -1,5 +1,6 @@
 package ru.finnypet.app.ui.screens.progress
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,7 @@ import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.Explanation
 import ru.finnypet.app.ui.components.FinnyButton
@@ -59,10 +61,10 @@ import ru.finnypet.app.ui.components.PlanFactBars
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.colors
+import ru.finnypet.app.ui.components.container
 import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
-import ru.finnypet.app.ui.components.jarLevel
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -260,24 +262,47 @@ private fun LastDaySection(lastDay: LastDay?) {
         title = stringResource(R.string.progress_last_day, lastDay.number),
         key = "day",
         summary = {
-            Row(
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-                modifier = Modifier.clearAndSetSemantics {},
+                verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
             ) {
-                lastDay.lines.forEach { line ->
-                    val savings = line.category == SpendCategory.SAVINGS
-                    Jar(
-                        level = if (savings) 0f else jarLevel(line),
-                        color = line.category.fill,
-                        coins = if (savings) line.actual.amount else 0,
-                        modifier = Modifier.size(MINI_JAR_WIDTH, MINI_JAR_HEIGHT),
-                    )
-                }
+                lastDay.lines.forEach { line -> DayChip(line) }
             }
         },
     ) {
         PlanFactBars(lines = lastDay.lines)
     }
+}
+
+/**
+ * Направление вчерашнего дня: иконка и «по плану» / «сверх плана» словом.
+ * Мини-банки с остатком плана тут путали: идеальный день, где потрачено
+ * всё задуманное, выглядел теми же пустыми банками, что и перерасход.
+ */
+@Composable
+private fun DayChip(line: BudgetLine) {
+    val word = stringResource(lastDayWord(line))
+    val spoken = "${stringResource(line.category.label)}: $word"
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        modifier = Modifier
+            .clip(RoundedCornerShape(Dimens.CornerTile))
+            .background(line.category.container)
+            .padding(horizontal = Dimens.SpaceSmall, vertical = Dimens.SpaceTiny)
+            .clearAndSetSemantics { contentDescription = spoken },
+    ) {
+        Icon(imageVector = line.category.icon, contentDescription = null, tint = line.category.color, modifier = Modifier.size(20.dp))
+        Text(text = word, style = MaterialTheme.typography.labelMedium, color = line.category.color)
+    }
+}
+
+/** Словом, соблюдён ли план направления: трата — не больше плана, копилка — не меньше (R3). */
+@StringRes
+internal fun lastDayWord(line: BudgetLine): Int = when {
+    line.followed -> R.string.progress_day_kept
+    line.category == SpendCategory.SAVINGS -> R.string.progress_day_short
+    else -> R.string.progress_day_over
 }
 
 /** Задания — «Пройдено 1 из 6» с чипами тем; внутри — список пройденного. */
@@ -449,9 +474,7 @@ private const val SILHOUETTE_ALPHA = 0.4f
 /** Тропинка чуть выше нижнего края совы — на уровне «полянки». */
 private val PATH_LIFT = 8.dp
 
-// Банка цели и мини-банки — в пропорции основной банки 96 × 124 (Jar.kt):
+// Банка цели — в пропорции основной банки 96 × 124 (Jar.kt):
 // размер задаёт внешний модификатор, рисунок масштабируется сам.
 private val GOAL_JAR_WIDTH = 56.dp
 private val GOAL_JAR_HEIGHT = 72.dp
-private val MINI_JAR_WIDTH = 28.dp
-private val MINI_JAR_HEIGHT = 36.dp

@@ -35,6 +35,15 @@ class ContentParserTest {
         assertTrue(gift.amount < pack.shop.minOf { it.price } + pack.shop.filter { it.category == SpendCategory.OPTIONAL }.minOf { it.price })
     }
 
+    /** DESIGN_PLAN §4: в игре везде «цель», а не «мечта». */
+    @Test
+    fun `в текстах игры нет мечты — только цель`() {
+        val texts = parser.parse(realContent()).texts
+        val dreams = texts.filterValues { it.contains("мечт", ignoreCase = true) }.keys
+
+        assertTrue("«Мечта» в текстах: $dreams", dreams.isEmpty())
+    }
+
     @Test
     fun `повтор события в одном дне отклоняется`() {
         org.junit.Assert.assertThrows(ContentParseException::class.java) {

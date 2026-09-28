@@ -228,7 +228,8 @@ class BudgetViewModel @Inject constructor(
         val goalTitle = goal?.let { pack.texts.textOf(it.titleKey) }
         val coverByNeed = petState.coverByNeed(pet.state, pack.shop)
         val cover = coverByNeed?.values?.fold(Coins.ZERO) { sum, price -> sum + price }
-        val owl = planOwl(plan, wallet, cover, balance.needSlack, goalTitle, limit)
+        val reached = progress != null && goal != null && progress.isReached(goal)
+        val owl = planOwl(plan, wallet, cover, balance.needSlack, goalTitle, reached, limit)
         val days = if (progress != null && goal != null) savingsEngine.periodsToGoal(progress, goal, plan.savings) else null
         return BudgetState.Planning(
             available = wallet,

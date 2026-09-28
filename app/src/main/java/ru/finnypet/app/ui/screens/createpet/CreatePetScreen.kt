@@ -32,11 +32,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -140,19 +145,26 @@ fun CreatePetContent(
         // Сова здоровается сама: без этого игра начиналась бы с голой формы
         // (DESIGN_PLAN 3.3) — знакомство теперь идёт после создания.
         TopSpeechBubble(text = state.greeting)
+        val owl = state.owl(stringResource(R.string.create_pet_preview))
         // Над ушками детёныша в квадрате совы ~43 dp пустого поля — ради них
         // поля имён и уходили за край. Верх рамки срезан на [OwlTopCut], но так,
-        // что и в прыжке сова не задевает хвостик реплики.
+        // что и в прыжке сова не задевает хвостик реплики. Описание совы для
+        // TalkBack — у этой рамки, а не у самой совы: её квадрат выходит за
+        // рамку вверх на срез и заходил на реплику.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(OwlRole.Create.size - OwlTopCut),
+                .height(OwlRole.Create.size - OwlTopCut)
+                .clearAndSetSemantics {
+                    contentDescription = owl.description
+                    role = Role.Image
+                },
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Прыжок на каждый новый выбор — ребёнок видит, что сова
             // откликается на него, а не просто перекрашивается.
             Owl(
-                look = state.owl(stringResource(R.string.create_pet_preview)),
+                look = owl,
                 size = OwlRole.Create.size,
                 reactTo = state.appearance,
                 // Сова остаётся 168 dp (DESIGN_PLAN 3.3): пустой верх её
@@ -360,7 +372,7 @@ private fun AccessoryTile(icon: ImageVector?, title: String, selected: Boolean, 
         modifier = Modifier
             .tile(marked = selected)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .defaultMinSize(minWidth = TileSize, minHeight = TileSize),
+            .defaultMinSize(minWidth = TileWidth, minHeight = TileSize),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -388,9 +400,10 @@ private fun AccessoryTile(icon: ImageVector?, title: String, selected: Boolean, 
                 imageVector = FinnyIcons.Check,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
+                // Отступ 8 dp: при 4 dp галочка ложилась на скруглённую рамку в углу.
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(Dimens.SpaceTiny)
+                    .padding(Dimens.SpaceSmall)
                     .size(TileCheck),
             )
         }
@@ -414,7 +427,23 @@ private fun NameField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(text = label, style = MaterialTheme.typography.bodyMedium) },
+        label = {
+            // Поднятая подпись вырезает в рамке прямоугольник высотой в себя, и
+            // его нижняя половина внутри белого поля оставалась цвета фона.
+            // Белая подложка под нижней половиной подписи заполняет этот вырез.
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.drawBehind {
+                    val gap = LabelGap.toPx()
+                    drawRect(
+                        color = surface,
+                        topLeft = Offset(-gap, size.height / 2),
+                        size = Size(size.width + gap * 2, size.height / 2),
+                    )
+                },
+            )
+        },
         supportingText = hint?.let { { Text(text = it, style = MaterialTheme.typography.bodyMedium) } },
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyLarge,
@@ -443,6 +472,9 @@ private fun NameField(
  */
 private val OwlTopCut = 32.dp
 
+/** Зазор рамки вокруг поднятой подписи поля — как у OutlinedTextField (4 dp). */
+private val LabelGap = 4.dp
+
 /** Образец 48 dp в рамке 56 dp: кольцо 3 dp и зазор 1 dp — пять в ряд на 328 dp. */
 private val SwatchSize = 48.dp
 private val SwatchFrame = 56.dp
@@ -451,5 +483,12 @@ private val CheckBadge = 24.dp
 private const val SWATCH_EDGE_ALPHA = 0.6f
 
 private val TileSize = 72.dp
+
+/**
+ * Ширина плиток одна на все три: по подписи «Шарфик» была шире соседних.
+ * 100 dp — самая широкая подпись жирным с полями; три плитки с зазорами —
+ * 316 dp, в 328 dp экрана 360 dp помещаются.
+ */
+private val TileWidth = 100.dp
 private val TileIcon = 32.dp
 private val TileCheck = 18.dp

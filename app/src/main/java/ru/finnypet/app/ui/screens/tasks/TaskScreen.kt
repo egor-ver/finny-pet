@@ -539,7 +539,7 @@ private fun Done(
     Box(modifier = Modifier.fillMaxSize()) {
         Screen(
             onBack = onBack,
-            balance = state.balance,
+            balance = shownBalance(state.balance, outcome.reward, landed),
             walletModifier = Modifier.onGloballyPositioned { wallet = it.boundsInRoot().center },
             centered = true,
             bottomBar = {

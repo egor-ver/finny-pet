@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
+import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.PetState
@@ -55,6 +56,21 @@ fun needsCostAfter(petState: PetStateEngine, state: PetState, item: ShopItem, sh
     val projected = petState.apply(state, item.effects).value
     return petState.cheapestCover(projected, shop)?.totalPrice() ?: Coins.ZERO
 }
+
+/**
+ * Что покупка изменит у питомца на самом деле (ТЗ 2.5.9): у верхней границы
+ * показатель не растёт, и окно товара не обещает «Радость +15» при радости
+ * 100 из 100. Тот же расчёт, что после покупки ([PetStateEngine.apply]).
+ */
+fun petGains(petState: PetStateEngine, state: PetState, item: ShopItem): List<Change.PetStat> =
+    petState.apply(state, item.effects).changes.filterIsInstance<Change.PetStat>()
+
+/**
+ * Ключ фразы «питомец играет» — своя у каждой игрушки: «играет с новой
+ * игрушкой» про энциклопедию звучало бы странно. Лежит рядом с названием
+ * товара в контент-паке, новая игрушка добавляется правкой JSON.
+ */
+fun toyPhraseKey(item: ShopItem): String = "${item.titleKey}.playing"
 
 /**
  * Насколько после покупки не хватит на нужное (раздел 3 плана, «доступность

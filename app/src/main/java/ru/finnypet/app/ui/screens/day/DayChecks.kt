@@ -5,6 +5,7 @@ import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PlanFactReport
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.GoalId
 import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.PetMood
 import ru.finnypet.app.domain.model.PetState
@@ -12,6 +13,7 @@ import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Transaction
+import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.ui.components.BudgetLine
 
 /** Строка итогов дня: звезда или пустой кружок и пояснение словами (DESIGN_PLAN 3.6). */
@@ -26,7 +28,9 @@ data class DayCheck(val done: Boolean, val text: Explanation)
  * реальные накопления при этом называются отдельно от награды за рост.
  *
  * [goalTitle] и [goalLeft] — цель и сколько до неё осталось после этого дня;
- * `null` — цели нет.
+ * `null` — цели нет или монеты дня ушли не только в неё ([savedOnlyFor]).
+ * Осталось ноль — цель собрана, и строка так и говорит, а не «осталось 0»
+ * или «монеты уже ближе к цели».
  */
 fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goalLeft: Coins?): List<DayCheck> {
     val stars = GrowthEngine.starsFor(report, needsMet)
@@ -67,6 +71,10 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
                     "day.savings.missed",
                     mapOf("saved" to "${savings.actual.amount}", "planned" to "${savings.planned.amount}"),
                 )
+                goalTitle != null && goalLeft == Coins.ZERO -> Explanation(
+                    "day.savings.reached",
+                    mapOf("saved" to "${savings.actual.amount}", "goal" to goalTitle),
+                )
                 !needsMet -> Explanation("day.savings.hungry", mapOf("saved" to "${savings.actual.amount}"))
                 goalTitle != null && goalLeft != null -> Explanation(
                     "day.savings.kept_goal",
@@ -77,6 +85,15 @@ fun dayChecks(needsMet: Boolean, report: PlanFactReport, goalTitle: String?, goa
         ),
     )
 }
+
+/**
+ * Все ли монеты копилки за день легли в цель [goal]: «Копилка +35: до цели
+ * осталось 50» врёт, если часть из 35 ушла в прошлую цель, купленную днём.
+ * Тогда итог называет только сумму дня, без остатка до новой цели.
+ */
+fun savedOnlyFor(goal: GoalId, transactions: List<Transaction>): Boolean =
+    transactions.none { it.type == TransactionType.GOAL_PURCHASE } &&
+        transactions.filter { it.type.category == SpendCategory.SAVINGS }.all { it.goalId == goal }
 
 /**
  * О чём грустит сова в итогах — о первой потребности вечером, до ночи (AD-2).
