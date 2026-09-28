@@ -239,6 +239,26 @@ class NextStepTest {
         }
     }
 
+    /**
+     * С потребностью без грусти сова нарисована и описана для TalkBack
+     * спокойной (R11) — фраза просит поесть, а не жалуется «Я голодный!»,
+     * иначе картинка и слова расходятся.
+     */
+    @Test
+    fun `потребность без грусти — сова просит поесть, а не жалуется на голод`() {
+        val texts = ContentParser().parse(RealContent.raw()).texts
+        val calm = listOf(
+            phrase(NextStep.Plan, needs = listOf(SATIETY)),
+            phrase(NextStep.Shop, needs = listOf(SATIETY), cover = 14),
+            phrase(NextStep.Shop, needs = listOf(SATIETY), cover = 14, needLeft = 8),
+        )
+
+        for (explanation in calm) {
+            val text = texts.textOf(explanation)
+            assertTrue(text, "Хочу есть" in text && "голодн" !in text)
+        }
+    }
+
     @Test
     fun `потребность в магазине целиком не закрыть — начнём с того, что есть`() {
         assertEquals(Explanation("owl.say.not_all.CARE"), phrase(NextStep.Shop, needs = listOf(CARE), cover = null))
