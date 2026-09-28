@@ -174,8 +174,8 @@ class BudgetPlanningTest {
         // Ползунок другой банки дальше свободных монет не идёт: их нет.
         viewModel.set(SpendCategory.OPTIONAL, Coins(5))
 
-        // Сова объясняет, почему бегунок стоит: монеты кончились.
-        val full = await { it.phrase.startsWith("Монеты кончились") }
+        // Сова объясняет, почему бегунок стоит: всё уже разложено.
+        val full = await { it.phrase.startsWith("Всё уже разложено") }
         assertEquals(planning.available, full.plan.total)
         assertEquals(Coins.ZERO, full.plan.optional)
     }

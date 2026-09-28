@@ -92,6 +92,21 @@ class PetStateEngine(private val balance: GameBalance) {
         shop.filter { neededNow(state, it) }.minOfOrNull { it.price }
 
     /**
+     * С какой потребности начать, когда на нужное по плану осталось [needLeft]:
+     * первая по важности (еда первой), которую поднимает хоть один нужный
+     * товар не дороже остатка. Иначе сова звала бы «начнём с еды», когда в
+     * остаток помещается только уход, — покупка еды была бы сверх плана.
+     * [needLeft] `null` — плана ещё нет, ограничивать нечем, это первая
+     * потребность. `null` — потребностей нет или в остаток не помещается ничего.
+     */
+    fun startWith(state: PetState, shop: List<ShopItem>, needLeft: Coins?): PetStatKind? {
+        val needs = needsOf(state)
+        if (needLeft == null) return needs.firstOrNull()
+        val fits = shop.filter { it.category == SpendCategory.MANDATORY && needLeft.covers(it.price) }
+        return needs.firstOrNull { kind -> fits.any { item -> item.effects.any { it.stat == kind && it.delta > 0 } } }
+    }
+
+    /**
      * Цена закрытия каждой потребности отдельно — для пояснения в плане:
      * «еда 22, уход 15». `null` — какую-то из них в магазине нечем закрыть.
      */

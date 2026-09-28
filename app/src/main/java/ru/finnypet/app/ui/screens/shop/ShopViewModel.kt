@@ -338,7 +338,7 @@ class ShopViewModel @Inject constructor(
                 description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
                 wellbeing = pet.state.wellbeing,
             ),
-            phrase = texts.textOf(shopPhrase(petState.needsOf(pet.state))),
+            phrase = texts.textOf(shopPhrase(petState.needsOf(pet.state), petState.startWith(pet.state, items, jars?.mandatory))),
             jars = jars,
             outcome = outcome,
         )

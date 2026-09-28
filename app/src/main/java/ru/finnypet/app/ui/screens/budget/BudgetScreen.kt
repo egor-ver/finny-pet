@@ -201,20 +201,21 @@ private fun Planning(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
-                FinnyButton(
-                    text = stringResource(R.string.budget_confirm),
-                    onClick = { confirming = true },
-                    enabled = state.canConfirm,
-                )
-                // Строка под кнопкой есть всегда, при пустой копилке — невидимая
+                // Строка над кнопкой есть всегда, при пустой копилке — невидимая
                 // и немая: иначе панель росла бы на строку с первой монетой в
-                // копилке, и кнопка прыгала бы вверх из-под пальца.
+                // копилке, и кнопка прыгала бы вверх из-под пальца. Над кнопкой,
+                // а не под ней: так кнопка стоит у низа, как на соседних экранах.
                 val toSavings = state.plan.savings > Coins.ZERO
                 Text(
                     text = stringResource(R.string.budget_to_savings, coinsText(state.plan.savings)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = if (toSavings) Modifier else Modifier.alpha(0f).clearAndSetSemantics {},
+                )
+                FinnyButton(
+                    text = stringResource(R.string.budget_confirm),
+                    onClick = { confirming = true },
+                    enabled = state.canConfirm,
                 )
             }
         },

@@ -136,11 +136,11 @@ class NextStepTest {
     fun `всё нужное дороже остатка плана — сова не называет полную цену`() {
         assertEquals(
             Explanation("owl.say.plan_part.SATIETY"),
-            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 12, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 12),
         )
         assertEquals(
             Explanation("owl.say.plan_part.CARE"),
-            phrase(NextStep.Shop, needs = listOf(CARE), cover = 15, wallet = 40, needLeft = 8, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(CARE), cover = 15, wallet = 40, needLeft = 8),
         )
     }
 
@@ -149,7 +149,7 @@ class NextStepTest {
     fun `в остаток плана помещается самое дешёвое нужное — начнём с еды`() {
         assertEquals(
             Explanation("owl.say.plan_part.SATIETY"),
-            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 11, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 11),
         )
     }
 
@@ -161,11 +161,11 @@ class NextStepTest {
     fun `в остаток плана не помещается ни один нужный товар — сова не зовёт в магазин`() {
         assertEquals(
             Explanation("owl.say.plan_short"),
-            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 4, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 4, startWith = null),
         )
         assertEquals(
             Explanation("owl.say.plan_short"),
-            phrase(NextStep.Shop, needs = listOf(CARE), cover = 15, wallet = 40, needLeft = 0, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(CARE), cover = 15, wallet = 40, needLeft = 0, startWith = null),
         )
     }
 
@@ -178,11 +178,27 @@ class NextStepTest {
     fun `в остаток плана не помещается ничего — plan_short при любом кошельке`() {
         assertEquals(
             Explanation("owl.say.plan_short"),
-            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 22, wallet = 10, needLeft = 3, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 22, wallet = 10, needLeft = 3, startWith = null),
         )
         assertEquals(
             Explanation("owl.say.plan_short"),
-            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = null, wallet = 10, needLeft = 3, cheapestNeeded = 8),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = null, wallet = 10, needLeft = 3, startWith = null),
+        )
+    }
+
+    /**
+     * Ревью F1: в остаток 12 помещается только уход, еда дороже. «Начнём с
+     * еды» звало бы купить её сверх плана — сова называет то, на что хватает.
+     */
+    @Test
+    fun `в остаток плана помещается только уход — начнём с перьев, а не с еды`() {
+        assertEquals(
+            Explanation("owl.say.plan_part.CARE"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 30, wallet = 40, needLeft = 12, startWith = CARE),
+        )
+        assertEquals(
+            Explanation("owl.say.not_all.CARE"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 52, wallet = 45, needLeft = 12, startWith = CARE),
         )
     }
 
@@ -322,7 +338,7 @@ class NextStepTest {
         eventKey: String? = null,
         eventArgs: Map<String, String> = emptyMap(),
         needLeft: Int? = null,
-        cheapestNeeded: Int? = null,
+        startWith: PetStatKind? = needs.firstOrNull(),
     ) = owlPhrase(
         step = step,
         needs = needs,
@@ -334,7 +350,7 @@ class NextStepTest {
         eventKey = eventKey,
         eventArgs = eventArgs,
         needLeft = needLeft?.let(::Coins),
-        cheapestNeeded = cheapestNeeded?.let(::Coins),
+        startWith = startWith,
     )
 
     private companion object {

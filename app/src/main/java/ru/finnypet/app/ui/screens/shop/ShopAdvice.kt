@@ -67,9 +67,17 @@ fun needsShortfallOf(balanceAfter: Coins?, needsCost: Coins): Coins? {
     return balanceAfter.shortfallTo(needsCost).takeIf { it > Coins.ZERO }
 }
 
-/** Что сова говорит в магазине: о первой потребности — еда раньше ухода, как везде. */
-fun shopPhrase(needs: List<PetStatKind>): Explanation =
-    Explanation(needs.firstOrNull()?.let { "owl.shop.need.${it.name}" } ?: "owl.shop.fed")
+/**
+ * Что сова говорит в магазине: о потребности [startWith] — первой, на которую
+ * хватает остатка «Нужного» по плану, еда раньше ухода, как на главном.
+ * Не хватает ни на одну — та же фраза, что на главном: иначе сова звала бы
+ * к метке «нужно сейчас», хотя любая такая покупка уже сверх плана.
+ */
+fun shopPhrase(needs: List<PetStatKind>, startWith: PetStatKind?): Explanation = when {
+    needs.isEmpty() -> Explanation("owl.shop.fed")
+    startWith == null -> Explanation("owl.say.plan_short")
+    else -> Explanation("owl.shop.need.${startWith.name}")
+}
 
 /**
  * «Я уже сыт — сохраним монеты?» для нужного, которое сове пока не нужно:

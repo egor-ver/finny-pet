@@ -222,7 +222,7 @@ class MainViewModel @Inject constructor(
                         eventKey = event?.key,
                         eventArgs = event?.args.orEmpty(),
                         needLeft = jars?.mandatory,
-                        cheapestNeeded = cheapestNeeded,
+                        startWith = petState.startWith(pet.state, shop, jars?.mandatory),
                     )
                     MainState.Ready(
                         petName = profile.petName,

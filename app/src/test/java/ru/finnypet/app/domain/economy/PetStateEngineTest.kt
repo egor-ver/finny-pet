@@ -292,6 +292,40 @@ class PetStateEngineTest {
     }
 
     @Test
+    fun `плана нет — начинаем с первой потребности, еда первой`() {
+        assertEquals(PetStatKind.SATIETY, engine.startWith(pet(satiety = 30, care = 30), shop, needLeft = null))
+    }
+
+    @Test
+    fun `в остаток помещается еда — начинаем с еды`() {
+        assertEquals(PetStatKind.SATIETY, engine.startWith(pet(satiety = 30, care = 30), shop, needLeft = Coins(8)))
+    }
+
+    /** Ревью F1: в остаток 12 помещается уход за 10, а самая дешёвая еда стоит 14. */
+    @Test
+    fun `в остаток помещается только уход — начинаем с ухода, а не с еды`() {
+        val noWater = shop.filter { it.id.value != "water" } + item("comb", 10, PetStatKind.CARE, 10)
+        assertEquals(PetStatKind.CARE, engine.startWith(pet(satiety = 30, care = 30), noWater, needLeft = Coins(12)))
+    }
+
+    @Test
+    fun `в остаток не помещается ничего нужного — начинать не с чего`() {
+        assertNull(engine.startWith(pet(satiety = 30, care = 30), shop, needLeft = Coins(7)))
+    }
+
+    /** Желаемое за монету — не нужное: сытость им по плану на нужное не закрывают. */
+    @Test
+    fun `дешёвое желаемое не считается началом по плану на нужное`() {
+        val withCandy = shop + item("candy", 1, PetStatKind.SATIETY, 50, SpendCategory.OPTIONAL)
+        assertNull(engine.startWith(pet(satiety = 30, care = 90), withCandy, needLeft = Coins(3)))
+    }
+
+    @Test
+    fun `потребностей нет — начинать не с чего`() {
+        assertNull(engine.startWith(pet(satiety = 90, care = 90), shop, needLeft = Coins(50)))
+    }
+
+    @Test
     fun `две воды дешевле каши с водой`() {
         val cover = engine.cheapestCover(pet(satiety = 40, care = 90), shop)!!
         assertEquals(listOf("water", "water"), cover.map { it.id.value })

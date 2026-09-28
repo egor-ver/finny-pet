@@ -67,14 +67,15 @@ fun nextStep(
  * [reward] — сколько дадут за задание, `null` — сегодня уже не дадут;
  * [eventKey]/[eventArgs] — событие дня (L7), `null` — событий сегодня нет;
  * [needLeft] — сколько осталось в банке «Нужное» по плану, `null` — план не
- * подтверждён; [cheapestNeeded] — цена самого дешёвого нужного сейчас товара.
+ * подтверждён; [startWith] — с какой потребности начать по плану
+ * ([ru.finnypet.app.domain.economy.PetStateEngine.startWith]), `null` — в
+ * остаток «Нужного» не помещается ни один нужный товар.
  *
  * Если всё нужное дороже остатка банки, сова не называет полную цену целью
  * похода: кошелёк её и выдержит, но фраза звала бы тратить сверх плана
- * (ТЗ 2.5.5). Если в остаток помещается хоть что-то нужное, она предлагает
- * начать с самого важного — первой потребности, еда первой. Если не помещается
- * ничего, в магазин она не зовёт вовсе при любом кошельке: любая покупка уже
- * была бы сверх плана.
+ * (ТЗ 2.5.5). Она предлагает начать с самой важной потребности, на которую
+ * остатка хватает. Если не хватает ни на одну, в магазин она не зовёт вовсе
+ * при любом кошельке: любая покупка уже была бы сверх плана.
  */
 fun owlPhrase(
     step: NextStep,
@@ -87,7 +88,7 @@ fun owlPhrase(
     eventKey: String? = null,
     eventArgs: Map<String, String> = emptyMap(),
     needLeft: Coins? = null,
-    cheapestNeeded: Coins? = null,
+    startWith: PetStatKind?,
 ): Explanation {
     val first = needs.firstOrNull()
     val morning = mapOf("income" to income.amount.toString())
@@ -105,13 +106,12 @@ fun owlPhrase(
             step == NextStep.Sleep -> Explanation("owl.say.no_coins")
             // До веток про кошелёк: при малом кошельке иначе выпало бы not_all
             // («начнём с еды») — тот же зов тратить сверх плана.
-            needLeft != null && cheapestNeeded != null && !needLeft.covers(cheapestNeeded) ->
-                Explanation("owl.say.plan_short")
+            startWith == null -> Explanation("owl.say.plan_short")
             cover != null && wallet.covers(cover) && needLeft != null && !needLeft.covers(cover) ->
-                Explanation("owl.say.plan_part.${first.name}")
+                Explanation("owl.say.plan_part.${startWith.name}")
             cover != null && wallet.covers(cover) ->
                 Explanation("owl.say.shop.${first.name}", mapOf("price" to cover.amount.toString()))
-            else -> Explanation("owl.say.not_all.${first.name}")
+            else -> Explanation("owl.say.not_all.${startWith.name}")
         }
     }
 }

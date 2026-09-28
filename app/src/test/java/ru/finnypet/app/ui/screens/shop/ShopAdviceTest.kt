@@ -138,9 +138,30 @@ class ShopAdviceTest {
 
     @Test
     fun `сова говорит о первой потребности, еда раньше ухода`() {
-        assertEquals(Explanation("owl.shop.need.SATIETY"), shopPhrase(listOf(PetStatKind.SATIETY, PetStatKind.CARE)))
-        assertEquals(Explanation("owl.shop.need.CARE"), shopPhrase(listOf(PetStatKind.CARE)))
-        assertEquals(Explanation("owl.shop.fed"), shopPhrase(emptyList()))
+        val both = listOf(PetStatKind.SATIETY, PetStatKind.CARE)
+        assertEquals(Explanation("owl.shop.need.SATIETY"), shopPhrase(both, PetStatKind.SATIETY))
+        assertEquals(Explanation("owl.shop.need.CARE"), shopPhrase(listOf(PetStatKind.CARE), PetStatKind.CARE))
+        assertEquals(Explanation("owl.shop.fed"), shopPhrase(emptyList(), null))
+    }
+
+    /** Ревью F1 (r3-12): на нужное по плану осталось 3, еда от 8 — к метке «нужно сейчас» сова не зовёт. */
+    @Test
+    fun `в остаток плана не помещается ничего нужного — фраза про сверх плана`() {
+        val both = listOf(PetStatKind.SATIETY, PetStatKind.CARE)
+        assertEquals(Explanation("owl.say.plan_short"), shopPhrase(both, null))
+        assertEquals(
+            Explanation("owl.say.plan_short"),
+            shopPhrase(both, petState.startWith(hungry, pack.shop, needLeft = Coins(3))),
+        )
+    }
+
+    /** По плану хватает только на уход — сова говорит о перьях, а не о еде. */
+    @Test
+    fun `в остаток помещается только уход — сова говорит о перьях`() {
+        assertEquals(
+            Explanation("owl.shop.need.CARE"),
+            shopPhrase(listOf(PetStatKind.SATIETY, PetStatKind.CARE), PetStatKind.CARE),
+        )
     }
 
     @Test
@@ -151,8 +172,8 @@ class ShopAdviceTest {
     /** Пропавшая фраза показалась бы ребёнку сырым ключом вроде «owl.shop.fed». */
     @Test
     fun `у каждой фразы совы в магазине есть текст`() {
-        val keys = listOf(shopPhrase(emptyList())) +
-            listOf(PetStatKind.SATIETY, PetStatKind.CARE).map { shopPhrase(listOf(it)) } +
+        val keys = listOf(shopPhrase(emptyList(), null), shopPhrase(listOf(PetStatKind.SATIETY), null)) +
+            listOf(PetStatKind.SATIETY, PetStatKind.CARE).map { shopPhrase(listOf(it), it) } +
             pack.shop.filter { it.category == SpendCategory.MANDATORY }.mapNotNull(::notNeededPhrase)
 
         val missing = keys.map { it.key }.filterNot(pack.texts::containsKey)
