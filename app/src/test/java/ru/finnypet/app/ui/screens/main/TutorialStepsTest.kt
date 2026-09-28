@@ -237,4 +237,26 @@ class TutorialStepsTest {
         val arc = arrowArc(Rect(140f, 300f, 344f, 540f), Rect(20f, 10f, 60f, 70f), inset = 28f, gap = 2f)!!
         assertEquals(40f, arc.tip.x, 0.01f)
     }
+
+    /**
+     * F6: пока вырез едет к новой цели, стрелки нет — на шаге 2 она тянулась
+     * вверх к вырезу, поднимавшемуся от копилки к кошельку, и пропадала.
+     */
+    @Test
+    fun `вырез ещё едет — стрелки нет, доехал — есть`() {
+        val savings = Rect(184f, 440f, 344f, 525f)
+        val wallet = Rect(16f, 38f, 90f, 82f)
+        val taskButton = Rect(16f, 625f, 344f, 680f)
+        val halfway = Rect(100f, 240f, 217f, 304f)
+
+        assertFalse(cutoutsArrived(shown = listOf(savings, taskButton), targets = listOf(wallet, taskButton)))
+        assertFalse(cutoutsArrived(shown = listOf(halfway, taskButton), targets = listOf(wallet, taskButton)))
+        assertTrue(cutoutsArrived(shown = listOf(wallet, taskButton), targets = listOf(wallet, taskButton)))
+    }
+
+    /** Шаг без целей на экране — «доехал» сразу: стрелок всё равно нет, облачко на месте. */
+    @Test
+    fun `без целей вырезы на месте`() {
+        assertTrue(cutoutsArrived(shown = emptyList(), targets = emptyList()))
+    }
 }

@@ -4,14 +4,18 @@ import androidx.annotation.StringRes
 import ru.finnypet.app.R
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
+import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Change
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.ShopItem
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.totalPrice
+import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.jarLevel
 import ru.finnypet.app.ui.screens.main.JarsLeft
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.textOf
@@ -30,6 +34,42 @@ fun markOf(item: ShopItem, neededNow: Boolean, optionalLeft: Coins?): ItemMark =
     optionalLeft != null && !optionalLeft.covers(item.price) -> ItemMark.NOT_IN_PLAN
     else -> ItemMark.NONE
 }
+
+/**
+ * Банка плана над товарами: сколько из запланированного уже потрачено —
+ * «потрачено 12 из 35», как «Потрачено 14 из 20» в итогах дня, — и что
+ * осталось. [left] — не больше кошелька (решение F4, [JarsLeft.shownWithin]);
+ * [over] — насколько потрачено больше плана, ноль — не больше. [level] —
+ * уровень нарисованной банки, как у банок плана ([jarLevel]).
+ */
+data class ShopJar(
+    val category: SpendCategory,
+    val spent: Coins,
+    val planned: Coins,
+    val left: Coins,
+    val over: Coins,
+    val level: Float,
+)
+
+/**
+ * Банки нужного и желаемого для магазина (ребёнку было непонятно, сколько
+ * из плана уже потрачено — просьба владельца 28.09). Копилки здесь нет: в
+ * магазине её не тратят. [shown] — остатки плана, уже урезанные до кошелька.
+ */
+fun shopJars(plan: BudgetPlan, fact: PeriodFact, shown: JarsLeft): List<ShopJar> =
+    listOf(SpendCategory.MANDATORY to shown.mandatory, SpendCategory.OPTIONAL to shown.optional).map { (category, left) ->
+        val spent = fact.amountFor(category)
+        val planned = plan.amountFor(category)
+        val over = planned.shortfallTo(spent)
+        ShopJar(
+            category = category,
+            spent = spent,
+            planned = planned,
+            left = left,
+            over = over,
+            level = jarLevel(BudgetLine(category, planned = planned, actual = spent, followed = over == Coins.ZERO)),
+        )
+    }
 
 /**
  * Насколько цена больше того, что осталось по плану на направление товара

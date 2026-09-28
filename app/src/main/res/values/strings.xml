@@ -255,8 +255,12 @@
     <string name="shop_mark_needed">нужно сейчас</string>
     <string name="shop_mark_not_needed">пока не нужно</string>
     <string name="shop_mark_not_in_plan">не в плане</string>
-    <!-- «Нужное: ещё 24» — остаток по плану -->
-    <string name="shop_jar_left">%1$s: ещё %2$d</string>
+    <!-- Банки плана над товарами: «потрачено 12 из 35», остаток — budget_jar_left «осталось 23», как на плане;
+         для TalkBack — «Нужное: потрачено 12 из 35, осталось 23» -->
+    <string name="shop_jar_spent">потрачено %1$d из %2$d</string>
+    <!-- Число без «монет», как «осталось 23»: у coinsText именительный падеж, и «на 1 монета» было бы ошибкой -->
+    <string name="shop_jar_over">сверх плана на %1$d</string>
+    <string name="shop_jar_description">%1$s: %2$s, %3$s</string>
     <!-- «−14 монет» в облачке после покупки -->
     <string name="shop_spent">−%1$s</string>
     <string name="shop_planning_hint">Сначала спланируй день — потом можно покупать.</string>

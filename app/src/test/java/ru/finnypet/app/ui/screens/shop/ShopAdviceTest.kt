@@ -6,13 +6,16 @@ import org.junit.Test
 import ru.finnypet.app.data.content.ContentParser
 import ru.finnypet.app.data.content.RealContent
 import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PetState
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.SpendCategory
 import ru.finnypet.app.domain.model.Stat
 import ru.finnypet.app.ui.screens.main.JarsLeft
+import ru.finnypet.app.ui.screens.main.shownWithin
 
 /**
  * Метки карточек и фразы совы в магазине — на настоящем контент-паке и
@@ -211,5 +214,60 @@ class ShopAdviceTest {
 
         assertTrue(phrases.isNotEmpty())
         assertTrue(phrases.none { " —" in it })
+    }
+
+    // --- Банки плана над товарами (F6) ---
+
+    /** Эталон дня 1 (раздел 4 плана): план 23 / 11, куплены вода и витамины (23) — нужное потрачено всё. */
+    @Test
+    fun `банки магазина — потрачено из плана и остаток`() {
+        val plan = BudgetPlan(mandatory = Coins(23), optional = Coins(11), savings = Coins(11))
+        val fact = PeriodFact(mapOf(SpendCategory.MANDATORY to Coins(23)))
+
+        val jars = shopJars(plan, fact, JarsLeft(mandatory = Coins.ZERO, optional = Coins(11), savings = Coins.ZERO))
+
+        assertEquals(listOf(SpendCategory.MANDATORY, SpendCategory.OPTIONAL), jars.map { it.category })
+        val (need, want) = jars
+        assertEquals(Coins(23), need.spent)
+        assertEquals(Coins(23), need.planned)
+        assertEquals(Coins.ZERO, need.left)
+        assertEquals(Coins.ZERO, need.over)
+        assertEquals(0f, need.level, 0f)
+        assertEquals(Coins.ZERO, want.spent)
+        assertEquals(Coins(11), want.planned)
+        assertEquals(Coins(11), want.left)
+        assertEquals(1f, want.level, 0f)
+    }
+
+    /** Эталон дня 2: мяч за 24 при плане желаемого 19 — сверх плана на 5, остаток не минус. */
+    @Test
+    fun `банка сверх плана — насколько больше, банка пустая`() {
+        val plan = BudgetPlan(mandatory = Coins(8), optional = Coins(19), savings = Coins(19))
+        val fact = PeriodFact(mapOf(SpendCategory.OPTIONAL to Coins(24)))
+
+        val want = shopJars(plan, fact, JarsLeft(mandatory = Coins(8), optional = Coins.ZERO)).last()
+
+        assertEquals(Coins(24), want.spent)
+        assertEquals(Coins(19), want.planned)
+        assertEquals(Coins(5), want.over)
+        assertEquals(Coins.ZERO, want.left)
+        assertEquals(0f, want.level, 0f)
+    }
+
+    /**
+     * Решение F4 сохраняется: остаток — уже урезанный до кошелька, а
+     * «потрачено из плана» — настоящие числа плана.
+     */
+    @Test
+    fun `остаток банки не больше кошелька, план и траты — как есть`() {
+        val plan = BudgetPlan(mandatory = Coins(20), optional = Coins(120), savings = Coins.ZERO)
+        val fact = PeriodFact(mapOf(SpendCategory.MANDATORY to Coins(30)))
+        val shown = JarsLeft(mandatory = Coins.ZERO, optional = Coins(120)).shownWithin(Coins(115))
+
+        val want = shopJars(plan, fact, shown).last()
+
+        assertEquals(Coins(115), want.left)
+        assertEquals(Coins(120), want.planned)
+        assertEquals(Coins.ZERO, want.spent)
     }
 }

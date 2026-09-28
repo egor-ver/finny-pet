@@ -15,11 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.ItemIcon
+import ru.finnypet.app.ui.components.Jar
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
 import ru.finnypet.app.ui.components.OwlLook
@@ -68,12 +70,10 @@ import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StatChip
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
-import ru.finnypet.app.ui.components.container
-import ru.finnypet.app.ui.components.icon
+import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.tile
 import ru.finnypet.app.ui.screens.main.JarsLeft
-import ru.finnypet.app.ui.screens.main.shownWithin
 import ru.finnypet.app.ui.sound.Sound
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
@@ -205,7 +205,7 @@ private fun Ready(
             item(key = "header:owl") {
                 OwlBubble(owl = state.owl, phrase = state.phrase, done = done)
             }
-            state.jars?.let { jars -> item(key = "header:jars") { JarChips(jars = jars.shownWithin(state.balance)) } }
+            if (state.planJars.isNotEmpty()) item(key = "header:jars") { PlanJars(jars = state.planJars) }
             if (!state.canBuy) {
                 item(key = "header:planning") { PlanningHint(text = stringResource(R.string.shop_planning_hint), onPlan = onPlan) }
             }
@@ -357,41 +357,63 @@ private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?)
 }
 
 /**
- * «[миска] ещё 23», «[мяч] ещё 10» — сколько по плану ещё можно, как на
- * главном. В ряд с переносом: при крупном шрифте второй чип уходит на
- * следующую строку целиком, а не зажимается до разрыва слова (ТЗ 3.6).
+ * Банки плана над товарами: «Нужное — потрачено 12 из 35, осталось 23».
+ * Прежние чипы «[миска] ещё 23» ребёнок не понимал: чего «ещё» и что за
+ * миска (просьба владельца 28.09). Теперь направление названо словом, рядом
+ * та же банка, что на плане, а слова те же, что в итогах дня («Потрачено
+ * 14 из 20») и на плане («осталось 23»). Белая плитка — как у товаров ниже.
  */
 @Composable
-private fun JarChips(jars: JarsLeft) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+private fun PlanJars(jars: List<ShopJar>) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
+        modifier = Modifier
+            .fillMaxWidth()
+            .tile(marked = false)
+            .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
     ) {
-        JarChip(category = SpendCategory.MANDATORY, left = jars.mandatory)
-        JarChip(category = SpendCategory.OPTIONAL, left = jars.optional)
+        jars.forEach { jar -> PlanJarRow(jar) }
     }
 }
 
-/** Направление здесь — иконка и цвет, поэтому TalkBack читает его словом: «Нужное: ещё 23». */
+/**
+ * Одна банка. Название и остаток — в ряд с переносом: при шрифте 2,0
+ * остаток уходит под название целиком, а не рвётся (ТЗ 3.6). Сверх плана —
+ * «сверх плана на 5», как в итогах, без красного: это не ошибка (AD-4).
+ * TalkBack читает направление словом и оба числа.
+ */
 @Composable
-private fun JarChip(category: SpendCategory, left: Coins) {
-    val spoken = stringResource(R.string.shop_jar_left, stringResource(category.label), left.amount)
+private fun PlanJarRow(jar: ShopJar) {
+    val title = stringResource(jar.category.label)
+    val spent = stringResource(R.string.shop_jar_spent, jar.spent.amount, jar.planned.amount)
+    val rest = if (jar.over > Coins.ZERO) {
+        stringResource(R.string.shop_jar_over, jar.over.amount)
+    } else {
+        stringResource(R.string.budget_jar_left, jar.left.amount)
+    }
+    val spoken = stringResource(R.string.shop_jar_description, title, spent, rest)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
         modifier = Modifier
-            .clip(CircleShape)
-            .background(category.container)
-            .padding(horizontal = Dimens.SpaceMedium, vertical = Dimens.SpaceSmall)
+            .fillMaxWidth()
             .clearAndSetSemantics { contentDescription = spoken },
     ) {
-        // Тоном текста: заливка на светлом контейнере бледнее (DESIGN_PLAN 2.1).
-        Icon(imageVector = category.icon, contentDescription = null, tint = category.color)
-        Text(
-            text = stringResource(R.string.main_jar_left, left.amount),
-            style = MaterialTheme.typography.labelLarge,
-            color = category.color,
-        )
+        Jar(level = jar.level, color = jar.category.fill, modifier = Modifier.size(JAR_WIDTH, JAR_HEIGHT))
+        Column(modifier = Modifier.weight(1f)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = title, style = MaterialTheme.typography.titleSmall, color = jar.category.color)
+                Text(text = rest, style = MaterialTheme.typography.labelMedium, color = jar.category.color)
+            }
+            Text(
+                text = spent,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -642,3 +664,7 @@ private val RecoveryOption.action: RecoveryAction
         // Пересмотр плана — совет на завтра, экрана у него нет.
         RecoveryOption.ADJUST_NEXT_PLAN -> RecoveryAction.Hint
     }
+
+// Банка у строки плана — мини-версия банок плана: на две строки текста.
+private val JAR_WIDTH = 28.dp
+private val JAR_HEIGHT = 36.dp

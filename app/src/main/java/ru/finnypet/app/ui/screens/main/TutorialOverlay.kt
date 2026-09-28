@@ -155,19 +155,22 @@ fun TutorialOverlay(
 
     val appear = remember { Animatable(if (motion) 0f else 1f) }
     LaunchedEffect(Unit) { appear.animateTo(1f, tween(Motion.StandardMs)) }
-    // Стрелка «дышит» один раз на шаг, без бесконечного цикла (DESIGN_PLAN 2.7).
-    val breath = remember { Animatable(0f) }
-    LaunchedEffect(step) {
-        if (motion) {
-            breath.snapTo(0f)
-            breath.animateTo(1f, tween(Motion.EmphasisMs))
-        }
-    }
 
     val holes = resolved.mapNotNull { target -> targets.bounds[target]?.takeUnless { it.isEmpty } }
     val spec = if (motion) tween<Rect>(Motion.StandardMs) else snap()
     val shown = holes.mapIndexed { index, rect ->
         key(index) { animateRectAsState(targetValue = rect, animationSpec = spec, label = "tutorialCutout").value }
+    }
+    val arrived = cutoutsArrived(shown = shown, targets = holes)
+
+    // Стрелка «дышит» один раз на шаг, без бесконечного цикла (DESIGN_PLAN 2.7), —
+    // когда появилась, то есть когда вырезы доехали до целей.
+    val breath = remember { Animatable(0f) }
+    LaunchedEffect(step, arrived) {
+        if (motion && arrived) {
+            breath.snapTo(0f)
+            breath.animateTo(1f, tween(Motion.EmphasisMs))
+        }
     }
 
     // Крупный шрифт: кнопки остаются в облачке (см. [TutorialPanel]), иначе —
@@ -196,7 +199,7 @@ fun TutorialOverlay(
                     blendMode = BlendMode.Clear,
                 )
             }
-            if (bubble != Rect.Zero && TUTORIAL_STEPS[step].arrow) {
+            if (bubble != Rect.Zero && TUTORIAL_STEPS[step].arrow && arrived) {
                 val nudge = sin(PI * breath.value).toFloat() * ARROW_NUDGE.toPx()
                 val from = bubble.translate(-origin)
                 // Стрелка сквозь кнопки шага не рисуется — к кошельку над

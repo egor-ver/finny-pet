@@ -44,6 +44,7 @@ import ru.finnypet.app.ui.components.wellbeing
 import ru.finnypet.app.ui.screens.ProfileViewModel
 import ru.finnypet.app.ui.screens.main.JarsLeft
 import ru.finnypet.app.ui.screens.main.jarsLeft
+import ru.finnypet.app.ui.screens.main.shownWithin
 import ru.finnypet.app.domain.repository.SavingsRepository
 import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
 import ru.finnypet.app.domain.usecase.TaskSchedule
@@ -155,6 +156,8 @@ sealed interface ShopState {
         val phrase: String,
         /** Сколько по плану ещё осталось; `null` — план не подтверждён. */
         val jars: JarsLeft? = null,
+        /** Банки нужного и желаемого над товарами; пусто — план не подтверждён. */
+        val planJars: List<ShopJar> = emptyList(),
         /**
          * Покупка показывается в облачке совы, а не окном: ребёнок видит,
          * что изменилось, и сразу выбирает дальше (ТЗ 2.5.9).
@@ -310,7 +313,10 @@ class ShopViewModel @Inject constructor(
                     outcome,
                 ) { coins, transactions, plan, goal, outcome ->
                     val saved = goal?.saved ?: Coins.ZERO
-                    ready(profile, pet, period, coins, jarsLeft(period.status, plan, periodEngine.factOf(transactions)), outcome) { item ->
+                    val fact = periodEngine.factOf(transactions)
+                    val jars = jarsLeft(period.status, plan, fact)
+                    val planJars = if (jars != null && plan != null) shopJars(plan, fact, jars.shownWithin(coins)) else emptyList()
+                    ready(profile, pet, period, coins, jars, planJars, outcome) { item ->
                         // Отказ считается только для того, что не по карману: удачная
                         // проверка собрала бы операцию покупки, которой нет.
                         if (coins.covers(item.price)) null else shortageOf(attempt(item, coins, period.id, saved, transactions), texts)
@@ -325,6 +331,7 @@ class ShopViewModel @Inject constructor(
         period: GamePeriod,
         coins: Coins,
         jars: JarsLeft?,
+        planJars: List<ShopJar>,
         outcome: PurchaseOutcome?,
         shortage: (ShopItem) -> ItemShortage?,
     ): ShopState.Ready {
@@ -343,6 +350,7 @@ class ShopViewModel @Inject constructor(
             ),
             phrase = texts.textOf(shopPhrase(petState.needsOf(pet.state), petState.startWith(pet.state, items, jars?.mandatory))),
             jars = jars,
+            planJars = planJars,
             outcome = outcome,
         )
     }
