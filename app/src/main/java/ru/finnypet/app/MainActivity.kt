@@ -1,5 +1,6 @@
 package ru.finnypet.app
 
+import android.media.AudioManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,6 +41,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Кнопки громкости правят громкость игры (звуки и мелодия — поток
+        // музыки), даже когда сейчас ничего не звучит; иначе между звуками они
+        // правили бы звонок, и ребёнок не смог бы сделать игру тише.
+        volumeControlStream = AudioManager.STREAM_MUSIC
         // Настройки звука слушаются и в свёрнутом приложении: выключенная там
         // мелодия не должна зазвучать при возврате даже на миг (AD-17).
         lifecycleScope.launch { settings.observeSoundEnabled().collect(audio::setSoundEnabled) }

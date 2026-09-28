@@ -99,6 +99,8 @@ sealed interface MainState {
         val needs: List<PetStatKind>,
         /** Фраза совы в облачке — уже готовый текст из контент-пака. */
         val phrase: String,
+        /** Фраза называет утренний доход — звучат монеты ([namesIncome]). */
+        val incomeArrived: Boolean = false,
         /** `null` — сова взрослая. */
         val growth: GrowthView?,
         /** «{имя} вырос!» из контент-пака — плитка «Рост» на взрослой стадии (DESIGN_PLAN 3.1). */
@@ -232,6 +234,7 @@ class MainViewModel @Inject constructor(
                         stats = pet.state,
                         needs = needs,
                         phrase = texts.textOf(phrase),
+                        incomeArrived = phrase.namesIncome(),
                         growth = growthOf(pet.growth, balance.growthThresholds),
                         grownMessage = texts.textOf(Explanation("growth.grown", mapOf("name" to profile.petName))),
                         growthPoints = pet.growth.points,

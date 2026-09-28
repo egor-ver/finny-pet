@@ -75,6 +75,8 @@ import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.needLabel
 import ru.finnypet.app.ui.components.starsText
+import ru.finnypet.app.ui.sound.Sound
+import ru.finnypet.app.ui.sound.SoundOnce
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 
@@ -322,6 +324,10 @@ private fun MainLayout(
         // прозрачно, а не убрано — иначе раскладка съехала бы и вырезы
         // обучения указывали бы не туда, а стрелка к кошельку шла бы сквозь текст.
         TopSpeechBubble(text = state.phrase, modifier = Modifier.alpha(if (owlSilent) 0f else 1f))
+        // Раз на показ фразы: возврат с задания её не повторяет — состояние
+        // главного в стеке переходов сохраняется, — а к следующему утру
+        // фраза успевает смениться, и звук снова новый.
+        if (state.incomeArrived) SoundOnce(Sound.COINS)
         // Имя прижато к сове (4 dp, бюджет высот DESIGN_PLAN 3.1): низ рамки
         // совы и так занят полянкой, а каждый десяток точек нужен плиткам.
         Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny)) {

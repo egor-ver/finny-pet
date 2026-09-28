@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.screens.main
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.data.content.ContentParser
@@ -48,6 +49,26 @@ class NextStepTest {
         )
         val texts = ContentParser().parse(RealContent.raw()).texts
         assertTrue("повтор" in texts.textOf(Explanation("owl.say.task_repeat", mapOf("income" to "35", "reward" to "10"))).lowercase())
+    }
+
+    /**
+     * Утренний доход звучит монетами (ревью A1), когда сова его называет —
+     * утром и у задания; у фраз события, грусти и дня звука нет.
+     */
+    @Test
+    fun `монеты звучат, только когда сова называет доход`() {
+        assertTrue(phrase(NextStep.Plan).namesIncome())
+        assertTrue(phrase(NextStep.Plan, needs = listOf(SATIETY)).namesIncome())
+        assertTrue(phrase(NextStep.Task, reward = 10).namesIncome())
+        assertTrue(phrase(NextStep.Task, reward = 10, repeat = true).namesIncome())
+        assertFalse(phrase(NextStep.Plan, sadAbout = SATIETY).namesIncome())
+        assertFalse(phrase(NextStep.Task, eventKey = "event.family_gift", eventArgs = mapOf("amount" to "8"), reward = 10).namesIncome())
+        assertFalse(phrase(NextStep.Shop, needs = listOf(SATIETY), cover = 8).namesIncome())
+        assertFalse(phrase(NextStep.Sleep).namesIncome())
+
+        // Ключ income в фразах, которые его называют, — «Пришло ещё» в тексте.
+        val texts = ContentParser().parse(RealContent.raw()).texts
+        assertTrue("Пришло ещё" in texts.textOf(phrase(NextStep.Plan)))
     }
 
     @Test
