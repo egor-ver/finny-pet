@@ -53,9 +53,12 @@ object TaskSchedule {
     /** Обычные задания: разбор не в списке, не в счётчиках и не в минимуме ТЗ 2.6 (AD-7). */
     fun listed(tasks: List<LearningTask>): List<LearningTask> = tasks.filterNot { it.isReview }
 
-    /** Пройдено — только верно (R8): ошибка учит, но заданием не засчитывается. */
+    /**
+     * Пройдено — только верно (R8): ошибка учит, но заданием не засчитывается.
+     * Разбор не в счётчиках (AD-7): иначе главный показывал бы «7 из 6».
+     */
     fun passed(tasks: List<LearningTask>, completed: List<CompletedTask>): Set<TaskId> =
-        correctPasses(tasks, completed).mapTo(mutableSetOf()) { it.taskId }
+        correctPasses(listed(tasks), completed).mapTo(mutableSetOf()) { it.taskId }
 
     /**
      * Задание дня для главного экрана.

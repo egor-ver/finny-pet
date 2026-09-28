@@ -120,6 +120,14 @@ class TaskScheduleTest {
     }
 
     @Test
+    fun `верно пройденный разбор не считается пройденным заданием`() {
+        val tasks = listOf(task("a"), task("review", review = true))
+        val completed = listOf(passed("a", 10), passed("review", 20))
+
+        assertEquals(setOf(TaskId("a")), TaskSchedule.passed(tasks, completed))
+    }
+
+    @Test
     fun `задание дня — первое непройденное в порядке контента`() {
         val tasks = listOf(task("a"), task("b"), task("c"))
 
