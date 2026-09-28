@@ -38,6 +38,7 @@
     <string name="main_goal_left">Осталось</string>
     <string name="main_goal_reached">Цель собрана!</string>
     <string name="main_goal_progress">Цель «%1$s»: накоплено %2$d из %3$d</string>
+    <string name="main_goal_progress_enough">Цель «%1$s»: накоплено %2$d — хватает на цель</string>
     <string name="main_pet_state">Как себя чувствует %1$s</string>
     <!-- «Пушок · детёныш» под совой -->
     <string name="main_pet_stage">%1$s · %2$s</string>
@@ -47,6 +48,7 @@
     <string name="main_action_sleep">Уложить спать</string>
     <!-- Главная кнопка, пока не спланировано и за задание ещё дают монеты (правка владельца №2) -->
     <string name="main_task_action">Выполнить задание</string>
+    <string name="main_task_repeat_action">Повторить задание</string>
     <!-- Строка роста: «До подростка 6 из 8» -->
     <string name="main_growth_to_young">До подростка</string>
     <string name="main_growth_to_grown">До взрослого</string>
@@ -59,6 +61,8 @@
     <string name="main_jar_left_description">%1$s: ещё %2$d</string>
     <string name="main_jar_goal">%1$s %2$d/%3$d</string>
     <string name="main_jar_goal_description">Копилка: %1$s, %2$d из %3$d</string>
+    <string name="main_jar_goal_enough">Хватает!</string>
+    <string name="main_jar_goal_enough_description">Копилка: %1$s, накоплено %2$d — хватает на цель</string>
     <!-- Сумма 0 не нужна: без цели в копилке ещё нечего показывать числом (DESIGN_PLAN 3.1) -->
     <string name="main_jar_no_goal">Выбери цель</string>
     <string name="main_jar_no_goal_description">Копилка: %1$d, цель не выбрана</string>
@@ -114,6 +118,8 @@
     <string name="progress_no_days">Ни один день ещё не закончен. Закончи первый — и здесь появятся итоги.</string>
     <string name="progress_goal">На что копим</string>
     <string name="progress_goal_saved">Накоплено %1$d из %2$d</string>
+    <string name="savings_saved_enough">Накоплено %1$d — хватает на цель!</string>
+    <string name="savings_change">После покупки сдача %1$s вернётся в кошелёк.</string>
     <string name="progress_stage_here">здесь</string>
     <string name="progress_stage_now">Стадия роста: %1$s</string>
     <string name="progress_no_tasks">Заданий пока не пройдено.</string>
@@ -145,7 +151,7 @@
     <string name="adult_overview">Как идут дела: %1$s</string>
     <string name="adult_days">Сыграно дней</string>
     <string name="adult_stage">Стадия питомца</string>
-    <string name="adult_points">Очки роста</string>
+    <string name="adult_points">Всего звёзд роста</string>
     <string name="adult_balance">Кошелёк</string>
     <string name="adult_saved">Отложено на цель</string>
     <string name="adult_bonus">Монеты от взрослого</string>
@@ -221,6 +227,7 @@
     <string name="budget_confirm_title">План закрепится до вечера</string>
     <string name="budget_confirm_body">Поменять его сегодня уже не получится.</string>
     <string name="budget_confirm_yes">Подтвердить</string>
+    <string name="budget_confirm_unplanned">Не разложено: %1$s. Этот остаток сохранится в кошельке.</string>
     <!-- «Сразу в копилку: 8 монет» — доля копилки уходит при подтверждении (R6) -->
     <string name="budget_to_savings">Сразу в копилку: %1$s</string>
     <!-- «1 монета останется на завтра» — остаток не ошибка (R5) -->
@@ -380,7 +387,7 @@
     <string name="tutorial_where_plan_tile">плитка План, первый ряд слева</string>
     <string name="tutorial_where_savings_tile">плитка Копилка, первый ряд справа</string>
     <string name="tutorial_where_tasks_tile">плитка Задания, второй ряд справа</string>
-    <string name="tutorial_where_task_button">кнопка Выполнить задание внизу</string>
+    <string name="tutorial_where_task_button">кнопка задания внизу</string>
     <string name="tutorial_where_plan_button">кнопка Спланировать день внизу</string>
     <string name="tutorial_where_satiety">показатель Еда</string>
     <string name="tutorial_where_mood">показатель Радость</string>

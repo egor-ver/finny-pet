@@ -4,11 +4,13 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -342,6 +348,10 @@ private fun HintLine(text: String) {
  *
  * Слоты `thumb`/`track` у `Slider` пока экспериментальные — без них не
  * заменить ручку на монету и пунктир делений на сплошную дорожку.
+ *
+ * Ряд симметричен: у «−» и «+» одинаковые зазоры до концов дорожки, а
+ * монета на нуле и на максимуме лежит внутри скруглённого конца
+ * ([SliderTrack]), не налезая на кнопки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -357,10 +367,10 @@ private fun AmountSlider(
     val top = available.amount.coerceAtLeast(1)
     val enabled = available > Coins.ZERO
     val spoken = coinsText(shown)
-    val fill = category.fill
+    val fill = if (enabled) category.fill else disabledColor()
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
     ) {
         StepButton(
             icon = FinnyIcons.Minus,
@@ -380,7 +390,7 @@ private fun AmountSlider(
                     modifier = Modifier.shadow(elevation = 3.dp, shape = CircleShape),
                 )
             },
-            track = { ProgressTrack(fraction = shown.amount.toFloat() / top, color = fill) },
+            track = { SliderTrack(fraction = shown.amount.toFloat() / top, color = fill) },
             modifier = Modifier
                 .weight(1f)
                 .semantics {
@@ -397,5 +407,39 @@ private fun AmountSlider(
     }
 }
 
+/**
+ * Дорожка ползунка — в цвет своей банки: пустая часть — тот же цвет
+ * прозрачнее, заполненная — насыщенный, без тёмного контура. Бежевая
+ * дорожка с контуром выглядела пустым индикатором загрузки, а заливка
+ * спорила с цветом карточки (замечание владельца 28.09). Идёт за пальцем
+ * кадр в кадр, без анимации.
+ *
+ * `Slider` отдаёт дорожке ширину за вычетом монеты: её центр ходит от края
+ * до края дорожки, и на нуле половина монеты торчала за левый конец. Поэтому
+ * дорожка рисуется шире своей рамки на полмонеты в обе стороны: монета на
+ * краях лежит в скруглённом конце, а ряд симметричен.
+ */
+@Composable
+private fun SliderTrack(fraction: Float, color: Color) {
+    Canvas(modifier = Modifier.fillMaxWidth().height(Dimens.BarHeight)) {
+        val reach = THUMB_SIZE.toPx() / 2
+        val corner = CornerRadius(size.height / 2)
+        val full = size.width + reach * 2
+        drawRoundRect(
+            color = color.copy(alpha = EMPTY_TRACK_ALPHA),
+            topLeft = Offset(-reach, 0f),
+            size = Size(full, size.height),
+            cornerRadius = corner,
+        )
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(-reach, 0f),
+            size = Size(size.width * fraction.coerceIn(0f, 1f) + reach * 2, size.height),
+            cornerRadius = corner,
+        )
+    }
+}
+
 private val THUMB_SIZE = 32.dp
+private const val EMPTY_TRACK_ALPHA = 0.25f
 private val COUNTER_COIN = 36.dp

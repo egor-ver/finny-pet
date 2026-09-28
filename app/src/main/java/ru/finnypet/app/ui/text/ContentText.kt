@@ -28,9 +28,13 @@ fun Map<String, String>.textOf(explanation: Explanation): String =
 /**
  * «{coins:balance}» — число со словом в нужной форме: «81 монета», а не
  * «81 монет». Формы слова — в контент-паке, выбор формы — по русскому
- * правилу ([wordFormOf]).
+ * правилу ([wordFormOf]). Между числом и словом неразрывный пробел: иначе
+ * «монет.» уезжало одно на следующую строку облачка (ревью F4-fix).
  */
 private fun Map<String, String>.coinsOf(value: String): String {
     val amount = value.toIntOrNull() ?: return value
-    return "$value ${textOf("word.coins.${wordFormOf(amount).name}")}"
+    return "$value$NBSP${textOf("word.coins.${wordFormOf(amount).name}")}"
 }
+
+private const val NBSP = '\u00A0'
+

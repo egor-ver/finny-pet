@@ -77,7 +77,7 @@ class ContentTextTest {
             "word.coins.MANY" to "монет",
         )
         val shown = listOf("1", "2", "5", "11", "21", "81", "104").map {
-            words.textOf(Explanation("rest", mapOf("balance" to it)))
+            words.textOf(Explanation("rest", mapOf("balance" to it))).replace(NBSP, ' ')
         }
 
         assertEquals(
@@ -89,8 +89,18 @@ class ContentTextTest {
         )
     }
 
+    /** Ревью F4-fix: «монет.» уезжало одно на новую строку облачка — число и слово не разрываются. */
+    @Test
+    fun `число и слово «монет» не разрываются переносом`() {
+        val words = mapOf("rest" to "Дадут {coins:reward}.", "word.coins.MANY" to "монет")
+
+        assertEquals("Дадут 10${NBSP}монет.", words.textOf(Explanation("rest", mapOf("reward" to "10"))))
+    }
+
     @Test
     fun `не число в месте для монет остаётся как есть`() {
         assertEquals("Цена: много.", mapOf("x" to "Цена: {coins:p}.").textOf(Explanation("x", mapOf("p" to "много"))))
     }
 }
+
+private const val NBSP = '\u00A0'

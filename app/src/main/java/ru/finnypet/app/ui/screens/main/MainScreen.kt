@@ -66,6 +66,7 @@ import ru.finnypet.app.ui.components.container
 import ru.finnypet.app.ui.components.direction
 import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.goalFraction
+import ru.finnypet.app.ui.components.goalOverfilled
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
@@ -357,7 +358,9 @@ private fun DayButtons(
     onShop: () -> Unit,
     onSleep: () -> Unit,
 ) {
-    val taskText = stringResource(R.string.main_task_action)
+    // Все пройдены — награда за повтор: «Выполнить задание +10» рядом с
+    // плиткой «6 из 6» выглядело ошибкой (ревью F4-fix).
+    val taskText = stringResource(if (task?.allDone == true) R.string.main_task_repeat_action else R.string.main_task_action)
     val planText = stringResource(R.string.budget_action_plan)
     val shopText = stringResource(R.string.shop_action)
     val sleepText = stringResource(R.string.main_action_sleep)
@@ -697,7 +700,12 @@ private fun PlanTile(jars: JarsLeft?, onOpen: () -> Unit, modifier: Modifier = M
     }
 }
 
-/** Иконка направления и «ещё 38»: цветом и словом, для TalkBack — словом (ТЗ 3.6). */
+/**
+ * Иконка направления и «ещё 38»: цветом и словом, для TalkBack — словом (ТЗ 3.6).
+ * Строка — стилем меток (16/20) с иконкой 20 dp: три строки по 24 dp делали
+ * плитку плана выше соседней на 12 dp, и вечером, с чипом «нужен» и репликой
+ * в три строки, нижний ряд плиток упирался в кнопки (ревью F2-fix).
+ */
 @Composable
 private fun JarLeft(category: SpendCategory, left: Coins, modifier: Modifier = Modifier) {
     Row(
@@ -705,18 +713,19 @@ private fun JarLeft(category: SpendCategory, left: Coins, modifier: Modifier = M
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier,
     ) {
-        Icon(imageVector = category.icon, contentDescription = null, tint = category.fill)
+        Icon(imageVector = category.icon, contentDescription = null, tint = category.fill, modifier = Modifier.size(JAR_ICON))
         Text(
             text = stringResource(R.string.main_jar_left, left.amount),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMedium,
             color = category.color,
         )
     }
 }
 
 /**
- * Копилка и цель: эмодзи цели на тарелке и мини-полоса «6/40» — без
+ * Копилка и цель: эмодзи цели на тарелке и мини-полоса «6/40» («Хватает!»,
+ * если накоплено больше цены, — коротко, чтобы влезть в одну строку и не
+ * сделать плитку выше соседней «Рост»; полная фраза — в озвучке) — без
  * заголовка словами, эмодзи и так узнаётся (DESIGN_PLAN 3.1). Цели может не
  * быть — отложенные монеты всё равно видны в описании для TalkBack, строка
  * зовёт выбрать цель.
@@ -726,8 +735,13 @@ private fun SavingsTile(savings: SavingsView, onOpen: () -> Unit, modifier: Modi
     val title = savings.goalTitle
     val price = savings.price
     val saved = savings.saved.amount
+    val overfilled = price != null && goalOverfilled(savings.saved, price)
     val spoken = if (title != null && price != null) {
-        stringResource(R.string.main_jar_goal_description, title, saved, price.amount)
+        if (overfilled) {
+            stringResource(R.string.main_jar_goal_enough_description, title, saved)
+        } else {
+            stringResource(R.string.main_jar_goal_description, title, saved, price.amount)
+        }
     } else {
         stringResource(R.string.main_jar_no_goal_description, saved)
     }
@@ -751,7 +765,11 @@ private fun SavingsTile(savings: SavingsView, onOpen: () -> Unit, modifier: Modi
                 if (title != null && price != null) {
                     ProgressLine(fraction = goalFraction(savings.saved, price), color = SpendCategory.SAVINGS.fill)
                     Text(
-                        text = stringResource(R.string.main_growth_points_short, saved, price.amount),
+                        text = if (overfilled) {
+                            stringResource(R.string.main_jar_goal_enough)
+                        } else {
+                            stringResource(R.string.main_growth_points_short, saved, price.amount)
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = SpendCategory.SAVINGS.color,
@@ -853,7 +871,8 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
     val progress = stringResource(R.string.main_tasks_progress, task.completedCount, task.totalCount)
     val reward = stringResource(if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken)
     val spoken = if (task.allDone) {
-        "$title: $progress. ${stringResource(R.string.main_task_all_done)}"
+        val repeat = if (task.rewardAvailable) " $reward" else ""
+        "$title: $progress. ${stringResource(R.string.main_task_all_done)}$repeat"
     } else {
         "$title: $progress. $reward"
     }
@@ -903,6 +922,8 @@ private val STATS = listOf(PetStatKind.SATIETY, PetStatKind.MOOD, PetStatKind.CA
 private val MAIN_BUTTON_HEIGHT = 56.dp
 
 private val CHIP_PADDING = 2.dp
+
+private val JAR_ICON = 20.dp
 
 /** Минимальная высота плитки 2 × 2 (DESIGN_PLAN 3.1: бюджет высот главного). */
 private val TILE_HEIGHT = 84.dp

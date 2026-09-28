@@ -18,7 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
@@ -104,6 +106,33 @@ fun Jar(
  */
 fun goalFraction(saved: Coins, price: Coins): Float =
     if (price.amount == 0) 1f else (saved.amount.toFloat() / price.amount).coerceAtMost(1f)
+
+/**
+ * «Накоплено 6 из 40». Сверх цены копить можно (эталон PLAN_V3 §4 откладывает
+ * и в собранную цель), но «75 из 70» выглядело ошибкой (ревью F3-fix) — тогда
+ * «Накоплено 75 — хватает на цель!», а про сдачу говорит [goalChangeText].
+ */
+@Composable
+fun goalSavedText(saved: Coins, price: Coins): String =
+    if (goalOverfilled(saved, price)) {
+        stringResource(R.string.savings_saved_enough, saved.amount)
+    } else {
+        stringResource(R.string.progress_goal_saved, saved.amount, price.amount)
+    }
+
+/** «После покупки сдача 5 монет вернётся в кошелёк»; `null` — сдачи не будет. */
+@Composable
+fun goalChangeText(saved: Coins, price: Coins): String? =
+    goalChange(saved, price).takeIf { it > Coins.ZERO }?.let { stringResource(R.string.savings_change, coinsText(it)) }
+
+/**
+ * Накоплено больше цены: тогда ни одна строка — на экране или в TalkBack — не
+ * называет «44 из 40», а говорит «хватает на цель» (ревью F5).
+ */
+fun goalOverfilled(saved: Coins, price: Coins): Boolean = goalChange(saved, price) > Coins.ZERO
+
+/** Сколько вернётся в кошелёк сдачей при покупке цели (`SavingsEngine`, AD-10): накопленное сверх цены. */
+fun goalChange(saved: Coins, price: Coins): Coins = price.shortfallTo(saved)
 
 // Крупно: после подтверждения банки — главный элемент экрана плана, а
 // пропорции 7:9 прежние, чтобы крышка и монеты на дне не поплыли.

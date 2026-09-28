@@ -29,19 +29,20 @@ fun StepButton(
     modifier: Modifier = Modifier,
 ) {
     val primary = MaterialTheme.colorScheme.primary
+    // Выключенная — серая, как выключенная второстепенная кнопка: бледно-голубая
+    // «−» на нуле казалась сбоем, а не «меньше нельзя» (замечание владельца 28.09).
     OutlinedIconButton(
         onClick = onClick,
         enabled = enabled,
-        border = BorderStroke(Dimens.ButtonBorderWidth, if (enabled) primary else primary.copy(alpha = DISABLED_ALPHA)),
+        border = BorderStroke(Dimens.ButtonBorderWidth, if (enabled) primary else disabledColor()),
         colors = IconButtonDefaults.outlinedIconButtonColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = primary,
             disabledContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContentColor = disabledColor(),
         ),
         modifier = modifier.size(Dimens.TouchTarget),
     ) {
         Icon(imageVector = icon, contentDescription = description)
     }
 }
-
-private const val DISABLED_ALPHA = 0.38f

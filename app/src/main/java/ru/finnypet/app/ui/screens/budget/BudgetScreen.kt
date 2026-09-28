@@ -166,6 +166,7 @@ private fun Planning(
     if (confirming) {
         ConfirmDialog(
             savings = state.plan.savings,
+            unplanned = state.remainder,
             onConfirm = {
                 confirming = false
                 onConfirm()
@@ -256,9 +257,13 @@ private fun WalletAction(wallet: Coins) {
  * Подтверждение — отдельным окном: после него план не меняется до вечера,
  * а доля копилки сразу уходит на цель (R6). ТЗ 3.6 требует подтверждения
  * действий, заметно меняющих прогресс.
+ *
+ * [unplanned] — монеты, не разложенные ни в одну банку. Так можно (PLAN_V3 §3:
+ * сумма не больше кошелька), но без строки в окне план с 153 свободными из
+ * 205 подтверждался молча (ревью F2-fix): теперь сказано, куда они денутся.
  */
 @Composable
-private fun ConfirmDialog(savings: Coins, onConfirm: () -> Unit, onCancel: () -> Unit) {
+private fun ConfirmDialog(savings: Coins, unplanned: Coins, onConfirm: () -> Unit, onCancel: () -> Unit) {
     FinnyDialog(
         title = stringResource(R.string.budget_confirm_title),
         onDismiss = onCancel,
@@ -271,6 +276,12 @@ private fun ConfirmDialog(savings: Coins, onConfirm: () -> Unit, onCancel: () ->
         if (savings > Coins.ZERO) {
             Text(
                 text = stringResource(R.string.budget_to_savings, coinsText(savings)),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        if (unplanned > Coins.ZERO) {
+            Text(
+                text = stringResource(R.string.budget_confirm_unplanned, coinsText(unplanned)),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }

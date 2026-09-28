@@ -39,6 +39,8 @@ import ru.finnypet.app.domain.usecase.DeleteGame
 import ru.finnypet.app.domain.usecase.StartDemo
 import ru.finnypet.app.domain.usecase.TaskSchedule
 import ru.finnypet.app.ui.screens.ProfileViewModel
+import ru.finnypet.app.ui.components.GrowthView
+import ru.finnypet.app.ui.components.growthOf
 import ru.finnypet.app.ui.text.textOf
 import javax.inject.Inject
 
@@ -86,7 +88,13 @@ sealed interface AdultState {
         val topics: List<TopicProgress>,
         val days: Int,
         val stage: GrowthStage,
+        /** Все звёзды роста за игру. */
         val points: Int,
+        /**
+         * Звёзды до следующей стадии — тот же счёт, что на главном и в итогах
+         * («До взрослого 0 из 6»); `null` — сова взрослая.
+         */
+        val growth: GrowthView?,
         val balance: Coins,
         val saved: Coins,
         val bonus: Coins,
@@ -261,6 +269,7 @@ class AdultViewModel @Inject constructor(
             days = days,
             stage = pet.growth.stage,
             points = pet.growth.points,
+            growth = growthOf(pet.growth, gameBalance.growthThresholds),
             balance = money.balance,
             saved = progress.goal?.saved ?: Coins.ZERO,
             bonus = gameBalance.parentBonus,

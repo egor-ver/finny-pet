@@ -130,6 +130,24 @@ class TutorialStepsTest {
         assertEquals(220f, top, 0.01f)
     }
 
+    /**
+     * Ревью F3, п. 20: кнопки шага стоят на месте сверху (до 150), облачко ниже
+     * них. Кошелёк над кнопками промежутков не делит: облачко встаёт вплотную
+     * к кнопке задания внизу, а не посередине между ней и кошельком.
+     */
+    @Test
+    fun `кнопки шага сверху — облачко под ними, кошелёк над ними не в счёт`() {
+        val top = panelTop(listOf(0f..60f, 680f..760f), panelHeight = 300f, height = 800f, reach = 28f, from = 150f)
+        assertEquals(680f - 28f - 300f, top, 0.01f)
+    }
+
+    @Test
+    fun `кнопки шага сверху — облачко не заходит на них`() {
+        assertEquals(150f, panelTop(listOf(700f..800f), panelHeight = 600f, height = 800f, reach = 28f, from = 150f), 0.01f)
+        val top = panelTop(listOf(170f..230f), panelHeight = 300f, height = 800f, reach = 28f, from = 150f)
+        assertEquals(230f + 28f, top, 0.01f)
+    }
+
     @Test
     fun `без целей — облачко по центру`() {
         assertEquals(250f, panelTop(emptyList(), panelHeight = 300f, height = 800f, reach = 28f), 0.01f)

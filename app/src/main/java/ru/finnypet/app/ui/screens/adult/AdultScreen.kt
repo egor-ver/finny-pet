@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.finnypet.app.R
+import ru.finnypet.app.domain.model.GrowthStage
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
@@ -268,7 +269,17 @@ private fun Overview(state: AdultState.Ready) {
         Heading(stringResource(R.string.adult_overview, state.childName))
         LabelledLine(stringResource(R.string.adult_days), state.days.toString(), style)
         LabelledLine(stringResource(R.string.adult_stage), stringResource(state.stage.label), style)
+        // Два счёта роста рядом и подписаны: «Очки роста 4» без пояснения
+        // спорили с «До взрослого 0 из 6» на главном — там звёзды считаются
+        // внутри стадии (DESIGN_PLAN 3.1), а здесь взрослому нужен и общий итог.
         LabelledLine(stringResource(R.string.adult_points), state.points.toString(), style)
+        state.growth?.let { growth ->
+            LabelledLine(
+                stringResource(if (growth.next == GrowthStage.GROWN) R.string.main_growth_to_grown else R.string.main_growth_to_young),
+                stringResource(R.string.main_growth_points, growth.points, growth.target),
+                style,
+            )
+        }
         LabelledLine(stringResource(R.string.adult_balance), state.balance, style)
         LabelledLine(stringResource(R.string.adult_saved), state.saved, style)
     }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,12 +58,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
@@ -165,8 +170,12 @@ fun TutorialOverlay(
         key(index) { animateRectAsState(targetValue = rect, animationSpec = spec, label = "tutorialCutout").value }
     }
 
+    // Крупный шрифт: кнопки остаются в облачке (см. [TutorialPanel]), иначе —
+    // стоят на одном месте над облачком.
+    val fixedButtons = LocalDensity.current.fontScale <= Dimens.WIDE_FONT_SCALE
     var origin by remember { mutableStateOf(Offset.Zero) }
     var bubble by remember { mutableStateOf(Rect.Zero) }
+    var buttons by remember { mutableStateOf(Rect.Zero) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -190,7 +199,10 @@ fun TutorialOverlay(
             if (bubble != Rect.Zero && TUTORIAL_STEPS[step].arrow) {
                 val nudge = sin(PI * breath.value).toFloat() * ARROW_NUDGE.toPx()
                 val from = bubble.translate(-origin)
-                cutouts.forEach { hole ->
+                // Цель выше кнопок шага (кошелёк) — только вырез: стрелка к ней
+                // прошла бы сквозь кнопки.
+                val buttonsTop = if (buttons == Rect.Zero) Float.NEGATIVE_INFINITY else buttons.top - origin.y
+                cutouts.filterNot { it.bottom <= buttonsTop }.forEach { hole ->
                     arrowArc(bubble = from, hole = hole, inset = ARROW_INSET.toPx(), gap = ARROW_GAP.toPx())
                         ?.let { drawArrow(it, nudge) }
                 }
@@ -204,15 +216,28 @@ fun TutorialOverlay(
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.Space)
-                .onGloballyPositioned { area = it.positionInRoot() },
+                .onGloballyPositioned { area = it.positionInRoot() }
+                .semantics { isTraversalGroup = true },
         ) {
             val height = constraints.maxHeight.toFloat()
+            if (fixedButtons) {
+                StepButtons(
+                    step = step,
+                    onNext = onNext,
+                    onSkip = onSkip,
+                    modifier = Modifier
+                        .padding(top = BUTTONS_TOP)
+                        .onGloballyPositioned { buttons = it.boundsInRoot() }
+                        // Кнопки выше облачка, но TalkBack читает сначала шаг.
+                        .semantics { traversalIndex = 1f },
+                )
+            }
             TutorialPanel(
                 step = step,
                 text = text,
                 where = resolved,
                 owl = owl,
-                onNext = onNext,
+                onNext = onNext.takeUnless { fixedButtons },
                 onSkip = onSkip,
                 onBubble = { bubble = it },
                 modifier = Modifier
@@ -220,7 +245,8 @@ fun TutorialOverlay(
                     .offset {
                         val pad = CUTOUT_PADDING.toPx()
                         val spans = holes.map { (it.top - area.y - pad)..(it.bottom - area.y + pad) }
-                        IntOffset(0, panelTop(spans, panelHeight.toFloat(), height, ARROW_REACH.toPx()).roundToInt())
+                        val from = if (buttons == Rect.Zero) 0f else buttons.bottom - area.y + Dimens.SpaceSmall.toPx()
+                        IntOffset(0, panelTop(spans, panelHeight.toFloat(), height, ARROW_REACH.toPx(), from).roundToInt())
                     }
                     .onGloballyPositioned { panelHeight = it.size.height },
             )
@@ -229,15 +255,55 @@ fun TutorialOverlay(
 }
 
 /**
- * Сова с облачком, а кнопки шага — внутри облачка: стрелка выходит из его
- * верха или низа, и кнопки под облачком перегородили бы ей путь к цели внизу
- * (шаг «доход»: кошелёк сверху, кнопка задания снизу). Для TalkBack текст —
- * одна фраза «Шаг 3 из 6», реплика совы и где искать элемент словами по сетке
- * главного: стрелку не видно, а экран под слоем скрыт от озвучки.
- * `liveRegion` — чтобы новый шаг прочитался сам после «Дальше».
+ * Кнопки шага на одном месте — сверху, где на главном стоит реплика совы
+ * (под обучением она прозрачна, и целей там нет). Облачко ходит от цели к
+ * цели, и «Дальше» в нём прыгало по экрану под пальцем ребёнка (ревью F3,
+ * п. 20). Стрелку, как и при кнопках внутри облачка (решение F1), они не
+ * пересекают: кнопки выше облачка, а стрелка к цели выше кнопок не рисуется.
+ * «Пропустить» слева, «Дальше» справа — вперёд по ходу чтения.
+ */
+@Composable
+private fun StepButtons(step: Int, onNext: () -> Unit, onSkip: () -> Unit, modifier: Modifier = Modifier) {
+    val last = nextTutorialStep(step) == null
+    // Поля кнопок уже обычных: две в ряд на 328 dp, и при шрифте 1,3
+    // «Пропустить» иначе не влезало бы в половину ряда одним словом.
+    val padding = PaddingValues(horizontal = Dimens.SpaceSmall)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { isTraversalGroup = true },
+    ) {
+        // На последнем шаге пропускать уже нечего: «Играть!» одна (решение владельца 28.09).
+        if (!last) {
+            FinnySecondaryButton(
+                text = stringResource(R.string.tutorial_skip),
+                onClick = onSkip,
+                contentPadding = padding,
+                modifier = Modifier.weight(1f).semantics { traversalIndex = 1f },
+            )
+        }
+        FinnyButton(
+            text = stringResource(if (last) R.string.tutorial_play else R.string.tutorial_next),
+            onClick = onNext,
+            contentPadding = padding,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * Сова с облачком. Для TalkBack текст — одна фраза «Шаг 3 из 6», реплика
+ * совы и где искать элемент словами по сетке главного: стрелку не видно, а
+ * экран под слоем скрыт от озвучки. `liveRegion` — чтобы новый шаг прочитался
+ * сам после «Дальше».
  *
  * При крупном шрифте сова рядом не помещается — облачко во всю ширину без
- * неё, иначе «Пропустить» рвалось бы посреди слова.
+ * неё, иначе «Пропустить» рвалось бы посреди слова. Главный тогда
+ * прокручивается к целям, и цель могла бы уехать под кнопки сверху, поэтому
+ * кнопки остаются внутри облачка ([onNext] не `null`): стрелка выходит из его
+ * верха или низа, и кнопки ей не мешают.
  */
 @Composable
 private fun TutorialPanel(
@@ -245,7 +311,8 @@ private fun TutorialPanel(
     text: String,
     where: List<TutorialTarget>,
     owl: OwlLook,
-    onNext: () -> Unit,
+    /** `null` — кнопки шага стоят отдельно ([StepButtons]). */
+    onNext: (() -> Unit)?,
     onSkip: () -> Unit,
     onBubble: (Rect) -> Unit,
     modifier: Modifier = Modifier,
@@ -276,13 +343,15 @@ private fun TutorialPanel(
             StepDots(step = step, count = count)
             Text(text = text, style = MaterialTheme.typography.bodyLarge)
         }
-        ButtonColumn {
-            FinnyButton(
-                text = stringResource(if (last) R.string.tutorial_play else R.string.tutorial_next),
-                onClick = onNext,
-            )
-            // На последнем шаге пропускать уже нечего: «Играть!» одна (решение владельца 28.09).
-            if (!last) FinnySecondaryButton(text = stringResource(R.string.tutorial_skip), onClick = onSkip)
+        if (onNext != null) {
+            ButtonColumn {
+                FinnyButton(
+                    text = stringResource(if (last) R.string.tutorial_play else R.string.tutorial_next),
+                    onClick = onNext,
+                )
+                // На последнем шаге пропускать уже нечего: «Играть!» одна (решение владельца 28.09).
+                if (!last) FinnySecondaryButton(text = stringResource(R.string.tutorial_skip), onClick = onSkip)
+            }
         }
     }
     if (LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE) {
@@ -381,6 +450,12 @@ private val ARROW_GAP = 2.dp
  * Не меньше: стрелка должна остаться длиннее двух наконечников.
  */
 private val ARROW_REACH = 28.dp
+
+/**
+ * Кнопки шага — сразу под шапкой главного (TopAppBar 64 dp; слой уже отступил
+ * от статус-бара и на 16 dp сверху), на месте прозрачной под обучением реплики.
+ */
+private val BUTTONS_TOP = TopAppBarDefaults.TopAppBarExpandedHeight - Dimens.Space + Dimens.SpaceSmall
 private val ARROW_INSET = 28.dp
 private val ARROW_NUDGE = 6.dp
 private val DOT = 10.dp

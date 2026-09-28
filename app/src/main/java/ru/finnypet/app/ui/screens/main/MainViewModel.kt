@@ -219,6 +219,7 @@ class MainViewModel @Inject constructor(
                         wallet = wallet,
                         reward = taskReward,
                         income = balance.periodIncome,
+                        repeat = task?.allDone == true,
                         eventKey = event?.key,
                         eventArgs = event?.args.orEmpty(),
                         needLeft = jars?.mandatory,

@@ -65,6 +65,8 @@ fun nextStep(
  * [needs] — потребности по порядку важности, еда первой; [cover] — цена
  * закрытия всех потребностей, `null` — в магазине их не закрыть целиком;
  * [reward] — сколько дадут за задание, `null` — сегодня уже не дадут;
+ * [repeat] — все задания пройдены, награда — за повтор одного из них: сова
+ * говорит «повторим», чтобы «6 из 6» и «+10» рядом не выглядели ошибкой;
  * [eventKey]/[eventArgs] — событие дня (L7), `null` — событий сегодня нет;
  * [needLeft] — сколько осталось в банке «Нужное» по плану, `null` — план не
  * подтверждён; [startWith] — с какой потребности начать по плану
@@ -85,6 +87,7 @@ fun owlPhrase(
     wallet: Coins,
     reward: Coins?,
     income: Coins,
+    repeat: Boolean = false,
     eventKey: String? = null,
     eventArgs: Map<String, String> = emptyMap(),
     needLeft: Coins? = null,
@@ -97,7 +100,8 @@ fun owlPhrase(
             eventKey != null && sadAbout != null -> Explanation("$eventKey.sad.${sadAbout.name}", eventArgs)
             sadAbout != null -> Explanation("owl.say.sad.${sadAbout.name}")
             eventKey != null -> Explanation(eventKey, eventArgs)
-            step == NextStep.Task && reward != null -> Explanation("owl.say.task", morning + ("reward" to reward.amount.toString()))
+            step == NextStep.Task && reward != null ->
+                Explanation(if (repeat) "owl.say.task_repeat" else "owl.say.task", morning + ("reward" to reward.amount.toString()))
             first != null -> Explanation("owl.say.morning.${first.name}", morning)
             else -> Explanation("owl.say.morning", morning)
         }

@@ -76,6 +76,18 @@ class TaskContentTest {
         assertEquals("task.save_gift_coins.otherwise" to false, explain("save-gift-coins", jars(0, 30, 0)))
     }
 
+    /**
+     * Верный исход — «отложил не меньше 12», и ребёнок, положивший 15, тоже
+     * здесь. Объяснение не приписывает ему ровно 12 (ревью F3-fix: «12 из
+     * подарка ушли в копилку» при 15 в копилке).
+     */
+    @Test
+    fun `подарок — верное объяснение не называет, сколько именно отложено`() {
+        assertEquals("task.save_gift_coins.success" to true, explain("save-gift-coins", jars(0, 15, 15)))
+        val success = pack.texts.getValue("task.save_gift_coins.success")
+        assertFalse(success, "ушли в копилку" in success)
+    }
+
     @Test
     fun `спиннер — стоит 2 дня копилки, «всего на день» и «ничего не изменится» неверны`() {
         assertEquals(

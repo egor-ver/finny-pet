@@ -77,30 +77,33 @@ fun TutorialStep.resolve(present: Set<TutorialTarget>): List<TutorialTarget> =
  * важнее цели.
  *
  * [spans] — вертикальные границы подсвеченных элементов в координатах слоя.
+ * [from] — выше облачку нельзя: там кнопки шага. Цели выше [from] (кошелёк)
+ * промежутков не делят — к ним облачко не подходит, остаётся только вырез.
  */
 internal fun panelTop(
     spans: List<ClosedFloatingPointRange<Float>>,
     panelHeight: Float,
     height: Float,
     reach: Float,
+    from: Float = 0f,
 ): Float {
     val gaps = mutableListOf<ClosedFloatingPointRange<Float>>()
-    var cursor = 0f
+    var cursor = from
     spans.sortedBy { it.start }.forEach { span ->
         if (span.start > cursor) gaps += cursor..span.start
         cursor = max(cursor, span.endInclusive)
     }
     if (cursor < height) gaps += cursor..height
-    val limit = max(0f, height - panelHeight)
+    val limit = max(from, height - panelHeight)
     val best = gaps.maxByOrNull { it.endInclusive - it.start } ?: return limit
-    val targetAbove = best.start > 0f
+    val targetAbove = best.start > from
     val targetBelow = best.endInclusive < height
     val top = when {
         targetAbove && !targetBelow -> best.start + reach
         targetBelow && !targetAbove -> best.endInclusive - reach - panelHeight
         else -> (best.start + best.endInclusive - panelHeight) / 2
     }
-    return top.coerceIn(0f, limit)
+    return top.coerceIn(from, limit)
 }
 
 /**

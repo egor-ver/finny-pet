@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -168,10 +169,13 @@ fun FinnySecondaryButton(
         shape = RoundedCornerShape(Dimens.CornerTile),
         // Рамка толще и цветом primary: `outline` даёт на белом только 1,3:1,
         // граница второстепенной кнопки была бы почти не видна (DESIGN_PLAN 2.4).
-        border = BorderStroke(Dimens.ButtonBorderWidth, MaterialTheme.colorScheme.primary),
+        // Выключенная — рамка серая, как и текст: синяя рамка с серым текстом
+        // выглядела сбоем, а не «сейчас нельзя» (ревью F3-fix).
+        border = BorderStroke(Dimens.ButtonBorderWidth, if (enabled) MaterialTheme.colorScheme.primary else disabledColor()),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary,
+            disabledContentColor = disabledColor(),
         ),
         contentPadding = contentPadding,
         modifier = modifier
@@ -186,6 +190,15 @@ fun FinnySecondaryButton(
         )
     }
 }
+
+/**
+ * Цвет выключенной кнопки с рамкой — серый, как текст выключенной кнопки
+ * Material: одинаково у второстепенных кнопок и у «−»/«+», чтобы «сейчас
+ * нельзя» везде выглядело одинаково, а не бледным цветом действия.
+ */
+@Composable
+@ReadOnlyComposable
+internal fun disabledColor(): Color = MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_CONTENT_ALPHA)
 
 /**
  * Столбик кнопок внизу экрана.
@@ -225,4 +238,5 @@ private fun RewardChip(reward: Coins, contentColor: Color) {
 }
 
 private const val DISABLED_ALPHA = 0.5f
+private const val DISABLED_CONTENT_ALPHA = 0.38f
 private const val REWARD_CHIP_ALPHA = 0.18f

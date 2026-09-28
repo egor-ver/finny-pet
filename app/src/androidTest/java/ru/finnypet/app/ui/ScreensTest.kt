@@ -61,6 +61,7 @@ import ru.finnypet.app.ui.screens.budget.BudgetContent
 import ru.finnypet.app.ui.screens.demo.DemoChipContent
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.components.GrowthSummary
+import ru.finnypet.app.ui.components.GrowthView
 import ru.finnypet.app.ui.screens.day.DayContent
 import ru.finnypet.app.ui.screens.day.DayState
 import ru.finnypet.app.ui.screens.day.DayCheckView
@@ -1530,6 +1531,7 @@ class ScreensTest {
         days = 3,
         stage = GrowthStage.YOUNG,
         points = 12,
+        growth = GrowthView(GrowthStage.GROWN, points = 2, target = 6),
         balance = Coins(40),
         saved = Coins(30),
         bonus = Coins(10),

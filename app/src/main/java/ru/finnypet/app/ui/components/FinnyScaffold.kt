@@ -1,7 +1,9 @@
 package ru.finnypet.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -34,10 +37,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.theme.Dimens
@@ -109,13 +114,14 @@ fun FinnyScaffold(
         actions = actions,
         bottomBar = bottomBar,
     ) { insets ->
+        val scroll = rememberScrollState()
         // Высота окна нужна как нижняя граница высоты колонки: внутри прокрутки
         // колонка иначе сжимается до содержимого, и центровать было бы не в чем.
         BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(insets)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scroll)
                     .heightIn(min = maxHeight)
                     .padding(horizontal = Dimens.ScreenPadding, vertical = verticalPadding),
                 // Одинаковый ритм на всех экранах: расстояние между блоками
@@ -128,6 +134,7 @@ fun FinnyScaffold(
                 ),
                 content = content,
             )
+            ContinuesBelow(visible = scroll.canScrollForward)
         }
     }
 }
@@ -164,20 +171,43 @@ fun FinnyListScaffold(
         actions = actions,
         bottomBar = bottomBar,
     ) { insets ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(insets),
-            contentPadding = PaddingValues(
-                horizontal = Dimens.ScreenPadding,
-                vertical = Dimens.Space,
-            ),
-            verticalArrangement = Arrangement.spacedBy(spacing),
-            content = content,
-        )
+        Box(modifier = Modifier.fillMaxSize().padding(insets)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    horizontal = Dimens.ScreenPadding,
+                    vertical = Dimens.Space,
+                ),
+                verticalArrangement = Arrangement.spacedBy(spacing),
+                content = content,
+            )
+            ContinuesBelow(visible = listState.canScrollForward)
+        }
     }
 }
+
+/**
+ * Содержимое не поместилось и продолжается под нижней панелью — его край
+ * растворяется в фоне. Без этого обрезанная по панели плитка выглядела
+ * подсунутой под кнопку, а от подсказки под полем торчала полоска букв
+ * (ревью F2-fix, F3): теперь видно, что дальше можно прокрутить.
+ * Касаний не перехватывает — у слоя нет обработчиков, прокрутка идёт сквозь.
+ */
+@Composable
+private fun BoxScope.ContinuesBelow(visible: Boolean) {
+    if (!visible) return
+    val background = MaterialTheme.colorScheme.background
+    Box(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .height(EDGE_FADE)
+            .background(Brush.verticalGradient(listOf(background.copy(alpha = 0f), background))),
+    )
+}
+
+private val EDGE_FADE = 24.dp
 
 /**
  * Общая обвязка обоих каркасов: заголовок, возврат, нижняя панель и

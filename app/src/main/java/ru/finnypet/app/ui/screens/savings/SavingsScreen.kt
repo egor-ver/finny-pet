@@ -60,6 +60,8 @@ import ru.finnypet.app.ui.components.StepButton
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.fill
+import ru.finnypet.app.ui.components.goalChangeText
+import ru.finnypet.app.ui.components.goalSavedText
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
@@ -317,12 +319,21 @@ private fun ActiveGoal(
             Owl(look = state.owl, size = OwlRole.Standalone.size)
         }
         Text(
-            text = stringResource(R.string.progress_goal_saved, goal.saved.amount, goal.price.amount),
+            text = goalSavedText(goal.saved, goal.price),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
         if (goal.isReached) {
+            goalChangeText(goal.saved, goal.price)?.let { change ->
+                Text(
+                    text = change,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             FinnyButton(
                 text = stringResource(R.string.savings_buy, goal.buyTitle),
                 onClick = { askingBuy = true },

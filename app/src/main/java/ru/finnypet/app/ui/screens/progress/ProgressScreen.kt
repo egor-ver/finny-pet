@@ -63,6 +63,8 @@ import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.colors
 import ru.finnypet.app.ui.components.container
 import ru.finnypet.app.ui.components.fill
+import ru.finnypet.app.ui.components.goalOverfilled
+import ru.finnypet.app.ui.components.goalSavedText
 import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
@@ -207,7 +209,12 @@ private fun GoalCard(goal: GoalSummary?) {
     }
     val reached = goal.saved.covers(goal.price)
     val left = goal.saved.shortfallTo(goal.price)
-    val spoken = stringResource(R.string.main_goal_progress, goal.title, goal.saved.amount, goal.price.amount) + ". " +
+    val saidSaved = if (goalOverfilled(goal.saved, goal.price)) {
+        stringResource(R.string.main_goal_progress_enough, goal.title, goal.saved.amount)
+    } else {
+        stringResource(R.string.main_goal_progress, goal.title, goal.saved.amount, goal.price.amount)
+    }
+    val spoken = "$saidSaved. " +
         if (reached) stringResource(R.string.main_goal_reached) else "${stringResource(R.string.main_goal_left)} ${coinsText(left)}"
     FinnyCard(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
         Row(
@@ -218,7 +225,7 @@ private fun GoalCard(goal: GoalSummary?) {
             Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
                 Text(text = goal.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = stringResource(R.string.progress_goal_saved, goal.saved.amount, goal.price.amount),
+                    text = goalSavedText(goal.saved, goal.price),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (reached) {

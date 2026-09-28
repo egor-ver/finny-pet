@@ -35,6 +35,21 @@ class NextStepTest {
         )
     }
 
+    /**
+     * Все задания пройдены, а награда ещё ждёт — сова зовёт повторить: «6 из 6»
+     * на плитке и «+10» на кнопке иначе выглядели ошибкой (ревью F4-fix).
+     * Награда та же.
+     */
+    @Test
+    fun `все задания пройдены — сова зовёт повторить за ту же награду`() {
+        assertEquals(
+            Explanation("owl.say.task_repeat", mapOf("income" to "35", "reward" to "10")),
+            phrase(NextStep.Task, reward = 10, repeat = true),
+        )
+        val texts = ContentParser().parse(RealContent.raw()).texts
+        assertTrue("повтор" in texts.textOf(Explanation("owl.say.task_repeat", mapOf("income" to "35", "reward" to "10"))).lowercase())
+    }
+
     @Test
     fun `день идёт, сова хочет есть и монеты есть — магазин`() {
         assertEquals(NextStep.Shop, step(hasNeeds = true))
@@ -234,7 +249,7 @@ class NextStepTest {
         )
 
         for (explanation in morning) {
-            val text = texts.textOf(explanation)
+            val text = texts.textOf(explanation).replace('\u00A0', ' ')
             assertTrue(text, "Пришло ещё 35 монет" in text)
         }
     }
@@ -320,7 +335,8 @@ class NextStepTest {
                         for (cover in listOf(null, 5, 100))
                             for (reward in listOf(null, 10))
                                 for (needLeft in listOf(null, 0, 100))
-                                    add(phrase(step, needs, sad, cover, wallet = 50, reward = reward, needLeft = needLeft).key)
+                                    for (repeat in listOf(false, true))
+                                        add(phrase(step, needs, sad, cover, wallet = 50, reward = reward, needLeft = needLeft, repeat = repeat).key)
         }
 
         val missing = keys.filterNot(texts::containsKey)
@@ -359,6 +375,7 @@ class NextStepTest {
         eventArgs: Map<String, String> = emptyMap(),
         needLeft: Int? = null,
         startWith: PetStatKind? = needs.firstOrNull(),
+        repeat: Boolean = false,
     ) = owlPhrase(
         step = step,
         needs = needs,
@@ -367,6 +384,7 @@ class NextStepTest {
         wallet = Coins(wallet),
         reward = reward?.let(::Coins),
         income = Coins(35),
+        repeat = repeat,
         eventKey = eventKey,
         eventArgs = eventArgs,
         needLeft = needLeft?.let(::Coins),
