@@ -123,15 +123,18 @@
     <!-- Раздел для взрослого (ТЗ 2.5.12) -->
     <string name="adult_action">Открыть раздел для взрослого</string>
     <string name="adult_gate_title">Только для взрослого</string>
-    <string name="adult_gate_explain">Этот раздел для родителя. Реши пример, чтобы открыть его.</string>
-    <string name="adult_gate_prompt">Сколько будет %1$d × %2$d?</string>
+    <string name="adult_gate_explain">Этот раздел — для взрослого. Решите пример, чтобы открыть его.</string>
+    <!-- Неразрывные пробелы: крупный пример переносится только после «будет», а не «14 ×» / «3?». -->
+    <string name="adult_gate_prompt">Сколько будет %1$d × %2$d?</string>
     <string name="adult_gate_answer">Ответ</string>
     <string name="adult_gate_open">Открыть раздел</string>
-    <string name="adult_gate_wrong">Ответ неверный. Посчитай ещё раз.</string>
+    <string name="adult_gate_wrong">Ответ не подошёл. Попробуйте ещё раз.</string>
     <string name="adult_title">Раздел для взрослого</string>
     <string name="adult_failed">Не получилось открыть раздел. Попробуйте ещё раз.</string>
     <string name="adult_talk">О чём поговорить сегодня</string>
     <string name="adult_about">Чему учит игра</string>
+    <string name="adult_about_more">Подробнее</string>
+    <string name="adult_about_less">Свернуть</string>
     <string name="adult_topics">Пройденные темы</string>
     <string name="adult_topic_passed">пройдено %1$d из %2$d</string>
     <string name="adult_topic_none">заданий по теме пока нет</string>

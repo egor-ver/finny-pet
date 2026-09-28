@@ -77,9 +77,10 @@ fun AdultGateContent(riddle: Riddle, onSolved: () -> Unit, onBack: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // Пример крупно (DESIGN_PLAN 3.11): ради него взрослый и пришёл на экран.
         Text(
             text = stringResource(R.string.adult_gate_prompt, riddle.left, riddle.right),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.displaySmall,
         )
         OutlinedTextField(
             value = typed,

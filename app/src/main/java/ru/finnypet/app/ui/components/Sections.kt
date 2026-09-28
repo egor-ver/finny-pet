@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -56,12 +57,18 @@ fun LabelledLine(label: String, value: @Composable () -> Unit) {
     }
 }
 
+/**
+ * [style] меняет только раздел взрослого: там все значения одного размера
+ * `titleMedium` (DESIGN_PLAN 3.11), а игровые экраны выделяют суммы крупнее.
+ */
 @Composable
-fun LabelledLine(label: String, value: String) = LabelledLine(label) {
-    Text(text = value, style = MaterialTheme.typography.bodyLarge)
-}
+fun LabelledLine(label: String, value: String, style: TextStyle = MaterialTheme.typography.bodyLarge) =
+    LabelledLine(label) {
+        Text(text = value, style = style)
+    }
 
 @Composable
-fun LabelledLine(label: String, amount: Coins) = LabelledLine(label) {
-    MoneyAmount(amount = amount)
-}
+fun LabelledLine(label: String, amount: Coins, style: TextStyle = MaterialTheme.typography.titleLarge) =
+    LabelledLine(label) {
+        MoneyAmount(amount = amount, style = style)
+    }

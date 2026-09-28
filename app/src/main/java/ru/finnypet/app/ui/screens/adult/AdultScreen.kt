@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +36,7 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.Heading
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.coinsText
+import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -42,6 +45,9 @@ import ru.finnypet.app.ui.theme.Dimens
  *
  * Колонка, а не список: разделов пять и все они постоянного размера — тем
  * ровно три, целей приложения четыре, и от игры их число не растёт.
+ *
+ * Вид спокойный, «взрослый» (DESIGN_PLAN 3.11): без совы и эффектов, каждый
+ * раздел — белая карточка, значения строк одним стилем `titleMedium`.
  */
 @Composable
 fun AdultScreen(
@@ -177,61 +183,105 @@ private fun Ready(
     }
 }
 
-/** Первой — подсказка для разговора: ради неё взрослый и открывает раздел. */
+/**
+ * Первой — подсказка для разговора: ради неё взрослый и открывает раздел.
+ * Синяя плашка с лампочкой, а не персиковая: персиковый в игре значит
+ * «Желаемое», и совет читался бы как про покупки (DESIGN_PLAN 3.11).
+ */
 @Composable
 private fun Talk(text: String) {
-    FinnyCard(color = MaterialTheme.colorScheme.secondaryContainer) {
-        Heading(stringResource(R.string.adult_talk))
+    FinnyCard(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.semantics(mergeDescendants = true) {},
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+        ) {
+            Icon(imageVector = FinnyIcons.Bulb, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Heading(stringResource(R.string.adult_talk))
+        }
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
+/**
+ * «Чему учит игра» — первый абзац на виду, остальные по «Подробнее»:
+ * четыре абзаца подряд отодвигали темы и прогресс ребёнка за экран, а
+ * читают их один раз.
+ */
 @Composable
-private fun ColumnScope.About(about: List<String>) {
+private fun About(about: List<String>) {
     if (about.isEmpty()) return
-    Heading(stringResource(R.string.adult_about))
-    about.forEach { line -> Explanation(line) }
+    var open by rememberSaveable { mutableStateOf(false) }
+    FinnyCard {
+        Heading(stringResource(R.string.adult_about))
+        aboutShown(about, open).forEach { line -> Explanation(line) }
+        if (about.size > 1) {
+            TextButton(
+                onClick = { open = !open },
+                modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget),
+            ) {
+                Text(
+                    text = stringResource(if (open) R.string.adult_about_less else R.string.adult_about_more),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+    }
 }
+
+/** Свёрнутый раздел показывает только первый абзац — он и отвечает на «чему учит». */
+internal fun aboutShown(about: List<String>, open: Boolean): List<String> =
+    if (open) about else about.take(1)
 
 /**
  * Темы перечислены все, включая нетронутые, и только числами: ТЗ 2.5.12
  * запрещает негативные оценки ребёнка, поэтому «не пройдено» здесь не звучит.
  */
 @Composable
-private fun ColumnScope.Topics(topics: List<TopicProgress>) {
-    Heading(stringResource(R.string.adult_topics))
-    topics.forEach { topic ->
-        LabelledLine(
-            label = stringResource(topic.topic.label),
-            value = when (topic.total) {
-                0 -> stringResource(R.string.adult_topic_none)
-                else -> stringResource(R.string.adult_topic_passed, topic.passed, topic.total)
-            },
-        )
+private fun Topics(topics: List<TopicProgress>) {
+    FinnyCard {
+        Heading(stringResource(R.string.adult_topics))
+        topics.forEach { topic ->
+            LabelledLine(
+                label = stringResource(topic.topic.label),
+                value = when (topic.total) {
+                    0 -> stringResource(R.string.adult_topic_none)
+                    else -> stringResource(R.string.adult_topic_passed, topic.passed, topic.total)
+                },
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
     }
 }
 
 @Composable
-private fun ColumnScope.Overview(state: AdultState.Ready) {
-    Heading(stringResource(R.string.adult_overview, state.childName))
-    LabelledLine(stringResource(R.string.adult_days), state.days.toString())
-    LabelledLine(stringResource(R.string.adult_stage), stringResource(state.stage.label))
-    LabelledLine(stringResource(R.string.adult_points), state.points.toString())
-    LabelledLine(stringResource(R.string.adult_balance), state.balance)
-    LabelledLine(stringResource(R.string.adult_saved), state.saved)
+private fun Overview(state: AdultState.Ready) {
+    val style = MaterialTheme.typography.titleMedium
+    FinnyCard {
+        Heading(stringResource(R.string.adult_overview, state.childName))
+        LabelledLine(stringResource(R.string.adult_days), state.days.toString(), style)
+        LabelledLine(stringResource(R.string.adult_stage), stringResource(state.stage.label), style)
+        LabelledLine(stringResource(R.string.adult_points), state.points.toString(), style)
+        LabelledLine(stringResource(R.string.adult_balance), state.balance, style)
+        LabelledLine(stringResource(R.string.adult_saved), state.saved, style)
+    }
 }
 
 @Composable
-private fun ColumnScope.Bonus(state: AdultState.Ready, onAward: () -> Unit) {
+private fun Bonus(state: AdultState.Ready, onAward: () -> Unit) {
     val bonus = coinsText(state.bonus)
-    Heading(stringResource(R.string.adult_bonus))
-    Explanation(stringResource(R.string.adult_bonus_explain, bonus))
-    when (state.award) {
-        AwardState.AVAILABLE ->
-            FinnyButton(text = stringResource(R.string.adult_bonus_action, bonus), onClick = onAward)
+    FinnyCard {
+        Heading(stringResource(R.string.adult_bonus))
+        Explanation(stringResource(R.string.adult_bonus_explain, bonus))
+        when (state.award) {
+            AwardState.AVAILABLE ->
+                FinnyButton(text = stringResource(R.string.adult_bonus_action, bonus), onClick = onAward)
 
-        AwardState.USED -> Explanation(stringResource(R.string.adult_bonus_used))
-        AwardState.NO_DAY -> Explanation(stringResource(R.string.adult_bonus_no_day))
+            AwardState.USED -> Explanation(stringResource(R.string.adult_bonus_used))
+            AwardState.NO_DAY -> Explanation(stringResource(R.string.adult_bonus_no_day))
+        }
     }
 }
 
@@ -240,18 +290,22 @@ private fun ColumnScope.Bonus(state: AdultState.Ready, onAward: () -> Unit) {
  * барьером: ребёнку он не нужен, а эксперт этот раздел откроет по ТЗ.
  */
 @Composable
-private fun ColumnScope.Demo(onStart: () -> Unit) {
-    Heading(stringResource(R.string.adult_demo))
-    Explanation(stringResource(R.string.adult_demo_explain))
-    FinnyButton(text = stringResource(R.string.adult_demo_action), onClick = onStart)
+private fun Demo(onStart: () -> Unit) {
+    FinnyCard {
+        Heading(stringResource(R.string.adult_demo))
+        Explanation(stringResource(R.string.adult_demo_explain))
+        FinnyButton(text = stringResource(R.string.adult_demo_action), onClick = onStart)
+    }
 }
 
 /** Удаление игры (ТЗ 3.5): последним разделом и с подтверждением (ТЗ 3.6). */
 @Composable
-private fun ColumnScope.DeleteGame(onAsk: () -> Unit) {
-    Heading(stringResource(R.string.adult_delete))
-    Explanation(stringResource(R.string.adult_delete_explain))
-    FinnySecondaryButton(text = stringResource(R.string.adult_delete_action), onClick = onAsk)
+private fun DeleteGame(onAsk: () -> Unit) {
+    FinnyCard {
+        Heading(stringResource(R.string.adult_delete))
+        Explanation(stringResource(R.string.adult_delete_explain))
+        FinnySecondaryButton(text = stringResource(R.string.adult_delete_action), onClick = onAsk)
+    }
 }
 
 /**
@@ -262,12 +316,14 @@ private fun ColumnScope.DeleteGame(onAsk: () -> Unit) {
  * [SettingsRepository] на случай, если звук появится позже.
  */
 @Composable
-private fun ColumnScope.Settings(
+private fun Settings(
     state: AdultState.Ready,
     onAnimations: (Boolean) -> Unit,
 ) {
-    Heading(stringResource(R.string.adult_settings))
-    Toggle(stringResource(R.string.adult_animations), state.animationsEnabled, onAnimations)
+    FinnyCard {
+        Heading(stringResource(R.string.adult_settings))
+        Toggle(stringResource(R.string.adult_animations), state.animationsEnabled, onAnimations)
+    }
 }
 
 @Composable
