@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.components
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -11,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -138,6 +140,13 @@ fun Owl(
      * итогом заново при каждой операции, а не переиспользуется.
      */
     reactOnAppear: Boolean = false,
+    /**
+     * Смена значения — повод подпрыгнуть: выбор окраса или аксессуара при
+     * создании (DESIGN_PLAN 3.3). Показатели там не меняются, поэтому
+     * [shouldJump] не сработал бы. Первое значение прыжка не даёт — ребёнок
+     * ещё ничего не выбрал.
+     */
+    reactTo: Any? = null,
 ) {
     val motion = LocalAnimationsEnabled.current
     val lift = remember { Animatable(0f) }
@@ -145,17 +154,17 @@ fun Owl(
     // покупки сова подпрыгивает на главном, куда ребёнок вернулся.
     var seen by rememberSaveable { mutableIntStateOf(look.wellbeing) }
     LaunchedEffect(look.wellbeing) {
-        if (shouldJump(seen, look.wellbeing, motion)) {
-            lift.animateTo(1f, tween(JUMP_UP_MS))
-            lift.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-        }
+        if (shouldJump(seen, look.wellbeing, motion)) lift.jump()
         seen = look.wellbeing
     }
     LaunchedEffect(Unit) {
-        if (shouldReact(reactOnAppear, motion)) {
-            lift.animateTo(1f, tween(JUMP_UP_MS))
-            lift.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-        }
+        if (shouldReact(reactOnAppear, motion)) lift.jump()
+    }
+    // Обычный remember, а не сохраняемый: после поворота экрана выбор тот
+    // же, и прыгать не с чего.
+    var chosen by remember { mutableStateOf(reactTo) }
+    LaunchedEffect(reactTo) {
+        reactToChoice(chosen, reactTo, motion, onChosen = { chosen = it }, jump = { lift.jump() })
     }
     val meadowColor = FinnyTheme.palette.need.container
     // Полянка — в своём Canvas, а не в том, что прыгает: иначе прыжок сдвигал
@@ -210,6 +219,31 @@ internal fun shouldJump(before: Int, after: Int, motion: Boolean): Boolean = mot
 
 /** Разовая реакция на появление совы (U2) — с выключенным движением не играет, как и прыжок. */
 internal fun shouldReact(reactOnAppear: Boolean, motion: Boolean): Boolean = reactOnAppear && motion
+
+/** Реакция на новый выбор (DESIGN_PLAN 3.3): повторное нажатие на тот же вариант прыжка не даёт. */
+internal fun shouldReactToChange(before: Any?, after: Any?, motion: Boolean): Boolean = motion && before != after
+
+/**
+ * Выбор запоминается до прыжка, а не после: быстрый перевыбор отменяет
+ * прыжок на середине, и запись после него не случилась бы — тогда возврат
+ * к прежнему варианту (A→B→A) прыжка бы не дал, а сова осталась бы
+ * висеть над полянкой.
+ */
+internal suspend fun reactToChoice(
+    before: Any?,
+    after: Any?,
+    motion: Boolean,
+    onChosen: (Any?) -> Unit,
+    jump: suspend () -> Unit,
+) {
+    onChosen(after)
+    if (shouldReactToChange(before, after, motion)) jump()
+}
+
+private suspend fun Animatable<Float, AnimationVector1D>.jump() {
+    animateTo(1f, tween(JUMP_UP_MS))
+    animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+}
 
 /**
  * Пропорции стадии: [top] — верх головы, [bottom] — низ тела, [half] —
@@ -466,8 +500,10 @@ private const val FIELD_HEIGHT = 262f
 private const val CX = 120f
 private const val SAMPLES = 60
 private const val LID_SWEEP = 155f
-private const val SCARF_ID = "scarf"
-private const val GLASSES_ID = "glasses"
+
+// Аксессуары, которые сова умеет рисовать; экран создания берёт их же для иконок плиток.
+internal const val SCARF_ID = "scarf"
+internal const val GLASSES_ID = "glasses"
 private val SIDES = listOf(-1f, 1f)
 
 private val DARK = Color(0xFF2A2320)

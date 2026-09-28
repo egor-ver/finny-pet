@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,4 +66,21 @@ fun FinnyCard(
             .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
         content = content,
     )
+}
+
+/**
+ * Белая плитка с тенью, как карточка; отмеченная (выбранный вариант, товар в
+ * корзине, аксессуар совы) — рамкой `primary`. Серо-зелёная заливка ушла из
+ * карточек совсем (DESIGN_PLAN 2.4).
+ */
+@Composable
+fun Modifier.tile(marked: Boolean): Modifier {
+    val shape = RoundedCornerShape(Dimens.CornerTile)
+    val shadowColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+    val primary = MaterialTheme.colorScheme.primary
+    return this
+        .shadow(elevation = Dimens.CardShadowElevation, shape = shape, ambientColor = shadowColor, spotColor = shadowColor)
+        .clip(shape)
+        .background(MaterialTheme.colorScheme.surface)
+        .then(if (marked) Modifier.border(Dimens.ButtonBorderWidth, primary, shape) else Modifier)
 }

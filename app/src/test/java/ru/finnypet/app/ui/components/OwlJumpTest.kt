@@ -1,5 +1,10 @@
 package ru.finnypet.app.ui.components
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,5 +35,32 @@ class OwlJumpTest {
         assertTrue(shouldReact(reactOnAppear = true, motion = true))
         assertFalse(shouldReact(reactOnAppear = true, motion = false))
         assertFalse(shouldReact(reactOnAppear = false, motion = true))
+    }
+
+    /** DESIGN_PLAN 3.3: сова откликается на новый окрас или аксессуар, но не на первый показ экрана. */
+    @Test
+    fun `новый выбор внешности — прыжок, тот же выбор или без движения — нет`() {
+        assertTrue(shouldReactToChange(before = "cream", after = "black", motion = true))
+        assertFalse(shouldReactToChange(before = "cream", after = "cream", motion = true))
+        assertFalse(shouldReactToChange(before = "cream", after = "black", motion = false))
+    }
+
+    /**
+     * Ревью U12: быстрый перевыбор A→B→A отменяет прыжок к B на середине, как
+     * LaunchedEffect при смене ключа. Возврат к A всё равно должен дать прыжок.
+     */
+    @Test
+    fun `быстрый перевыбор прерывает прыжок и начинает новый`() = runTest {
+        var chosen: Any? = "cream"
+        var jumps = 0
+        val jump: suspend () -> Unit = { jumps++; delay(500) }
+
+        val toBlack = launch { reactToChoice(chosen, "black", motion = true, onChosen = { chosen = it }, jump = jump) }
+        advanceTimeBy(100)
+        toBlack.cancel()
+        reactToChoice(chosen, "cream", motion = true, onChosen = { chosen = it }, jump = jump)
+
+        assertEquals(2, jumps)
+        assertEquals("cream", chosen)
     }
 }

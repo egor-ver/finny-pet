@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -76,6 +75,7 @@ import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.RemainderCounter
 import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StatChangeLine
+import ru.finnypet.app.ui.components.tile
 import ru.finnypet.app.ui.components.TopSpeechBubble
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.colors
@@ -359,23 +359,6 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
             Icon(imageVector = FinnyIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         }
     }
-}
-
-/**
- * Белая плитка с тенью, как карточка; отмеченная (выбранный вариант, товар в
- * корзине) — рамкой `primary`. Серо-зелёная заливка ушла из карточек совсем
- * (DESIGN_PLAN 2.4).
- */
-@Composable
-private fun Modifier.tile(marked: Boolean): Modifier {
-    val shape = RoundedCornerShape(Dimens.CornerTile)
-    val shadowColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-    val primary = MaterialTheme.colorScheme.primary
-    return this
-        .shadow(elevation = Dimens.CardShadowElevation, shape = shape, ambientColor = shadowColor, spotColor = shadowColor)
-        .clip(shape)
-        .background(MaterialTheme.colorScheme.surface)
-        .then(if (marked) Modifier.border(Dimens.ButtonBorderWidth, primary, shape) else Modifier)
 }
 
 /**

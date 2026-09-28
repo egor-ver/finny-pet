@@ -66,8 +66,19 @@ data class CreatePetState(
         description = description,
     )
 
+    /** «Окрас · кремовый» (DESIGN_PLAN 3.3): после точки название читается строчными. */
+    val colorTitle: String
+        get() = colors.first { it.id == colorId }.title.lowercase()
+
+    /**
+     * Не хватает имени — причина неактивной «Готово», её объясняют под
+     * кнопкой. Сохранение тоже гасит кнопку, но объяснять там нечего.
+     */
+    val needsNames: Boolean
+        get() = childName.isBlank() || petName.isBlank()
+
     val canCreate: Boolean
-        get() = childName.isNotBlank() && petName.isNotBlank() && !saving
+        get() = !needsNames && !saving
 }
 
 @HiltViewModel

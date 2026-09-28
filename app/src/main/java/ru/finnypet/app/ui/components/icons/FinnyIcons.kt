@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 
 /**
  * Свой набор значков вместо эмодзи и текстовых знаков в коде (DESIGN_PLAN
- * 2.3, AD-16): `material-icons-extended` не подключаем — нужно около 15
+ * 2.3, AD-16): `material-icons-extended` не подключаем — нужно около 20
  * значков, а библиотека тянет тысячи и стиль у неё «офисный».
  *
  * Цвет и подпись для TalkBack задаёт вызывающий `Icon(tint=…,
@@ -221,6 +221,38 @@ object FinnyIcons {
 
     val Minus: ImageVector = icon("FinnyMinus") {
         outlined(2.6f) { moveTo(5f, 12f); lineTo(19f, 12f) }
+    }
+
+    /** Шарф — аксессуар совы при создании (DESIGN_PLAN 3.3): петля вокруг шеи и свисающий конец. */
+    val Scarf: ImageVector = icon("FinnyScarf") {
+        filled {
+            moveTo(3f, 7.5f)
+            curveTo(7.5f, 10.5f, 16.5f, 10.5f, 21f, 7.5f)
+            lineTo(21f, 11.5f)
+            curveTo(16.5f, 14.5f, 7.5f, 14.5f, 3f, 11.5f)
+            close()
+        }
+        filled {
+            // Конец начинается внутри петли, без зазора — иначе на 24 dp это две разные фигуры.
+            moveTo(13f, 11.5f); lineTo(17.2f, 11f); lineTo(18.5f, 20.5f); lineTo(14.3f, 21f); close()
+        }
+    }
+
+    /** Очки — аксессуар совы при создании. */
+    val Glasses: ImageVector = icon("FinnyGlasses") {
+        outlined(1.8f) { circle(cx = 7f, cy = 13.5f, r = 4f) }
+        outlined(1.8f) { circle(cx = 17f, cy = 13.5f, r = 4f) }
+        outlined(1.8f) {
+            moveTo(11f, 13f); curveTo(11.7f, 11.8f, 12.3f, 11.8f, 13f, 13f)
+            moveTo(3f, 13f); lineTo(2f, 9f)
+            moveTo(21f, 13f); lineTo(22f, 9f)
+        }
+    }
+
+    /** Перечёркнутый круг — вариант «без аксессуара»: такой же выбор, как шарф и очки. */
+    val None: ImageVector = icon("FinnyNone") {
+        outlined(1.8f) { circle(cx = 12f, cy = 12f, r = 8f) }
+        outlined(1.8f) { moveTo(6.4f, 6.4f); lineTo(17.6f, 17.6f) }
     }
 
     /** Лампочка — подсказка под банкой плана, совет дня (DESIGN_PLAN 2.3). Цоколь отделён от колбы зазором, иначе на 24 dp всё сливается в каплю. */
