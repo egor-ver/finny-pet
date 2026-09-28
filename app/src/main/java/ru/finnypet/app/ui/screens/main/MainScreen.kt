@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -58,7 +59,6 @@ import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.TopSpeechBubble
 import ru.finnypet.app.ui.components.color
-import ru.finnypet.app.ui.components.colors
 import ru.finnypet.app.ui.components.container
 import ru.finnypet.app.ui.components.direction
 import ru.finnypet.app.ui.components.fill
@@ -217,6 +217,7 @@ private fun ReadyScreen(
             // Под обучением экран скрыт от TalkBack: слой модальный, иначе
             // озвучка уводила бы на кнопки, нажать которые сейчас нельзя.
             modifier = if (tutorialStep != null) Modifier.clearAndSetSemantics {} else Modifier,
+            owlSilent = tutorialStep != null,
             onWallet = { walletOpen = true },
             onPlan = onPlan,
             onShop = onShop,
@@ -248,6 +249,7 @@ private fun MainLayout(
     state: MainState.Ready,
     targets: TutorialTargets,
     modifier: Modifier,
+    owlSilent: Boolean,
     onWallet: () -> Unit,
     onPlan: () -> Unit,
     onShop: () -> Unit,
@@ -282,6 +284,7 @@ private fun MainLayout(
             TopIcon(icon = FinnyIcons.Grownup, label = stringResource(R.string.adult_action), onClick = onAdult)
         },
         spacing = Dimens.SpaceSmall,
+        verticalPadding = Dimens.SpaceSmall,
         bottomBar = {
             DayButtons(
                 step = state.step,
@@ -294,9 +297,16 @@ private fun MainLayout(
             )
         },
     ) {
-        TopSpeechBubble(text = state.phrase)
-        OwlWithThings(state = state)
-        PetNameStage(state = state)
+        // Под обучением говорит сова обучения; облачко главного лишь
+        // прозрачно, а не убрано — иначе раскладка съехала бы и вырезы
+        // обучения указывали бы не туда, а стрелка к кошельку шла бы сквозь текст.
+        TopSpeechBubble(text = state.phrase, modifier = Modifier.alpha(if (owlSilent) 0f else 1f))
+        // Имя прижато к сове (4 dp, бюджет высот DESIGN_PLAN 3.1): низ рамки
+        // совы и так занят полянкой, а каждый десяток точек нужен плиткам.
+        Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny)) {
+            OwlWithThings(state = state)
+            PetNameStage(state = state)
+        }
         PetStats(state = state, targets = targets)
         TileGrid(
             state = state,
@@ -499,9 +509,11 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
         Icon(imageVector = kind.icon, contentDescription = null, tint = kind.direction.fill)
+        // Цвет направления, которое показатель пополняет (DESIGN_PLAN 2.1):
+        // еда и уход — «Нужное», радость — «Желаемое».
         ProgressLine(
             fraction = stat.value.toFloat() / Stat.RANGE.last,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = kind.direction.fill,
         )
         Text(text = label, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
         if (needed) {
@@ -509,12 +521,13 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
                 modifier = Modifier
                     .clip(RoundedCornerShape(Dimens.Corner))
                     .background(kind.direction.container)
-                    .padding(horizontal = Dimens.SpaceSmall, vertical = Dimens.SpaceTiny),
+                    .padding(horizontal = Dimens.SpaceSmall, vertical = CHIP_PADDING),
             ) {
+                // Чип — стилем меток (DESIGN_PLAN 2.2, 16/20): ниже строки
+                // текста, и ряд показателей не выталкивает плитки под кнопки.
                 Text(
                     text = need,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelMedium,
                     color = kind.direction.color,
                     textAlign = TextAlign.Center,
                 )
@@ -670,9 +683,13 @@ private fun PlanTile(jars: JarsLeft?, onOpen: () -> Unit, modifier: Modifier = M
         if (jars == null) {
             Text(text = unplanned, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            JarLeft(category = SpendCategory.MANDATORY, left = jars.mandatory)
-            JarLeft(category = SpendCategory.OPTIONAL, left = jars.optional)
-            JarLeft(category = SpendCategory.SAVINGS, left = jars.savings)
+            // Строки банок вплотную, без общего шага карточки: с ним плитка
+            // вырастала на 16 dp выше соседней и уводила нижний ряд под кнопки.
+            Column {
+                JarLeft(category = SpendCategory.MANDATORY, left = jars.mandatory)
+                JarLeft(category = SpendCategory.OPTIONAL, left = jars.optional)
+                JarLeft(category = SpendCategory.SAVINGS, left = jars.savings)
+            }
         }
     }
 }
@@ -812,8 +829,10 @@ private fun GrowthTile(
 }
 
 /**
- * Тема, «2 из 6» и чип «+10» (пока за задание дают монеты, в любой фазе дня
- * — ТЗ 2.5.3). Плитка ведёт в список заданий; выполнить задание дня можно
+ * Подпись «Задания», «2 из 6» и чип «+10» (пока за задание дают монеты, в
+ * любой фазе дня — ТЗ 2.5.3). Иконка своя, а не темы задания дня: у темы
+ * «Накопления» это копилка, и плитка выглядела бы второй копилкой рядом с
+ * настоящей. Плитка ведёт в список заданий; выполнить задание дня можно
  * главной кнопкой внизу, пока она — «Выполнить задание» ([DayButtons]).
  *
  * Все задания пройдены — это состояние всей игры (полный текст
@@ -823,12 +842,13 @@ private fun GrowthTile(
 @Composable
 private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     if (task == null) return
+    val title = stringResource(R.string.tasks_title)
     val progress = stringResource(R.string.main_tasks_progress, task.completedCount, task.totalCount)
     val reward = stringResource(if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken)
     val spoken = if (task.allDone) {
-        "$progress. ${stringResource(R.string.main_task_all_done)}"
+        "$title: $progress. ${stringResource(R.string.main_task_all_done)}"
     } else {
-        "$progress. $reward"
+        "$title: $progress. $reward"
     }
     FinnyCard(
         modifier = modifier
@@ -841,13 +861,15 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(imageVector = task.topic.icon, contentDescription = null, tint = task.topic.colors.fill)
-            Text(
-                text = progress,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
+            Icon(imageVector = FinnyIcons.Tasks, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = progress,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             if (task.rewardAvailable) {
                 Text(
                     text = "+${task.reward.amount}",
@@ -872,6 +894,8 @@ private val PetStatKind.tutorialTarget: TutorialTarget
 private val STATS = listOf(PetStatKind.SATIETY, PetStatKind.MOOD, PetStatKind.CARE)
 
 private val MAIN_BUTTON_HEIGHT = 56.dp
+
+private val CHIP_PADDING = 2.dp
 
 /** Минимальная высота плитки 2 × 2 (DESIGN_PLAN 3.1: бюджет высот главного). */
 private val TILE_HEIGHT = 84.dp

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,6 +57,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import ru.finnypet.app.R
 import ru.finnypet.app.ui.components.ButtonColumn
 import ru.finnypet.app.ui.components.FinnyButton
+import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.OwlRole
@@ -163,7 +166,7 @@ fun TutorialOverlay(
     }
 
     var origin by remember { mutableStateOf(Offset.Zero) }
-    var panel by remember { mutableStateOf(Rect.Zero) }
+    var bubble by remember { mutableStateOf(Rect.Zero) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -184,9 +187,13 @@ fun TutorialOverlay(
                     blendMode = BlendMode.Clear,
                 )
             }
-            if (panel != Rect.Zero) {
+            if (bubble != Rect.Zero) {
                 val nudge = sin(PI * breath.value).toFloat() * ARROW_NUDGE.toPx()
-                cutouts.forEach { drawArrow(from = panel.translate(-origin), to = it, nudge = nudge) }
+                val from = bubble.translate(-origin)
+                cutouts.forEach { hole ->
+                    arrowArc(bubble = from, hole = hole, inset = ARROW_INSET.toPx(), gap = ARROW_GAP.toPx())
+                        ?.let { drawArrow(it, nudge) }
+                }
             }
         }
 
@@ -207,27 +214,30 @@ fun TutorialOverlay(
                 owl = owl,
                 onNext = onNext,
                 onSkip = onSkip,
+                onBubble = { bubble = it },
                 modifier = Modifier
                     .heightIn(max = maxHeight)
                     .offset {
                         val pad = CUTOUT_PADDING.toPx()
                         val spans = holes.map { (it.top - area.y - pad)..(it.bottom - area.y + pad) }
-                        IntOffset(0, panelTop(spans, panelHeight.toFloat(), height).roundToInt())
+                        IntOffset(0, panelTop(spans, panelHeight.toFloat(), height, ARROW_REACH.toPx()).roundToInt())
                     }
-                    .onGloballyPositioned {
-                        panelHeight = it.size.height
-                        panel = it.boundsInRoot()
-                    },
+                    .onGloballyPositioned { panelHeight = it.size.height },
             )
         }
     }
 }
 
 /**
- * Сова с облачком и кнопки шага. Для TalkBack облачко — одна фраза «Шаг 3
- * из 5», текст совы и где искать элемент словами по сетке главного: стрелку
- * не видно, а экран под слоем скрыт от озвучки. `liveRegion` — чтобы новый
- * шаг прочитался сам после «Дальше».
+ * Сова с облачком, а кнопки шага — внутри облачка: стрелка выходит из его
+ * верха или низа, и кнопки под облачком перегородили бы ей путь к цели внизу
+ * (шаг «доход»: кошелёк сверху, кнопка задания снизу). Для TalkBack текст —
+ * одна фраза «Шаг 3 из 6», реплика совы и где искать элемент словами по сетке
+ * главного: стрелку не видно, а экран под слоем скрыт от озвучки.
+ * `liveRegion` — чтобы новый шаг прочитался сам после «Дальше».
+ *
+ * При крупном шрифте сова рядом не помещается — облачко во всю ширину без
+ * неё, иначе «Пропустить» рвалось бы посреди слова.
  */
 @Composable
 private fun TutorialPanel(
@@ -237,6 +247,7 @@ private fun TutorialPanel(
     owl: OwlLook,
     onNext: () -> Unit,
     onSkip: () -> Unit,
+    onBubble: (Rect) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val count = TUTORIAL_STEPS.size
@@ -246,12 +257,12 @@ private fun TutorialPanel(
         if (places.isNotEmpty()) append(' ').append(stringResource(R.string.tutorial_where, places.joinToString()))
     }
     val last = nextTutorialStep(step) == null
-    Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium), modifier = modifier.fillMaxWidth()) {
-        // Облачко прокручивается само, а кнопки под ним — нет: при крупном
-        // шрифте текст длиннее экрана, но «Дальше» и «Пропустить» не теряются.
-        SpeechBubble(
-            owl = owl,
-            owlRole = OwlRole.Dialog,
+    val placed = Modifier.onGloballyPositioned { onBubble(it.boundsInRoot()) }
+    val content: @Composable ColumnScope.() -> Unit = {
+        // Текст прокручивается сам, а кнопки под ним — нет: при крупном
+        // шрифте реплика длиннее экрана, но кнопки не теряются.
+        Column(
+            verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             modifier = Modifier
                 .weight(1f, fill = false)
                 .clearAndSetSemantics {
@@ -268,8 +279,14 @@ private fun TutorialPanel(
                 text = stringResource(if (last) R.string.tutorial_play else R.string.tutorial_next),
                 onClick = onNext,
             )
-            FinnySecondaryButton(text = stringResource(R.string.tutorial_skip), onClick = onSkip)
+            // На последнем шаге пропускать уже нечего: «Играть!» одна (решение владельца 28.09).
+            if (!last) FinnySecondaryButton(text = stringResource(R.string.tutorial_skip), onClick = onSkip)
         }
+    }
+    if (LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE) {
+        FinnyCard(modifier = modifier.then(placed), content = content)
+    } else {
+        SpeechBubble(owl = owl, owlRole = OwlRole.Dialog, modifier = modifier, bubbleModifier = placed, content = content)
     }
 }
 
@@ -300,27 +317,32 @@ private fun StepDots(step: Int, count: Int) {
 }
 
 /**
- * Кривая от облачка к вырезу со стрелкой на конце. Вырез на одной высоте с
- * облачком (не поместилось) — без стрелки: ей негде пройти.
+ * Дуга [arc] и наконечник-треугольник по её направлению. Линия кончается у
+ * основания наконечника: иначе её край торчал бы из острия. Слишком короткая
+ * стрелка (облачко вплотную к цели) не рисуется — от неё остался бы один
+ * наконечник. [nudge] отводит кончик к облачку и возвращает — «вдох» шага.
  */
-private fun DrawScope.drawArrow(from: Rect, to: Rect, nudge: Float) {
-    val gap = ARROW_GAP.toPx()
-    val (start, end) = when {
-        to.bottom <= from.top -> Offset(from.center.x, from.top) to Offset(to.center.x, to.bottom + gap - nudge)
-        to.top >= from.bottom -> Offset(from.center.x, from.bottom) to Offset(to.center.x, to.top - gap + nudge)
-        else -> return
-    }
-    val middle = (start.y + end.y) / 2
-    val path = Path().apply {
-        moveTo(start.x, start.y)
-        cubicTo(start.x, middle, end.x, middle, end.x, end.y)
-    }
-    val width = ARROW_WIDTH.toPx()
-    drawPath(path, color = ARROW, style = Stroke(width = width, cap = StrokeCap.Round))
+private fun DrawScope.drawArrow(arc: ArrowArc, nudge: Float) {
     val head = ARROW_HEAD.toPx()
-    val back = -sign(end.y - start.y) * head
-    drawLine(ARROW, end, Offset(end.x - head, end.y + back), strokeWidth = width, cap = StrokeCap.Round)
-    drawLine(ARROW, end, Offset(end.x + head, end.y + back), strokeWidth = width, cap = StrokeCap.Round)
+    // Длина проверяется до «вдоха»: иначе короткая стрелка у облачка вплотную
+    // к цели мигала бы, пропадая на середине движения.
+    if ((arc.tip - arc.start).getDistance() < head * 2) return
+    val tip = arc.tip.copy(y = arc.tip.y + sign(arc.start.y - arc.tip.y) * nudge)
+    val toward = (tip - arc.control).let { it / it.getDistance() }
+    val base = tip - toward * head
+    val side = Offset(-toward.y, toward.x) * (ARROW_HEAD_WIDTH.toPx() / 2)
+    val line = Path().apply {
+        moveTo(arc.start.x, arc.start.y)
+        quadraticTo(arc.control.x, arc.control.y, base.x, base.y)
+    }
+    drawPath(line, color = ARROW, style = Stroke(width = ARROW_WIDTH.toPx(), cap = StrokeCap.Butt))
+    val arrowhead = Path().apply {
+        moveTo(tip.x, tip.y)
+        lineTo(base.x + side.x, base.y + side.y)
+        lineTo(base.x - side.x, base.y - side.y)
+        close()
+    }
+    drawPath(arrowhead, color = ARROW)
 }
 
 private val TutorialTarget.where: Int
@@ -346,8 +368,18 @@ private val ARROW = Color.White
 private val CUTOUT_PADDING = 6.dp
 private val CUTOUT_CORNER = 20.dp
 private val ARROW_WIDTH = 3.dp
-private val ARROW_HEAD = 10.dp
-private val ARROW_GAP = 10.dp
+private val ARROW_HEAD = 12.dp
+private val ARROW_HEAD_WIDTH = 14.dp
+private val ARROW_GAP = 2.dp
+
+/**
+ * Место на стрелку между облачком и вырезом. Не больше: на шаге про план
+ * облачко тогда закрывает надпись кнопки задания над целью, и короткая
+ * стрелка проходит только по её нижнему краю (между кнопками 12 dp).
+ * Не меньше: стрелка должна остаться длиннее двух наконечников.
+ */
+private val ARROW_REACH = 28.dp
+private val ARROW_INSET = 28.dp
 private val ARROW_NUDGE = 6.dp
 private val DOT = 10.dp
 private val DOT_GAP = 6.dp

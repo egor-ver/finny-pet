@@ -65,7 +65,16 @@ fun nextStep(
  * [needs] — потребности по порядку важности, еда первой; [cover] — цена
  * закрытия всех потребностей, `null` — в магазине их не закрыть целиком;
  * [reward] — сколько дадут за задание, `null` — сегодня уже не дадут;
- * [eventKey]/[eventArgs] — событие дня (L7), `null` — событий сегодня нет.
+ * [eventKey]/[eventArgs] — событие дня (L7), `null` — событий сегодня нет;
+ * [needLeft] — сколько осталось в банке «Нужное» по плану, `null` — план не
+ * подтверждён; [cheapestNeeded] — цена самого дешёвого нужного сейчас товара.
+ *
+ * Если всё нужное дороже остатка банки, сова не называет полную цену целью
+ * похода: кошелёк её и выдержит, но фраза звала бы тратить сверх плана
+ * (ТЗ 2.5.5). Если в остаток помещается хоть что-то нужное, она предлагает
+ * начать с самого важного — первой потребности, еда первой. Если не помещается
+ * ничего, в магазин она не зовёт вовсе при любом кошельке: любая покупка уже
+ * была бы сверх плана.
  */
 fun owlPhrase(
     step: NextStep,
@@ -77,6 +86,8 @@ fun owlPhrase(
     income: Coins,
     eventKey: String? = null,
     eventArgs: Map<String, String> = emptyMap(),
+    needLeft: Coins? = null,
+    cheapestNeeded: Coins? = null,
 ): Explanation {
     val first = needs.firstOrNull()
     val morning = mapOf("income" to income.amount.toString())
@@ -92,6 +103,12 @@ fun owlPhrase(
         else -> when {
             first == null -> Explanation("owl.say.done")
             step == NextStep.Sleep -> Explanation("owl.say.no_coins")
+            // До веток про кошелёк: при малом кошельке иначе выпало бы not_all
+            // («начнём с еды») — тот же зов тратить сверх плана.
+            needLeft != null && cheapestNeeded != null && !needLeft.covers(cheapestNeeded) ->
+                Explanation("owl.say.plan_short")
+            cover != null && wallet.covers(cover) && needLeft != null && !needLeft.covers(cover) ->
+                Explanation("owl.say.plan_part.${first.name}")
             cover != null && wallet.covers(cover) ->
                 Explanation("owl.say.shop.${first.name}", mapOf("price" to cover.amount.toString()))
             else -> Explanation("owl.say.not_all.${first.name}")

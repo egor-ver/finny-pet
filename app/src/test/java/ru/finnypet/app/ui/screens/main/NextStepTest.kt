@@ -11,6 +11,7 @@ import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetStatKind
 import ru.finnypet.app.domain.model.PetStatKind.CARE
 import ru.finnypet.app.domain.model.PetStatKind.SATIETY
+import ru.finnypet.app.ui.text.textOf
 
 /**
  * Главная кнопка идёт по фазе дня: план, магазин, сон. В магазин зовут
@@ -127,6 +128,101 @@ class NextStepTest {
         )
     }
 
+    /**
+     * Снимок ревью U10+U11: в банке «Нужное» 12, всё нужное стоит 15. Кошелёк
+     * выдержит, но сова не зовёт тратить сверх плана — начнём с еды.
+     */
+    @Test
+    fun `всё нужное дороже остатка плана — сова не называет полную цену`() {
+        assertEquals(
+            Explanation("owl.say.plan_part.SATIETY"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 12, cheapestNeeded = 8),
+        )
+        assertEquals(
+            Explanation("owl.say.plan_part.CARE"),
+            phrase(NextStep.Shop, needs = listOf(CARE), cover = 15, wallet = 40, needLeft = 8, cheapestNeeded = 8),
+        )
+    }
+
+    /** Остаток 11, самое дешёвое нужное 8 — в план помещается, начнём с еды. */
+    @Test
+    fun `в остаток плана помещается самое дешёвое нужное — начнём с еды`() {
+        assertEquals(
+            Explanation("owl.say.plan_part.SATIETY"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 11, cheapestNeeded = 8),
+        )
+    }
+
+    /**
+     * Снимок ревью F1/47: осталось 4, еда от 8. Любая покупка — сверх плана,
+     * поэтому сова в магазин не зовёт.
+     */
+    @Test
+    fun `в остаток плана не помещается ни один нужный товар — сова не зовёт в магазин`() {
+        assertEquals(
+            Explanation("owl.say.plan_short"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 4, cheapestNeeded = 8),
+        )
+        assertEquals(
+            Explanation("owl.say.plan_short"),
+            phrase(NextStep.Shop, needs = listOf(CARE), cover = 15, wallet = 40, needLeft = 0, cheapestNeeded = 8),
+        )
+    }
+
+    /**
+     * Ревью F1: кошелёк 10 не выдерживает всё нужное (22 или «целиком не
+     * закрыть»), но и в остаток 3 не помещается даже еда за 8. Раньше выпадало
+     * «начнём с еды» — зов тратить сверх плана.
+     */
+    @Test
+    fun `в остаток плана не помещается ничего — plan_short при любом кошельке`() {
+        assertEquals(
+            Explanation("owl.say.plan_short"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 22, wallet = 10, needLeft = 3, cheapestNeeded = 8),
+        )
+        assertEquals(
+            Explanation("owl.say.plan_short"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = null, wallet = 10, needLeft = 3, cheapestNeeded = 8),
+        )
+    }
+
+    @Test
+    fun `всё нужное помещается в остаток плана — сова называет цену`() {
+        assertEquals(
+            Explanation("owl.say.shop.SATIETY", mapOf("price" to "15")),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 15, wallet = 40, needLeft = 15),
+        )
+    }
+
+    /** Кошелька не хватает на всё — прежняя фраза, план тут уже ни при чём. */
+    @Test
+    fun `кошелька не хватает на всё нужное — начнём с еды, даже если план мал`() {
+        assertEquals(
+            Explanation("owl.say.not_all.SATIETY"),
+            phrase(NextStep.Shop, needs = listOf(SATIETY, CARE), cover = 52, wallet = 45, needLeft = 12),
+        )
+    }
+
+    /**
+     * Снимок ревью U12: «Пришло 35 монет», а в кошельке 45 — остаток со вчера.
+     * Утренняя фраза говорит, что монеты пришли к тем, что уже были.
+     */
+    @Test
+    fun `утренние фразы не выдают приход за весь кошелёк`() {
+        val texts = ContentParser().parse(RealContent.raw()).texts
+        val morning = listOf(
+            phrase(NextStep.Plan),
+            phrase(NextStep.Plan, needs = listOf(SATIETY)),
+            phrase(NextStep.Plan, needs = listOf(CARE)),
+            phrase(NextStep.Task, reward = 10),
+        )
+
+        for (explanation in morning) {
+            val text = texts.textOf(explanation)
+            assertTrue(text, "Пришло ещё 35 монет" in text)
+        }
+    }
+
     @Test
     fun `потребность в магазине целиком не закрыть — начнём с того, что есть`() {
         assertEquals(Explanation("owl.say.not_all.CARE"), phrase(NextStep.Shop, needs = listOf(CARE), cover = null))
@@ -187,7 +283,8 @@ class NextStepTest {
                     for (sad in listOf(null) + kinds)
                         for (cover in listOf(null, 5, 100))
                             for (reward in listOf(null, 10))
-                                add(phrase(step, needs, sad, cover, wallet = 50, reward = reward).key)
+                                for (needLeft in listOf(null, 0, 100))
+                                    add(phrase(step, needs, sad, cover, wallet = 50, reward = reward, needLeft = needLeft).key)
         }
 
         val missing = keys.filterNot(texts::containsKey)
@@ -224,6 +321,8 @@ class NextStepTest {
         reward: Int? = null,
         eventKey: String? = null,
         eventArgs: Map<String, String> = emptyMap(),
+        needLeft: Int? = null,
+        cheapestNeeded: Int? = null,
     ) = owlPhrase(
         step = step,
         needs = needs,
@@ -234,6 +333,8 @@ class NextStepTest {
         income = Coins(35),
         eventKey = eventKey,
         eventArgs = eventArgs,
+        needLeft = needLeft?.let(::Coins),
+        cheapestNeeded = cheapestNeeded?.let(::Coins),
     )
 
     private companion object {

@@ -86,8 +86,12 @@ sealed interface BudgetState {
         val isDistributed: Boolean get() = remainder == Coins.ZERO && overBy == Coins.ZERO
     }
 
-    /** Банки после подтверждения: сколько задумано и сколько уже потрачено или отложено. */
-    data class Started(val lines: List<BudgetLine>) : BudgetState
+    /**
+     * Банки после подтверждения: сколько задумано и сколько уже потрачено или
+     * отложено. [wallet] — кошелёк в шапке: он виден во всех фазах дня, иначе
+     * после подтверждения ребёнок терял бы из виду, сколько у него монет.
+     */
+    data class Started(val lines: List<BudgetLine>, val wallet: Coins) : BudgetState
 }
 
 /**
@@ -203,7 +207,7 @@ class BudgetViewModel @Inject constructor(
                     val stored = plan ?: BudgetPlan.EMPTY
                     when (period.status) {
                         PeriodStatus.PLANNING -> planning(profile, pet, stored, wallet, goal, limit)
-                        else -> started(stored, transactions)
+                        else -> started(stored, transactions, wallet)
                     }
                 }
             }
@@ -251,7 +255,7 @@ class BudgetViewModel @Inject constructor(
         )
     }
 
-    private fun started(plan: BudgetPlan, transactions: List<Transaction>): BudgetState.Started {
+    private fun started(plan: BudgetPlan, transactions: List<Transaction>, wallet: Coins): BudgetState.Started {
         val report = budget.compare(plan, periodEngine.factOf(transactions))
         return BudgetState.Started(
             lines = report.lines.map { line ->
@@ -262,6 +266,7 @@ class BudgetViewModel @Inject constructor(
                     followed = line.followed,
                 )
             },
+            wallet = wallet,
         )
     }
 

@@ -1230,6 +1230,7 @@ class ScreensTest {
                     BudgetLine(SpendCategory.OPTIONAL, Coins(20), Coins(20), followed = true),
                     BudgetLine(SpendCategory.SAVINGS, Coins(20), Coins(20), followed = true),
                 ),
+                wallet = Coins(15),
             )
         )
 

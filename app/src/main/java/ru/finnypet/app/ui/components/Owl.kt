@@ -259,7 +259,7 @@ private suspend fun Animatable<Float, AnimationVector1D>.jump() {
  * полуширина, [eye] — радиус глаза, [eyeAt] — высота глаз в долях роста,
  * [eyeDx] — глаз от центра, [tuft] — высота ушек, [rows] — рядов пёрышек.
  */
-private class Proportions(
+internal class Proportions(
     val top: Float,
     val bottom: Float,
     val half: Float,
@@ -272,7 +272,7 @@ private class Proportions(
     val height: Float get() = bottom - top
 }
 
-private fun proportionsOf(stage: GrowthStage) = when (stage) {
+internal fun proportionsOf(stage: GrowthStage) = when (stage) {
     GrowthStage.CUB -> Proportions(72f, 236f, 78f, 25f, 0.38f, 27f, 5f, 2)
     GrowthStage.YOUNG -> Proportions(48f, 236f, 74f, 22f, 0.31f, 24f, 14f, 3)
     GrowthStage.GROWN -> Proportions(32f, 236f, 82f, 21f, 0.28f, 26f, 22f, 4)
@@ -290,9 +290,12 @@ private fun DrawScope.drawOwl(look: OwlLook) {
     val w = g.half
     val h = g.height
     val er = g.eye
-    val dx = g.eyeDx
     val ey = t + g.eyeAt * h
     val k = er / 27f
+    // В очках глаза чуть шире: у детёныша и подростка глаза почти касаются,
+    // и стёкла вокруг них заходили бы друг на друга.
+    val glasses = if (look.accessoryId == GLASSES_ID) glassesFit(g) else null
+    val dx = glasses?.eyeDx ?: g.eyeDx
 
     drawOval(Color.Black.copy(alpha = 0.08f), Offset(CX - w * 0.72f, b + 1f), Size(w * 1.44f, 14f))
     listOf(CX - w * 0.3f, CX + w * 0.3f).forEach { fx ->
@@ -395,11 +398,35 @@ private fun DrawScope.drawOwl(look: OwlLook) {
         style = Stroke(width = 1.6f, cap = StrokeCap.Round),
     )
 
-    val neckY = ey + er + 12f * k
     when (look.accessoryId) {
-        SCARF_ID -> drawScarf(neckY, halfWidth(g, neckY) * 0.93f)
-        GLASSES_ID -> drawGlasses(ey, er + 6f * k, dx)
+        SCARF_ID -> drawScarf(scarfFit(g))
+        GLASSES_ID -> glasses?.let { drawGlasses(ey, it) }
     }
+}
+
+/**
+ * Стёкла очков: радиус [lens] чуть больше глаза, а глаза в [eyeDx] от
+ * центра — ровно настолько, чтобы между стёклами остался зазор под
+ * перемычку. Стёкла всегда по центру глаз, при любом настроении.
+ */
+internal data class GlassesFit(val lens: Float, val eyeDx: Float)
+
+internal fun glassesFit(g: Proportions): GlassesFit {
+    val lens = g.eye * (1 + LENS_MARGIN)
+    return GlassesFit(lens = lens, eyeDx = maxOf(g.eyeDx, lens + GLASSES_STROKE / 2 + BRIDGE_GAP / 2))
+}
+
+/**
+ * Шарф по шее: [neckY] — верх полосы у краёв, [halfWidth] — полуширина. Шея
+ * ниже клюва, а полоса уже тела: внутренний край крыльев — около 0,84
+ * полуширины тела, и шарф на них не заходит.
+ */
+internal data class ScarfFit(val neckY: Float, val halfWidth: Float)
+
+internal fun scarfFit(g: Proportions): ScarfFit {
+    val ey = g.top + g.eyeAt * g.height
+    val neckY = ey + g.eye * (1 + NECK_BELOW_EYE)
+    return ScarfFit(neckY = neckY, halfWidth = halfWidth(g, neckY) * SCARF_WIDTH)
 }
 
 /** Радость — глаза дугой; спокойствие — зрачок по центру; грусть — зрачок ниже и веко. */
@@ -437,43 +464,58 @@ private fun DrawScope.drawEye(at: Offset, r: Float, side: Float, mood: PetMood, 
     }
 }
 
-private fun DrawScope.drawScarf(neckY: Float, w: Float) {
+/**
+ * Шарф симметричный: полоса по шее, узел по центру и два конца, чуть
+ * разведённые в стороны зеркально, — иначе один конец сбоку выглядел
+ * съехавшим набок.
+ */
+private fun DrawScope.drawScarf(fit: ScarfFit) {
+    val neckY = fit.neckY
+    val w = fit.halfWidth
     val sag = 7f
+    val band = 15f
     drawPath(
         Path().apply {
             moveTo(CX - w, neckY)
             quadraticTo(CX, neckY + 2 * sag, CX + w, neckY)
-            lineTo(CX + w, neckY + 15f)
-            quadraticTo(CX, neckY + 15f + 2 * sag, CX - w, neckY + 15f)
+            lineTo(CX + w, neckY + band)
+            quadraticTo(CX, neckY + band + 2 * sag, CX - w, neckY + band)
             close()
         },
         SCARF,
     )
-    listOf(-0.7f, -0.35f, 0f, 0.35f, 0.7f).forEach { u ->
+    listOf(-0.7f, -0.35f, 0.35f, 0.7f).forEach { u ->
         val top = neckY + sag * (1 - u * u)
-        drawRect(SCARF_STRIPE, Offset(CX + u * w - 3.5f, top), Size(7f, 15f))
+        drawRect(SCARF_STRIPE, Offset(CX + u * w - 3.5f, top), Size(7f, band))
     }
-    val tail = Offset(CX + w * 0.42f, neckY + 10f)
-    rotate(-10f, pivot = tail) {
-        drawRoundRect(SCARF, Offset(tail.x - 8f, tail.y), Size(16f, 44f), CornerRadius(5f))
-        drawRect(SCARF_STRIPE, Offset(tail.x - 8f, tail.y + 12f), Size(16f, 6f))
-        drawRect(SCARF_STRIPE, Offset(tail.x - 8f, tail.y + 26f), Size(16f, 6f))
-        repeat(4) { i ->
-            val x = tail.x - 6f + i * 4f
-            drawLine(SCARF, Offset(x, tail.y + 44f), Offset(x, tail.y + 50f), strokeWidth = 2f, cap = StrokeCap.Round)
+    val knotTop = neckY + sag
+    SIDES.forEach { sd ->
+        val pivot = Offset(CX + sd * 8f, knotTop + band / 2)
+        rotate(-sd * SCARF_END_TILT, pivot = pivot) {
+            drawRoundRect(SCARF, Offset(pivot.x - 7f, pivot.y), Size(14f, 36f), CornerRadius(5f))
+            drawRect(SCARF_STRIPE, Offset(pivot.x - 7f, pivot.y + 12f), Size(14f, 5f))
+            drawRect(SCARF_STRIPE, Offset(pivot.x - 7f, pivot.y + 23f), Size(14f, 5f))
+            repeat(3) { i ->
+                val x = pivot.x - 4f + i * 4f
+                drawLine(SCARF, Offset(x, pivot.y + 36f), Offset(x, pivot.y + 41f), strokeWidth = 2f, cap = StrokeCap.Round)
+            }
         }
     }
+    drawRoundRect(SCARF, Offset(CX - 10f, knotTop - 1f), Size(20f, band + 2f), CornerRadius(6f))
 }
 
-private fun DrawScope.drawGlasses(ey: Float, r: Float, dx: Float) {
-    SIDES.forEach { sd -> drawCircle(GLASSES, r, Offset(CX + sd * dx, ey), style = Stroke(width = 4f)) }
+private fun DrawScope.drawGlasses(ey: Float, fit: GlassesFit) {
+    val r = fit.lens
+    val dx = fit.eyeDx
+    SIDES.forEach { sd -> drawCircle(GLASSES, r, Offset(CX + sd * dx, ey), style = Stroke(width = GLASSES_STROKE)) }
+    // Перемычка — между внутренними краями стёкол, над клювом.
     drawPath(
         Path().apply {
             moveTo(CX - dx + r * 0.92f, ey - r * 0.35f)
-            quadraticTo(CX, ey - r * 0.75f, CX + dx - r * 0.92f, ey - r * 0.35f)
+            quadraticTo(CX, ey - r * 0.6f, CX + dx - r * 0.92f, ey - r * 0.35f)
         },
         GLASSES,
-        style = Stroke(width = 4f),
+        style = Stroke(width = GLASSES_STROKE, cap = StrokeCap.Round),
     )
 }
 
@@ -509,6 +551,12 @@ private const val FIELD_HEIGHT = 262f
 private const val CX = 120f
 private const val SAMPLES = 60
 private const val LID_SWEEP = 155f
+private const val LENS_MARGIN = 0.12f
+private const val GLASSES_STROKE = 4f
+private const val BRIDGE_GAP = 6f
+private const val NECK_BELOW_EYE = 0.44f
+private const val SCARF_WIDTH = 0.8f
+private const val SCARF_END_TILT = 10f
 
 // Аксессуары, которые сова умеет рисовать; экран создания берёт их же для иконок плиток.
 internal const val SCARF_ID = "scarf"

@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -269,11 +270,21 @@ private fun Step(
     onNext: () -> Unit,
 ) {
     val last = stage.index == stage.total - 1
+    // Черновики — на весь шаг, а не внутри банок: по ним же считается счётчик
+    // остатка над кнопкой. Свой набор на каждый шаг, чтобы движение ползунка
+    // одного шага не досталось следующему.
+    val drafts = key(stage.index) { rememberPlanDrafts() }
     Screen(
         onBack = onBack,
         balance = state.balance,
         bottomBar = {
             ButtonColumn {
+                // Счётчик закреплён над «Ответить», как на плане дня (DESIGN_PLAN
+                // 3.2): в конце прокрутки кнопка срезала его монету.
+                val step = stage.step
+                if (step is StepView.Distribute) {
+                    RemainderCounter(remainder = liveRemainder(step.plan, step.remainder, drafts), overBy = Coins.ZERO)
+                }
                 FinnyButton(
                     text = stringResource(if (last) R.string.task_answer else R.string.task_next),
                     onClick = onNext,
@@ -307,7 +318,6 @@ private fun Step(
                     )
                     MoneyAmount(amount = step.budget)
                 }
-                val drafts = rememberPlanDrafts()
                 PlanEditor(
                     plan = step.plan,
                     available = step.budget,
@@ -316,9 +326,6 @@ private fun Step(
                     drafts = drafts,
                     jars = step.jars,
                 )
-                // Редактор остаток не рисует (его место выбирает экран); здесь —
-                // сразу под банками, как было до выноса счётчика из редактора.
-                RemainderCounter(remainder = liveRemainder(step.plan, step.remainder, drafts), overBy = Coins.ZERO)
             }
 
             is StepView.Pick -> Shelf(step = step, topic = state.topic, onToggle = onToggle)

@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -178,9 +179,7 @@ private fun Planning(
     Screen(
         onBack = onBack,
         // Кошелёк в шапке: весь он и раскладывается (R5), а место под банки дорого.
-        actions = {
-            Box(modifier = Modifier.padding(end = Dimens.Space)) { MoneyAmount(amount = state.available) }
-        },
+        actions = { WalletAction(state.available) },
         // Остаток закреплён над кнопкой, а не в конце списка: раньше кнопка
         // его перекрывала, и ребёнок не видел, сколько ещё раскладывать
         // (DESIGN_PLAN 1, №5).
@@ -207,13 +206,16 @@ private fun Planning(
                     onClick = { confirming = true },
                     enabled = state.canConfirm,
                 )
-                if (state.plan.savings > Coins.ZERO) {
-                    Text(
-                        text = stringResource(R.string.budget_to_savings, coinsText(state.plan.savings)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // Строка под кнопкой есть всегда, при пустой копилке — невидимая
+                // и немая: иначе панель росла бы на строку с первой монетой в
+                // копилке, и кнопка прыгала бы вверх из-под пальца.
+                val toSavings = state.plan.savings > Coins.ZERO
+                Text(
+                    text = stringResource(R.string.budget_to_savings, coinsText(state.plan.savings)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = if (toSavings) Modifier else Modifier.alpha(0f).clearAndSetSemantics {},
+                )
             }
         },
     ) {
@@ -241,6 +243,12 @@ private fun Planning(
             )
         }
     }
+}
+
+/** Кошелёк в шапке плана — и до подтверждения, и после: баланс виден во всех фазах дня. */
+@Composable
+private fun WalletAction(wallet: Coins) {
+    Box(modifier = Modifier.padding(end = Dimens.Space)) { MoneyAmount(amount = wallet) }
 }
 
 /**
@@ -294,6 +302,7 @@ private fun Started(
     Box(modifier = Modifier.fillMaxSize()) {
         Screen(
             onBack = onBack,
+            actions = { WalletAction(state.wallet) },
             bottomBar = {
                 ButtonColumn(modifier = Modifier.onGloballyPositioned { source = it.boundsInRoot().center }) {
                     FinnyButton(text = stringResource(R.string.budget_go_shop), onClick = onShop)

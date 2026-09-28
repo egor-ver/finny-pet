@@ -129,7 +129,10 @@ fun FinnyNavHost(
         composable<Budget> {
             BudgetScreen(
                 onBack = { navController.popOnce() },
-                onShop = { navController.navigateOnce(Shop) },
+                // Магазин — вместо «План готов», а не поверх: «Назад» из
+                // магазина ведёт на главный, где видны банки и следующий шаг,
+                // а не на экран, который только что всё показал.
+                onShop = { navController.navigateOnce(Shop) { popUpTo<Main>() } },
                 onSavings = { navController.navigateOnce(Savings) },
             )
         }

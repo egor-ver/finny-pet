@@ -3,10 +3,13 @@ package ru.finnypet.app.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+import ru.finnypet.app.domain.model.Profile
 import ru.finnypet.app.domain.repository.ProfileRepository
 import javax.inject.Inject
 
@@ -35,15 +38,20 @@ class StartupViewModel @Inject constructor(
     profiles: ProfileRepository,
 ) : ViewModel() {
 
-    val state: StateFlow<Startup> = profiles.observeActive()
-        .map { profile -> if (profile == null) Startup.NoProfile else Startup.HasProfile }
+    val state: StateFlow<Startup> = startupOf(profiles.observeActive())
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            started = SharingStarted.Eagerly,
             initialValue = Startup.Loading,
         )
+}
 
-    private companion object {
-        const val STOP_TIMEOUT_MS = 5_000L
-    }
+/**
+ * Стартовый экран решается один раз, по первому значению профиля. Дальше
+ * переходы ведёт сам граф: если бы решение следило за профилем, создание
+ * питомца перестроило бы граф со стартом на обычном главном, и переход
+ * «главный под обучением» потерялся бы (ТЗ 2.5.1).
+ */
+internal fun startupOf(active: Flow<Profile?>): Flow<Startup> = flow {
+    emit(if (active.first() == null) Startup.NoProfile else Startup.HasProfile)
 }

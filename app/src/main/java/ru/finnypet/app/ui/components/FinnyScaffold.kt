@@ -55,6 +55,10 @@ import ru.finnypet.app.ui.theme.Dimens
  * из пары блоков между ними и кнопкой внизу остаётся пустая половина
  * (DESIGN_PLAN 1, №6). Длинное содержимое по-прежнему прокручивается.
  *
+ * [verticalPadding] — поле над первым блоком и под последним. Сужает его
+ * только главный: по бюджету высот (DESIGN_PLAN 3.1) сверху 8 dp и до кнопок
+ * 8 dp, иначе нижний ряд плиток уходит под кнопки.
+ *
  * Для экранов со списками есть [FinnyListScaffold]: вложить LazyColumn
  * сюда нельзя, он получит бесконечную высоту и упадёт.
  */
@@ -93,6 +97,7 @@ fun FinnyScaffold(
     bottomBar: (@Composable () -> Unit)? = null,
     spacing: Dp = Dimens.Space,
     centered: Boolean = false,
+    verticalPadding: Dp = Dimens.Space,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     ScaffoldChrome(
@@ -110,7 +115,7 @@ fun FinnyScaffold(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .heightIn(min = maxHeight)
-                    .padding(horizontal = Dimens.ScreenPadding, vertical = Dimens.Space),
+                    .padding(horizontal = Dimens.ScreenPadding, vertical = verticalPadding),
                 // Одинаковый ритм на всех экранах: расстояние между блоками
                 // задаётся здесь, а не каждым экраном по-своему (ТЗ 3.6).
                 // Экран может его сузить, если блоков много — например главный,

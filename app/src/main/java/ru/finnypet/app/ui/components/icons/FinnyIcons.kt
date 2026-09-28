@@ -237,6 +237,31 @@ object FinnyIcons {
         }
     }
 
+    /**
+     * Планшет с галочкой — плитка «Задания» на главном. Своя, а не иконка
+     * темы: у темы «Накопления» это копилка, и плитка путалась с копилкой.
+     * Галочка — вырез в заливке, прищепка — отдельная фигура сверху.
+     */
+    val Tasks: ImageVector = icon("FinnyTasks") {
+        filled(PathFillType.EvenOdd) {
+            moveTo(6.5f, 4.5f)
+            lineTo(17.5f, 4.5f)
+            curveTo(18.6f, 4.5f, 19.5f, 5.4f, 19.5f, 6.5f)
+            lineTo(19.5f, 19.5f)
+            curveTo(19.5f, 20.6f, 18.6f, 21.5f, 17.5f, 21.5f)
+            lineTo(6.5f, 21.5f)
+            curveTo(5.4f, 21.5f, 4.5f, 20.6f, 4.5f, 19.5f)
+            lineTo(4.5f, 6.5f)
+            curveTo(4.5f, 5.4f, 5.4f, 4.5f, 6.5f, 4.5f)
+            close()
+            moveTo(7.6f, 13.6f); lineTo(8.9f, 12.3f); lineTo(10.8f, 14.2f)
+            lineTo(15.1f, 9.9f); lineTo(16.4f, 11.2f); lineTo(10.8f, 16.8f); close()
+        }
+        filled {
+            moveTo(9f, 2.5f); lineTo(15f, 2.5f); lineTo(15f, 6.5f); lineTo(9f, 6.5f); close()
+        }
+    }
+
     /** «+» у ползунка плана — точная подстройка на одну монету (DESIGN_PLAN 3.2). */
     val Plus: ImageVector = icon("FinnyPlus") {
         outlined(2.6f) { moveTo(12f, 5f); lineTo(12f, 19f); moveTo(5f, 12f); lineTo(19f, 12f) }

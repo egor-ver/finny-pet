@@ -28,6 +28,9 @@ import ru.finnypet.app.ui.theme.Dimens
  * `OwlBubble` (магазин) и своей строки в плане: сова слева, справа белая
  * карточка с хвостиком к ней. [content] — не только текст: у магазина в
  * ней ещё и итог покупки.
+ *
+ * [bubbleModifier] — для самой карточки без совы: обучению нужны её границы,
+ * чтобы стрелка начиналась от облачка, а не от совы рядом.
  */
 @Composable
 fun SpeechBubble(
@@ -35,6 +38,7 @@ fun SpeechBubble(
     modifier: Modifier = Modifier,
     // Сова рядом с репликой обычно 88 dp, в обучении — 112 dp (DESIGN_PLAN 2.6).
     owlRole: OwlRole = OwlRole.WithSpeech,
+    bubbleModifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Row(
@@ -43,7 +47,7 @@ fun SpeechBubble(
         modifier = modifier.fillMaxWidth(),
     ) {
         Owl(look = owl, size = owlRole.size)
-        BubbleCard(modifier = Modifier.weight(1f), content = content)
+        BubbleCard(modifier = Modifier.weight(1f).then(bubbleModifier), content = content)
     }
 }
 

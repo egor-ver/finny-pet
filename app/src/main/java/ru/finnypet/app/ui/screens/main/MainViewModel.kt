@@ -201,14 +201,16 @@ class MainViewModel @Inject constructor(
                     val task = taskOf(completed, transactions, pet.state)
                     val needs = petState.needsOf(pet.state)
                     val taskReward = balance.taskReward.takeIf { task?.rewardAvailable == true }
+                    val cheapestNeeded = petState.cheapestNeeded(pet.state, shop)
                     val step = nextStep(
                         status = period.status,
                         hasNeeds = needs.isNotEmpty(),
                         wallet = wallet,
-                        cheapestNeeded = petState.cheapestNeeded(pet.state, shop),
+                        cheapestNeeded = cheapestNeeded,
                         taskReward = taskReward,
                     )
                     val event = eventOf(transactions)
+                    val jars = jarsLeft(period.status, plan, periodEngine.factOf(transactions))
                     val phrase = owlPhrase(
                         step = step,
                         needs = needs,
@@ -219,6 +221,8 @@ class MainViewModel @Inject constructor(
                         income = balance.periodIncome,
                         eventKey = event?.key,
                         eventArgs = event?.args.orEmpty(),
+                        needLeft = jars?.mandatory,
+                        cheapestNeeded = cheapestNeeded,
                     )
                     MainState.Ready(
                         petName = profile.petName,
@@ -232,7 +236,7 @@ class MainViewModel @Inject constructor(
                         growthPoints = pet.growth.points,
                         balance = wallet,
                         wallet = walletLines(period.startBalance, transactions, ::nameOf),
-                        jars = jarsLeft(period.status, plan, periodEngine.factOf(transactions)),
+                        jars = jars,
                         savings = savingsOf(progress),
                         task = task,
                         step = step,
