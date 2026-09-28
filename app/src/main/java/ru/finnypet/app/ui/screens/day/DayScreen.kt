@@ -57,6 +57,8 @@ import ru.finnypet.app.ui.components.TopSpeechBubble
 import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.sound.Sound
+import ru.finnypet.app.ui.sound.SoundOnce
 import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.wordFormOf
 import ru.finnypet.app.ui.theme.Dimens
@@ -255,6 +257,9 @@ private fun Closed(summary: DaySummary, onBack: () -> Unit) {
             }
         },
     ) {
+        // Звук — только когда есть чему радоваться: день без звёзд проходит
+        // тихо, без грустного сигнала (ТЗ 2.5.12 — без негативных оценок).
+        if (summary.newStage != null || summary.checks.any { it.done }) SoundOnce(Sound.STAR)
         TopSpeechBubble(text = summary.headline)
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(

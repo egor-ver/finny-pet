@@ -23,6 +23,11 @@ interface SettingsRepository {
 
     suspend fun setSoundEnabled(enabled: Boolean)
 
+    /** Тихая мелодия по кругу — отдельно от звуков событий. */
+    fun observeMusicEnabled(): Flow<Boolean>
+
+    suspend fun setMusicEnabled(enabled: Boolean)
+
     fun observeAnimationsEnabled(): Flow<Boolean>
 
     suspend fun setAnimationsEnabled(enabled: Boolean)

@@ -17,6 +17,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.dp
+import ru.finnypet.app.ui.sound.LocalGameAudio
+import ru.finnypet.app.ui.sound.Sound
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
 
@@ -31,6 +33,10 @@ import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
  *
  * При выключенном движении ничего не рисует и сразу зовёт [onFinished]: смысл
  * не теряется, конечное состояние видно без полёта (AD-8).
+ *
+ * [sound] звучит, когда монеты легли, — и без движения тоже: звук и движение
+ * выключаются каждый своей настройкой. Полёт один на событие (экраны берегут
+ * это через сохраняемое «легли»), поэтому и звук один.
  */
 @Composable
 fun CoinFlight(
@@ -38,12 +44,15 @@ fun CoinFlight(
     to: List<Offset>,
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
+    sound: Sound = Sound.COINS,
 ) {
     val animate = LocalAnimationsEnabled.current && to.isNotEmpty()
+    val audio = LocalGameAudio.current
     val progress = remember { Animatable(0f) }
     val finish by rememberUpdatedState(onFinished)
     LaunchedEffect(Unit) {
         if (animate) progress.animateTo(1f, tween(FLIGHT_MS, easing = FastOutSlowInEasing))
+        audio?.play(sound)
         finish()
     }
     if (!animate) return

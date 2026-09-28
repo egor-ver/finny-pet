@@ -14,22 +14,24 @@ import ru.finnypet.app.ui.screens.main.TutorialTarget.PLAN_BUTTON
 import ru.finnypet.app.ui.screens.main.TutorialTarget.PLAN_TILE
 import ru.finnypet.app.ui.screens.main.TutorialTarget.SATIETY
 import ru.finnypet.app.ui.screens.main.TutorialTarget.SAVINGS_TILE
+import ru.finnypet.app.ui.screens.main.TutorialTarget.SETTINGS
 import ru.finnypet.app.ui.screens.main.TutorialTarget.TASKS_TILE
 import ru.finnypet.app.ui.screens.main.TutorialTarget.TASK_BUTTON
 import ru.finnypet.app.ui.screens.main.TutorialTarget.WALLET
 
 /**
- * Обучение поверх главного (ТЗ 2.5.1, DESIGN_PLAN 3.4): шесть шагов, среди
- * них «нужное», «желаемое» и «отложить», последний — про план дня; подсветка переходит на запасной
- * элемент, если основного нет в этой фазе дня; облачко не закрывает цель.
+ * Обучение поверх главного (ТЗ 2.5.1, DESIGN_PLAN 3.4): семь шагов, среди
+ * них «нужное», «желаемое» и «отложить», шаг 6 — про план дня, последний — про
+ * настройки; подсветка переходит на запасной элемент, если основного нет в
+ * этой фазе дня; облачко не закрывает цель.
  */
 class TutorialStepsTest {
 
     private val texts = ContentParser().parse(RealContent.raw()).texts
 
     @Test
-    fun `шесть шагов, и у каждого есть реплика совы в контент-паке`() {
-        assertEquals(6, TUTORIAL_STEPS.size)
+    fun `семь шагов, и у каждого есть реплика совы в контент-паке`() {
+        assertEquals(7, TUTORIAL_STEPS.size)
         TUTORIAL_STEPS.forEach { step ->
             val text = texts[step.textKey]
             assertTrue("нет текста ${step.textKey}", !text.isNullOrBlank())
@@ -47,12 +49,21 @@ class TutorialStepsTest {
         assertEquals(listOf(SAVINGS_TILE), all[4])
     }
 
-    /** Решение владельца 28.09: день начинают с плана — последний шаг показывает на него. */
+    /** Решение владельца 28.09: день начинают с плана — шаг 6 показывает на него. */
     @Test
-    fun `последний шаг — план дня, запасная — плитка План`() {
+    fun `шаг 6 — план дня, запасная — плитка План`() {
         val everything = TutorialTarget.entries.toSet()
-        assertEquals(listOf(PLAN_BUTTON), TUTORIAL_STEPS.last().resolve(everything))
-        assertEquals(listOf(PLAN_TILE), TUTORIAL_STEPS.last().resolve(everything - PLAN_BUTTON))
+        assertEquals(listOf(PLAN_BUTTON), TUTORIAL_STEPS[5].resolve(everything))
+        assertEquals(listOf(PLAN_TILE), TUTORIAL_STEPS[5].resolve(everything - PLAN_BUTTON))
+    }
+
+    /** Пункт A1: последний шаг — где выключить звуки, мелодию и движение, со стрелкой к шестерёнке. */
+    @Test
+    fun `последний шаг — настройки`() {
+        val last = TUTORIAL_STEPS.last()
+        assertEquals("tutorial.step.7", last.textKey)
+        assertEquals(listOf(SETTINGS), last.resolve(TutorialTarget.entries.toSet()))
+        assertTrue(last.arrow)
     }
 
     /**
@@ -61,7 +72,7 @@ class TutorialStepsTest {
      */
     @Test
     fun `на шаге плана стрелки нет, на остальных есть`() {
-        assertEquals(listOf(true, true, true, true, true, false), TUTORIAL_STEPS.map { it.arrow })
+        assertEquals(listOf(true, true, true, true, true, false, true), TUTORIAL_STEPS.map { it.arrow })
     }
 
     @Test
@@ -96,7 +107,8 @@ class TutorialStepsTest {
     fun `дальше по шагам, после последнего обучение закрывается`() {
         assertEquals(1, nextTutorialStep(0))
         assertEquals(5, nextTutorialStep(4))
-        assertNull(nextTutorialStep(5))
+        assertEquals(6, nextTutorialStep(5))
+        assertNull(nextTutorialStep(6))
     }
 
     /**
@@ -188,6 +200,30 @@ class TutorialStepsTest {
         assertEquals(button.top - 2f, arc.tip.y, 0.01f)
         // Широкая цель прямо под облачком — стрелка отвесная, без лишнего изгиба.
         assertEquals(arc.start.x, arc.tip.x, 0.01f)
+    }
+
+    /**
+     * Пункт A1: к шестерёнке справа вверху стрелка идёт мимо «Играть!» в левой
+     * половине ряда кнопок, а к кошельку слева — упёрлась бы в кнопки и не рисуется.
+     */
+    @Test
+    fun `стрелка сквозь кнопки шага не проходит, мимо них — проходит`() {
+        val bubble = Rect(140f, 300f, 344f, 540f)
+        val gear = arrowArc(bubble, Rect(245f, 10f, 293f, 58f), inset = 28f, gap = 2f)!!
+        val wallet = arrowArc(bubble, Rect(10f, 10f, 150f, 58f), inset = 28f, gap = 2f)!!
+        val play = Rect(16f, 80f, 176f, 140f)
+        val bothButtons = Rect(16f, 80f, 344f, 140f)
+
+        assertFalse(gear.crosses(play, margin = 7f))
+        assertTrue(gear.crosses(bothButtons, margin = 7f))
+        assertTrue(wallet.crosses(play, margin = 7f))
+    }
+
+    /** Цель ниже кнопок шага — стрелка между облачком и целью, кнопки выше неё. */
+    @Test
+    fun `стрелка ниже кнопок их не пересекает`() {
+        val arc = arrowArc(Rect(140f, 200f, 344f, 400f), Rect(10f, 620f, 350f, 690f), inset = 28f, gap = 2f)!!
+        assertFalse(arc.crosses(Rect(16f, 80f, 344f, 140f), margin = 7f))
     }
 
     @Test

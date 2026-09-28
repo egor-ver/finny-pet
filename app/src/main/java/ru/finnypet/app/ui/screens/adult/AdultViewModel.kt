@@ -32,7 +32,6 @@ import ru.finnypet.app.domain.repository.ContentRepository
 import ru.finnypet.app.domain.repository.PeriodRepository
 import ru.finnypet.app.domain.repository.ProfileRepository
 import ru.finnypet.app.domain.repository.SavingsRepository
-import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.domain.repository.TaskProgressRepository
 import ru.finnypet.app.domain.usecase.AwardParentBonus
 import ru.finnypet.app.domain.usecase.DeleteGame
@@ -99,8 +98,6 @@ sealed interface AdultState {
         val saved: Coins,
         val bonus: Coins,
         val award: AwardState,
-        val soundEnabled: Boolean,
-        val animationsEnabled: Boolean,
         /** Текст начисления, пока взрослый его не закрыл. */
         val awarded: String? = null,
     ) : AdultState
@@ -108,10 +105,9 @@ sealed interface AdultState {
 
 /**
  * Раздел для взрослого (ТЗ 2.5.12): цели приложения, пройденные темы и общий
- * прогресс ребёнка. Сюда же собран переключатель движения — ТЗ 3.6 требует
- * его отключаемости, а на детских экранах настройкам не место. Звук
- * (`soundEnabled`) хранится тем же способом, но без переключателя на экране:
- * звуков в игре нет, а нерабочая настройка обманывала бы ожидание (Б16, U3).
+ * прогресс ребёнка. Настроек звука, мелодии и движения здесь нет: по решению
+ * владельца 28.09 они в одном месте — в окне настроек на главном
+ * (`SettingsDialog`), ребёнок выключает их сам.
  *
  * Действия взрослого: бонус через [AwardParentBonus] одной операцией, запуск
  * демонстрации и удаление игры (ТЗ 3.5).
@@ -122,7 +118,6 @@ class AdultViewModel @Inject constructor(
     private val periods: PeriodRepository,
     private val savings: SavingsRepository,
     private val tasks: TaskProgressRepository,
-    private val settings: SettingsRepository,
     private val awardBonus: AwardParentBonus,
     private val startDemo: StartDemo,
     private val deleteGame: DeleteGame,
@@ -195,10 +190,6 @@ class AdultViewModel @Inject constructor(
         awarded.value = null
     }
 
-    fun setSound(enabled: Boolean) = guarded { settings.setSoundEnabled(enabled) }
-
-    fun setAnimations(enabled: Boolean) = guarded { settings.setAnimationsEnabled(enabled) }
-
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun screen(): Flow<AdultState> =
         combine(profiles.observeActive(), failed) { profile, isFailed -> profile to isFailed }
@@ -224,8 +215,8 @@ class AdultViewModel @Inject constructor(
             .distinctUntilChanged { old, new -> old?.number == new?.number }
             .flatMapLatest { period ->
                 val days = periods.count(profile.id)
-                combine(progressOf(profile), moneyOf(period), viewOf()) { progress, money, view ->
-                    ready(profile, days, progress, money, view)
+                combine(progressOf(profile), moneyOf(period), awarded) { progress, money, awarded ->
+                    ready(profile, days, progress, money, awarded)
                 }
             }
 
@@ -246,18 +237,12 @@ class AdultViewModel @Inject constructor(
         }
     }
 
-    private fun viewOf(): Flow<View> = combine(
-        settings.observeSoundEnabled(),
-        settings.observeAnimationsEnabled(),
-        awarded,
-    ) { sound, animations, awarded -> View(sound, animations, awarded) }
-
     private fun ready(
         profile: Profile,
         days: Int,
         progress: Progress,
         money: Money,
-        view: View,
+        awarded: String?,
     ): AdultState {
         val pet = progress.pet ?: return AdultState.Loading
         return AdultState.Ready(
@@ -274,9 +259,7 @@ class AdultViewModel @Inject constructor(
             saved = progress.goal?.saved ?: Coins.ZERO,
             bonus = gameBalance.parentBonus,
             award = money.award,
-            soundEnabled = view.sound,
-            animationsEnabled = view.animations,
-            awarded = view.awarded,
+            awarded = awarded,
         )
     }
 
@@ -299,8 +282,6 @@ class AdultViewModel @Inject constructor(
     )
 
     private data class Money(val balance: Coins, val award: AwardState)
-
-    private data class View(val sound: Boolean, val animations: Boolean, val awarded: String?)
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

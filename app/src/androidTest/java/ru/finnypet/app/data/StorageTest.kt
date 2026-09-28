@@ -371,12 +371,15 @@ class StorageTest {
     @Test
     fun `звук_и_анимации_включены_по_умолчанию`() = runTest {
         assertEquals(true, settings.observeSoundEnabled().first())
+        assertEquals(true, settings.observeMusicEnabled().first())
         assertEquals(true, settings.observeAnimationsEnabled().first())
 
         settings.setSoundEnabled(false)
+        settings.setMusicEnabled(false)
         settings.setAnimationsEnabled(false)
 
         assertEquals(false, settings.observeSoundEnabled().first())
+        assertEquals(false, settings.observeMusicEnabled().first())
         assertEquals(false, settings.observeAnimationsEnabled().first())
     }
 

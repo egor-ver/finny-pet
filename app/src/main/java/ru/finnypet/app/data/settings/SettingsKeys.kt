@@ -21,5 +21,7 @@ object SettingsKeys {
 
     val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
 
+    val MUSIC_ENABLED = booleanPreferencesKey("music_enabled")
+
     val ANIMATIONS_ENABLED = booleanPreferencesKey("animations_enabled")
 }

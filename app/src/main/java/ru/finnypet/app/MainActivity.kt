@@ -13,7 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import ru.finnypet.app.domain.repository.SettingsRepository
 import ru.finnypet.app.ui.Startup
 import ru.finnypet.app.ui.StartupViewModel
@@ -21,8 +23,9 @@ import ru.finnypet.app.ui.navigation.CreatePet
 import ru.finnypet.app.ui.navigation.FinnyNavHost
 import ru.finnypet.app.ui.navigation.Main
 import ru.finnypet.app.ui.theme.FinnypetTheme
+import ru.finnypet.app.ui.sound.GameAudio
+import ru.finnypet.app.ui.sound.LocalGameAudio
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
-import ru.finnypet.app.ui.theme.LocalSoundEnabled
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -31,17 +34,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settings: SettingsRepository
 
+    @Inject
+    lateinit var audio: GameAudio
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Настройки звука слушаются и в свёрнутом приложении: выключенная там
+        // мелодия не должна зазвучать при возврате даже на миг (AD-17).
+        lifecycleScope.launch { settings.observeSoundEnabled().collect(audio::setSoundEnabled) }
+        lifecycleScope.launch { settings.observeMusicEnabled().collect(audio::setMusicEnabled) }
         setContent {
             // Настройки доступности читаются один раз на всё приложение и
             // раздаются через CompositionLocal: ТЗ 3.6 требует, чтобы звук
             // и анимации отключались, и флаг должен доходить до компонентов,
             // а не лежать в хранилище без дела.
             val animations by settings.observeAnimationsEnabled()
-                .collectAsStateWithLifecycle(initialValue = true)
-            val sound by settings.observeSoundEnabled()
                 .collectAsStateWithLifecycle(initialValue = true)
 
             val startup: StartupViewModel = hiltViewModel()
@@ -50,7 +58,7 @@ class MainActivity : ComponentActivity() {
             FinnypetTheme {
                 CompositionLocalProvider(
                     LocalAnimationsEnabled provides animations,
-                    LocalSoundEnabled provides sound,
+                    LocalGameAudio provides audio,
                 ) {
                     // Граф строится только когда известно, есть ли профиль:
                     // стартовый экран после сборки уже не поменять, а начать
@@ -72,5 +80,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // onResume/onPause, а не onStart/onStop: погасший экран на части телефонов
+    // только ставит активность на паузу, и мелодия играла бы в темноте.
+    override fun onResume() {
+        super.onResume()
+        audio.setVisible(true)
+    }
+
+    override fun onPause() {
+        audio.setVisible(false)
+        super.onPause()
     }
 }

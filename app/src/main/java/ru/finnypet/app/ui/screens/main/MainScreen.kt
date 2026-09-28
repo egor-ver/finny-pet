@@ -106,6 +106,8 @@ fun MainScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var tutorialStep by rememberSaveable { mutableStateOf(if (startTutorial) 0 else null) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    if (settingsOpen) SettingsDialog(onDismiss = { settingsOpen = false })
 
     MainContent(
         state = state,
@@ -118,6 +120,7 @@ fun MainScreen(
         onFinishDay = onFinishDay,
         onProgress = onProgress,
         onHelp = { tutorialStep = 0 },
+        onSettings = { settingsOpen = true },
         onAdult = onAdult,
         banner = banner,
         tutorialStep = tutorialStep,
@@ -141,6 +144,7 @@ fun MainContent(
     onFinishDay: () -> Unit = {},
     onProgress: () -> Unit = {},
     onHelp: () -> Unit = {},
+    onSettings: () -> Unit = {},
     onAdult: () -> Unit = {},
     banner: @Composable () -> Unit = {},
     /** Шаг обучения поверх экрана; `null` — обучения нет. */
@@ -160,6 +164,7 @@ fun MainContent(
             onFinishDay = onFinishDay,
             onProgress = onProgress,
             onHelp = onHelp,
+            onSettings = onSettings,
             onAdult = onAdult,
             banner = banner,
             tutorialStep = tutorialStep,
@@ -206,6 +211,7 @@ private fun ReadyScreen(
     onFinishDay: () -> Unit,
     onProgress: () -> Unit,
     onHelp: () -> Unit,
+    onSettings: () -> Unit,
     onAdult: () -> Unit,
     banner: @Composable () -> Unit,
     tutorialStep: Int?,
@@ -234,6 +240,7 @@ private fun ReadyScreen(
             onFinishDay = onFinishDay,
             onProgress = onProgress,
             onHelp = onHelp,
+            onSettings = onSettings,
             onAdult = onAdult,
             banner = banner,
         )
@@ -266,6 +273,7 @@ private fun MainLayout(
     onFinishDay: () -> Unit,
     onProgress: () -> Unit,
     onHelp: () -> Unit,
+    onSettings: () -> Unit,
     onAdult: () -> Unit,
     banner: @Composable () -> Unit,
 ) {
@@ -288,6 +296,12 @@ private fun MainLayout(
         actions = {
             banner()
             TopIcon(icon = FinnyIcons.Help, label = stringResource(R.string.help_action), onClick = onHelp)
+            TopIcon(
+                icon = FinnyIcons.Settings,
+                label = stringResource(R.string.settings_title),
+                onClick = onSettings,
+                modifier = Modifier.tutorialTarget(targets, TutorialTarget.SETTINGS),
+            )
             TopIcon(icon = FinnyIcons.Grownup, label = stringResource(R.string.adult_action), onClick = onAdult)
         },
         spacing = Dimens.SpaceSmall,
@@ -327,15 +341,15 @@ private fun MainLayout(
 }
 
 /**
- * Вход в подсказку или раздел для взрослого — значок 48 dp в шапке. Значок
- * для озвучки молчит, TalkBack читает подпись: «?» и замок сами по себе
- * ничего не говорят (ТЗ 3.6).
+ * Вход в подсказку, настройки или раздел для взрослого — значок 48 dp в
+ * шапке. Значок для озвучки молчит, TalkBack читает подпись: «?», шестерёнка
+ * и замок сами по себе ничего не говорят (ТЗ 3.6).
  */
 @Composable
-private fun TopIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun TopIcon(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .defaultMinSize(minWidth = Dimens.TouchTarget, minHeight = Dimens.TouchTarget)
             .semantics { contentDescription = label },
     ) {

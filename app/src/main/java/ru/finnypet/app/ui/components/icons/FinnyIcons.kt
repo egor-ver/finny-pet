@@ -297,6 +297,17 @@ object FinnyIcons {
         }
     }
 
+    /**
+     * Шестерёнка — окно настроек на главном (пункт A1). Ось — вырез в той же
+     * заливке (`EvenOdd`), как у копилки: кружок тем же цветом слился бы.
+     */
+    val Settings: ImageVector = icon("FinnySettings") {
+        filled(PathFillType.EvenOdd) {
+            gear(cx = 12f, cy = 12f, outerR = 10f, innerR = 7.4f, teeth = 8)
+            circle(cx = 12f, cy = 12f, r = 3.2f)
+        }
+    }
+
     /** Перечёркнутый круг — вариант «без аксессуара»: такой же выбор, как шарф и очки. */
     val None: ImageVector = icon("FinnyNone") {
         outlined(1.8f) { circle(cx = 12f, cy = 12f, r = 8f) }
@@ -380,6 +391,26 @@ private fun PathBuilder.thickLine(x1: Float, y1: Float, x2: Float, y2: Float, wi
     lineTo(x2 + ox, y2 + oy)
     lineTo(x2 - ox, y2 - oy)
     lineTo(x1 - ox, y1 - oy)
+    close()
+}
+
+/**
+ * Зубчатое колесо: у каждого зуба основание шире вершины — так зубцы на
+ * 24 dp читаются как шестерёнка, а не как звезда.
+ */
+private fun PathBuilder.gear(cx: Float, cy: Float, outerR: Float, innerR: Float, teeth: Int) {
+    val step = 2 * Math.PI / teeth
+    val rootHalf = step * 0.3
+    val topHalf = step * 0.19
+    for (i in 0 until teeth) {
+        val a = step * i
+        val corners = listOf(a - rootHalf to innerR, a - topHalf to outerR, a + topHalf to outerR, a + rootHalf to innerR)
+        corners.forEachIndexed { k, (angle, r) ->
+            val x = cx + r * cos(angle).toFloat()
+            val y = cy + r * sin(angle).toFloat()
+            if (i == 0 && k == 0) moveTo(x, y) else lineTo(x, y)
+        }
+    }
     close()
 }
 

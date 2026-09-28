@@ -1487,13 +1487,17 @@ class ScreensTest {
         scrollToText(text(R.string.adult_bonus_no_day))
     }
 
-    /** Б16: переключатель ничего не делал — в U3 его убрали со экрана, а не почистили текст. */
+    /**
+     * Б16: нерабочего «Звук в игре» у взрослого нет. Пункт A1: звук, мелодия и
+     * движение — в окне настроек на главном, у взрослого переключателей нет вовсе.
+     */
     @Test
     fun `звук_в_игре_скрыт_у_взрослого`() {
         showAdult(adultState())
 
-        scrollToText(text(R.string.adult_animations))
+        scrollToText(text(R.string.adult_delete))
         compose.onAllNodesWithText("Звук в игре").assertCountEquals(0)
+        compose.onAllNodesWithText(text(R.string.settings_animations)).assertCountEquals(0)
     }
 
     @Test
@@ -1536,8 +1540,6 @@ class ScreensTest {
         saved = Coins(30),
         bonus = Coins(10),
         award = award,
-        soundEnabled = true,
-        animationsEnabled = true,
     )
 
     private fun showGate(riddle: Riddle, onSolved: () -> Unit = {}) {

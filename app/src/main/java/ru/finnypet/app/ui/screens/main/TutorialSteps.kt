@@ -19,6 +19,7 @@ enum class TutorialTarget {
     SATIETY,
     MOOD,
     CARE,
+    SETTINGS,
 }
 
 /**
@@ -36,10 +37,11 @@ data class TutorialSpot(val main: TutorialTarget, val fallback: TutorialTarget? 
 data class TutorialStep(val textKey: String, val spots: List<TutorialSpot>, val arrow: Boolean = true)
 
 /**
- * Шесть шагов (DESIGN_PLAN 3.4 и решение владельца 28.09). «Нужное»,
+ * Семь шагов (DESIGN_PLAN 3.4 и решения владельца 28.09). «Нужное»,
  * «желаемое» и «отложить» — шаги 3–5: ТЗ 2.5.1 требует объяснить эти три
- * решения до первого действия. Последний шаг — с чего начинать день: сначала
- * план, потом всё остальное; поэтому шаг 5 говорит только о копилке.
+ * решения до первого действия. Шаг 6 — с чего начинать день: сначала план,
+ * потом всё остальное; поэтому шаг 5 говорит только о копилке. Последний —
+ * где выключить звуки, мелодию и движение (пункт A1).
  */
 val TUTORIAL_STEPS: List<TutorialStep> = listOf(
     TutorialStep("tutorial.step.1", listOf(TutorialSpot(TutorialTarget.SAVINGS_TILE))),
@@ -51,6 +53,7 @@ val TUTORIAL_STEPS: List<TutorialStep> = listOf(
     TutorialStep("tutorial.step.4", listOf(TutorialSpot(TutorialTarget.MOOD))),
     TutorialStep("tutorial.step.5", listOf(TutorialSpot(TutorialTarget.SAVINGS_TILE))),
     TutorialStep("tutorial.step.6", listOf(TutorialSpot(TutorialTarget.PLAN_BUTTON, TutorialTarget.PLAN_TILE)), arrow = false),
+    TutorialStep("tutorial.step.7", listOf(TutorialSpot(TutorialTarget.SETTINGS))),
 )
 
 /** Следующий шаг обучения; `null` — шаги кончились, обучение закрывается. */
@@ -133,6 +136,19 @@ fun arrowArc(bubble: Rect, hole: Rect, inset: Float, gap: Float): ArrowArc? {
     // а не скользит почти вдоль его края.
     val control = Offset(startX, start.y + (tip.y - start.y) * BEND)
     return ArrowArc(start = start, control = control, tip = tip)
+}
+
+/**
+ * Проходит ли дуга по [rect] с запасом [margin] на ширину наконечника. Дуга
+ * без перегиба лежит в рамке своих концов (вершина изгиба — над началом),
+ * поэтому хватает проверки рамки: и по высоте, и по ширине.
+ */
+fun ArrowArc.crosses(rect: Rect, margin: Float): Boolean {
+    val left = minOf(start.x, tip.x) - margin
+    val right = maxOf(start.x, tip.x) + margin
+    val top = minOf(start.y, tip.y)
+    val bottom = maxOf(start.y, tip.y)
+    return left < rect.right && right > rect.left && top < rect.bottom && bottom > rect.top
 }
 
 /** Как `coerceIn`, но рамка уже двух отступов даёт свою середину, а не исключение. */

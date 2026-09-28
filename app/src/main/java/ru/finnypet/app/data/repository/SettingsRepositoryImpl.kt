@@ -40,7 +40,7 @@ class SettingsRepositoryImpl @Inject constructor(
         store.edit { it.remove(SettingsKeys.PROFILE_BEFORE_DEMO) }
     }
 
-    // Звук и анимации включены по умолчанию: отключение — осознанный выбор
+    // Звук, мелодия и анимации включены по умолчанию: отключение — осознанный выбор
     // пользователя, а не состояние по умолчанию (ТЗ 3.6).
 
     override fun observeSoundEnabled(): Flow<Boolean> =
@@ -48,6 +48,13 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setSoundEnabled(enabled: Boolean) {
         store.edit { it[SettingsKeys.SOUND_ENABLED] = enabled }
+    }
+
+    override fun observeMusicEnabled(): Flow<Boolean> =
+        preferences.map { it[SettingsKeys.MUSIC_ENABLED] ?: true }
+
+    override suspend fun setMusicEnabled(enabled: Boolean) {
+        store.edit { it[SettingsKeys.MUSIC_ENABLED] = enabled }
     }
 
     override fun observeAnimationsEnabled(): Flow<Boolean> =

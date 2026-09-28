@@ -199,12 +199,16 @@ fun TutorialOverlay(
             if (bubble != Rect.Zero && TUTORIAL_STEPS[step].arrow) {
                 val nudge = sin(PI * breath.value).toFloat() * ARROW_NUDGE.toPx()
                 val from = bubble.translate(-origin)
-                // Цель выше кнопок шага (кошелёк) — только вырез: стрелка к ней
-                // прошла бы сквозь кнопки.
-                val buttonsTop = if (buttons == Rect.Zero) Float.NEGATIVE_INFINITY else buttons.top - origin.y
-                cutouts.filterNot { it.bottom <= buttonsTop }.forEach { hole ->
-                    arrowArc(bubble = from, hole = hole, inset = ARROW_INSET.toPx(), gap = ARROW_GAP.toPx())
-                        ?.let { drawArrow(it, nudge) }
+                // Стрелка сквозь кнопки шага не рисуется — к кошельку над
+                // «Пропустить» остаётся только вырез. К настройкам справа
+                // вверху она проходит: на последнем шаге правая половина ряда
+                // пуста (см. [StepButtons]).
+                val blocked = buttons.takeUnless { it == Rect.Zero }?.translate(-origin)
+                cutouts.forEach { hole ->
+                    val arc = arrowArc(bubble = from, hole = hole, inset = ARROW_INSET.toPx(), gap = ARROW_GAP.toPx())
+                    if (arc != null && (blocked == null || !arc.crosses(blocked, ARROW_HEAD_WIDTH.toPx() / 2))) {
+                        drawArrow(arc, nudge)
+                    }
                 }
             }
         }
@@ -259,8 +263,14 @@ fun TutorialOverlay(
  * (под обучением она прозрачна, и целей там нет). Облачко ходит от цели к
  * цели, и «Дальше» в нём прыгало по экрану под пальцем ребёнка (ревью F3,
  * п. 20). Стрелку, как и при кнопках внутри облачка (решение F1), они не
- * пересекают: кнопки выше облачка, а стрелка к цели выше кнопок не рисуется.
+ * пересекают: кнопки выше облачка, а стрелка сквозь кнопки не рисуется.
  * «Пропустить» слева, «Дальше» справа — вперёд по ходу чтения.
+ *
+ * На последнем шаге «Играть!» одна и встаёт на место «Пропустить», в левую
+ * половину: правая свободна для стрелки к шестерёнке настроек в шапке
+ * (пункт A1). Во всю ширину она перекрыла бы стрелку, а справа — встала бы
+ * ровно под шестерёнкой. Заодно быстрые нажатия «Дальше» не проскакивают
+ * последний шаг: на месте «Дальше» теперь пусто.
  */
 @Composable
 private fun StepButtons(step: Int, onNext: () -> Unit, onSkip: () -> Unit, modifier: Modifier = Modifier) {
@@ -275,7 +285,7 @@ private fun StepButtons(step: Int, onNext: () -> Unit, onSkip: () -> Unit, modif
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxWidth(if (last) LAST_STEP_WIDTH else 1f)
             .semantics { isTraversalGroup = true },
     ) {
         // На последнем шаге пропускать уже нечего: «Играть!» одна (решение владельца 28.09).
@@ -433,6 +443,7 @@ private val TutorialTarget.where: Int
         TutorialTarget.SATIETY -> R.string.tutorial_where_satiety
         TutorialTarget.MOOD -> R.string.tutorial_where_mood
         TutorialTarget.CARE -> R.string.tutorial_where_care
+        TutorialTarget.SETTINGS -> R.string.tutorial_where_settings
     }
 
 /**
@@ -463,6 +474,9 @@ private val ARROW_REACH = 28.dp
  */
 private val BUTTONS_TOP = TopAppBarDefaults.TopAppBarExpandedHeight - Dimens.Space + Dimens.SpaceSmall
 private val ARROW_INSET = 28.dp
+
+/** «Играть!» на последнем шаге — половина ряда, как «Пропустить» до неё. */
+private const val LAST_STEP_WIDTH = 0.5f
 private val ARROW_NUDGE = 6.dp
 private val DOT = 10.dp
 private val DOT_GAP = 6.dp

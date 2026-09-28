@@ -5,12 +5,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,7 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -76,7 +71,6 @@ fun AdultScreen(
         onRetry = viewModel::retry,
         onAward = viewModel::award,
         onDismissAward = viewModel::dismissAward,
-        onAnimations = viewModel::setAnimations,
         onStartDemo = viewModel::startDemo,
         onDeleteGame = viewModel::deleteGame,
     )
@@ -89,7 +83,6 @@ fun AdultContent(
     onRetry: () -> Unit = {},
     onAward: () -> Unit = {},
     onDismissAward: () -> Unit = {},
-    onAnimations: (Boolean) -> Unit = {},
     onStartDemo: () -> Unit = {},
     onDeleteGame: () -> Unit = {},
 ) {
@@ -116,7 +109,6 @@ fun AdultContent(
             onBack = onBack,
             onAward = onAward,
             onDismissAward = onDismissAward,
-            onAnimations = onAnimations,
             onStartDemo = onStartDemo,
             onDeleteGame = onDeleteGame,
         )
@@ -129,7 +121,6 @@ private fun Ready(
     onBack: () -> Unit,
     onAward: () -> Unit,
     onDismissAward: () -> Unit,
-    onAnimations: (Boolean) -> Unit,
     onStartDemo: () -> Unit,
     onDeleteGame: () -> Unit,
 ) {
@@ -143,7 +134,6 @@ private fun Ready(
         Topics(state.topics)
         Overview(state)
         Bonus(state, onAward)
-        Settings(state, onAnimations)
         Demo(onStartDemo)
         DeleteGame(onAsk = { askingDelete = true })
     }
@@ -321,55 +311,6 @@ private fun DeleteGame(onAsk: () -> Unit) {
         Heading(stringResource(R.string.adult_delete))
         Explanation(stringResource(R.string.adult_delete_explain))
         FinnySecondaryButton(text = stringResource(R.string.adult_delete_action), onClick = onAsk)
-    }
-}
-
-/**
- * Анимации отключаются (ТЗ 3.6), и делает это взрослый.
- *
- * Звук — без переключателя (Б16, U3): звуков в игре нет, а нерабочая
- * настройка обманывала бы ожидание. Хранение осталось нетронутым в
- * [SettingsRepository] на случай, если звук появится позже.
- */
-@Composable
-private fun Settings(
-    state: AdultState.Ready,
-    onAnimations: (Boolean) -> Unit,
-) {
-    FinnyCard {
-        Heading(stringResource(R.string.adult_settings))
-        Toggle(stringResource(R.string.adult_animations), state.animationsEnabled, onAnimations)
-    }
-}
-
-@Composable
-private fun Toggle(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = Dimens.TouchTarget)
-            // Нажимается вся строка, а не только сам переключатель: по ТЗ 3.6
-            // область нажатия не меньше 48 dp, а переключатель уже.
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        Switch(
-            checked = checked,
-            onCheckedChange = null,
-            // `outline` (#E4D8C6) почти сливается с кремовым фоном — 1,3:1.
-            // Выключенное состояние берёт свои цвета явно, а не outline.
-            colors = SwitchDefaults.colors(
-                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
-        )
     }
 }
 

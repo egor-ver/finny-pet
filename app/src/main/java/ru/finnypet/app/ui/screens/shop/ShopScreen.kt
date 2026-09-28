@@ -74,6 +74,7 @@ import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.tile
 import ru.finnypet.app.ui.screens.main.JarsLeft
 import ru.finnypet.app.ui.screens.main.shownWithin
+import ru.finnypet.app.ui.sound.Sound
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
@@ -297,6 +298,7 @@ private fun PurchaseFlight(done: PurchaseOutcome.Done, from: Offset?, to: Offset
         CoinFlight(
             from = from,
             to = listOf(to),
+            sound = Sound.PURCHASE,
             onFinished = {
                 landed = true
                 onLanded()

@@ -85,6 +85,8 @@ import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.liveRemainder
 import ru.finnypet.app.ui.components.rememberPlanDrafts
+import ru.finnypet.app.ui.sound.Sound
+import ru.finnypet.app.ui.sound.SoundOnce
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
@@ -536,6 +538,7 @@ private fun Done(
     var source by remember { mutableStateOf<Offset?>(null) }
     // Полёт — один раз: после поворота экрана монеты уже в кошельке.
     var landed by rememberSaveable { mutableStateOf(false) }
+    SoundOnce(if (outcome.correct) Sound.CORRECT else Sound.WRONG)
     Box(modifier = Modifier.fillMaxSize()) {
         Screen(
             onBack = onBack,

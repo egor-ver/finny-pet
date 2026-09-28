@@ -54,6 +54,8 @@ import ru.finnypet.app.ui.screens.adult.AdultExit
 import ru.finnypet.app.ui.screens.adult.AdultState
 import ru.finnypet.app.ui.screens.adult.AdultViewModel
 import ru.finnypet.app.ui.screens.adult.AwardState
+import ru.finnypet.app.ui.screens.main.SettingsView
+import ru.finnypet.app.ui.screens.main.SettingsViewModel
 import java.io.File
 
 /**
@@ -177,21 +179,30 @@ class AdultFlowTest {
         assertEquals(expected, periods.balance(period))
     }
 
+    /**
+     * Пункт A1: звук и движение переехали из раздела взрослого в окно настроек
+     * на главном, к ним добавилась мелодия. Проверка та же — переключатель
+     * пишет в те же настройки, которые слушает приложение.
+     */
     @Test
-    fun звук_и_анимации_переключаются_взрослым() = runBlocking {
-        openPeriod()
-        val model = viewModel()
-        // Начальное состояние целиком, а не наполовину: ждать один признак и
-        // утверждать про другой — та самая гонка, что уже ловили трижды.
-        await { it.soundEnabled && it.animationsEnabled }
+    fun звук_мелодия_и_движение_переключаются_в_настройках_главного() = runBlocking {
+        val model = SettingsViewModel(settings)
+        try {
+            // Начальное состояние целиком, а не наполовину: ждать один признак и
+            // утверждать про другой — та самая гонка, что уже ловили трижды.
+            withTimeout(TIMEOUT_MS) { model.state.first { it == SettingsView(sound = true, music = true, animations = true) } }
 
-        model.setSound(false)
-        model.setAnimations(false)
+            model.setSound(false)
+            model.setMusic(false)
+            model.setAnimations(false)
 
-        val off = await { !it.soundEnabled && !it.animationsEnabled }
-        assertFalse(off.soundEnabled)
-        assertFalse(off.animationsEnabled)
-        assertFalse(settings.observeSoundEnabled().first())
+            withTimeout(TIMEOUT_MS) { model.state.first { it == SettingsView(sound = false, music = false, animations = false) } }
+            assertFalse(settings.observeSoundEnabled().first())
+            assertFalse(settings.observeMusicEnabled().first())
+            assertFalse(settings.observeAnimationsEnabled().first())
+        } finally {
+            model.viewModelScope.cancel()
+        }
     }
 
     /** Переход делает экран, увидев факт: из корутины он потерялся бы при повороте. */
@@ -234,7 +245,6 @@ class AdultFlowTest {
         periods = periods,
         savings = savings,
         tasks = tasks,
-        settings = settings,
         awardBonus = AwardParentBonus(periods, WalletEngine(clock), balance),
         startDemo = StartDemo(profiles, settings),
         deleteGame = DeleteGame(profiles, settings),

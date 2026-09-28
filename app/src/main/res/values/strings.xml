@@ -177,8 +177,11 @@
     <string name="demo_exit_confirm_text">Всё, что сделано в демонстрации, сотрётся. Игра ребёнка не изменится.</string>
     <string name="demo_exit_confirm">Выйти и стереть</string>
 
-    <string name="adult_settings">Движение</string>
-    <string name="adult_animations">Движение на экране</string>
+    <!-- Окно настроек на главном (решение владельца 28.09); заголовок — и подпись шестерёнки для TalkBack -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_sound">Звуки</string>
+    <string name="settings_music">Мелодия</string>
+    <string name="settings_animations">Движение на экране</string>
 
     <!-- Итоги игрового дня (ТЗ 2.5.9, 2.5.10) -->
     <string name="day_title">Итоги дня</string>
@@ -392,4 +395,5 @@
     <string name="tutorial_where_satiety">показатель Еда</string>
     <string name="tutorial_where_mood">показатель Радость</string>
     <string name="tutorial_where_care">показатель Уход</string>
+    <string name="tutorial_where_settings">кнопка Настройки, вверху справа</string>
 </resources>
