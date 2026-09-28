@@ -28,8 +28,12 @@ enum class TutorialTarget {
  */
 data class TutorialSpot(val main: TutorialTarget, val fallback: TutorialTarget? = null)
 
-/** Шаг обучения: реплика совы из контент-пака и что подсветить. */
-data class TutorialStep(val textKey: String, val spots: List<TutorialSpot>)
+/**
+ * Шаг обучения: реплика совы из контент-пака и что подсветить. [arrow] `false` —
+ * только подсветка и облачко: к кнопке плана стрелка шла по нижней полосе
+ * кнопки задания — между ними 12 dp, обойти её негде (решение владельца 28.09).
+ */
+data class TutorialStep(val textKey: String, val spots: List<TutorialSpot>, val arrow: Boolean = true)
 
 /**
  * Шесть шагов (DESIGN_PLAN 3.4 и решение владельца 28.09). «Нужное»,
@@ -46,7 +50,7 @@ val TUTORIAL_STEPS: List<TutorialStep> = listOf(
     TutorialStep("tutorial.step.3", listOf(TutorialSpot(TutorialTarget.SATIETY), TutorialSpot(TutorialTarget.CARE))),
     TutorialStep("tutorial.step.4", listOf(TutorialSpot(TutorialTarget.MOOD))),
     TutorialStep("tutorial.step.5", listOf(TutorialSpot(TutorialTarget.SAVINGS_TILE))),
-    TutorialStep("tutorial.step.6", listOf(TutorialSpot(TutorialTarget.PLAN_BUTTON, TutorialTarget.PLAN_TILE))),
+    TutorialStep("tutorial.step.6", listOf(TutorialSpot(TutorialTarget.PLAN_BUTTON, TutorialTarget.PLAN_TILE)), arrow = false),
 )
 
 /** Следующий шаг обучения; `null` — шаги кончились, обучение закрывается. */

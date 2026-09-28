@@ -187,7 +187,7 @@ fun TutorialOverlay(
                     blendMode = BlendMode.Clear,
                 )
             }
-            if (bubble != Rect.Zero) {
+            if (bubble != Rect.Zero && TUTORIAL_STEPS[step].arrow) {
                 val nudge = sin(PI * breath.value).toFloat() * ARROW_NUDGE.toPx()
                 val from = bubble.translate(-origin)
                 cutouts.forEach { hole ->

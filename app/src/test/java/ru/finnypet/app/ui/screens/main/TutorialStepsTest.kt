@@ -55,6 +55,15 @@ class TutorialStepsTest {
         assertEquals(listOf(PLAN_TILE), TUTORIAL_STEPS.last().resolve(everything - PLAN_BUTTON))
     }
 
+    /**
+     * Решение владельца 28.09: к кнопке плана стрелка шла бы по кнопке задания
+     * (между ними 12 dp) — на шаге 6 только подсветка и облачко, у остальных стрелка есть.
+     */
+    @Test
+    fun `на шаге плана стрелки нет, на остальных есть`() {
+        assertEquals(listOf(true, true, true, true, true, false), TUTORIAL_STEPS.map { it.arrow })
+    }
+
     @Test
     fun `первый экран новой игры здоровается`() {
         assertTrue(!texts["owl.say.hello"].isNullOrBlank())

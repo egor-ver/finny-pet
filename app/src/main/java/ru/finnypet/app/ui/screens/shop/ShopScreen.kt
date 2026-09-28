@@ -73,6 +73,7 @@ import ru.finnypet.app.ui.components.icon
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.tile
 import ru.finnypet.app.ui.screens.main.JarsLeft
+import ru.finnypet.app.ui.screens.main.shownWithin
 import ru.finnypet.app.ui.theme.Dimens
 import ru.finnypet.app.ui.theme.FinnyTheme
 import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
@@ -203,7 +204,7 @@ private fun Ready(
             item(key = "header:owl") {
                 OwlBubble(owl = state.owl, phrase = state.phrase, done = done)
             }
-            state.jars?.let { jars -> item(key = "header:jars") { JarChips(jars = jars) } }
+            state.jars?.let { jars -> item(key = "header:jars") { JarChips(jars = jars.shownWithin(state.balance)) } }
             if (!state.canBuy) {
                 item(key = "header:planning") { PlanningHint(text = stringResource(R.string.shop_planning_hint), onPlan = onPlan) }
             }

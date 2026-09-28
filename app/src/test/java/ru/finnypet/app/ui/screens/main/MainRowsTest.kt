@@ -82,6 +82,28 @@ class MainRowsTest {
         )
     }
 
+    /**
+     * Решение владельца 28.09: после нужного сверх плана в кошельке 115, а по
+     * плану на желаемое ещё 120 — плашка показывает 115, не больше кошелька.
+     */
+    @Test
+    fun `плашка не показывает больше, чем в кошельке`() {
+        val jars = JarsLeft(mandatory = Coins.ZERO, optional = Coins(120), savings = Coins(130))
+
+        assertEquals(
+            JarsLeft(mandatory = Coins.ZERO, optional = Coins(115), savings = Coins(115)),
+            jars.shownWithin(Coins(115)),
+        )
+    }
+
+    /** Кошелька хватает — показанный остаток и есть остаток плана. */
+    @Test
+    fun `кошелька хватает — плашка показывает остаток плана`() {
+        val jars = JarsLeft(mandatory = Coins(24), optional = Coins(2), savings = Coins(8))
+
+        assertEquals(jars, jars.shownWithin(Coins(40)))
+    }
+
     // --- Кошелёк сегодня ---
 
     /** Раздел 8 плана: «+3 со вчера», «+35 доход дня», «+10 разбор», «−8 в копилку», «−14 каша» — в кошельке 26. */

@@ -89,7 +89,7 @@
   "day.plan.over_mandatory": "Нужное — сверх плана на {over}; желаемое — по плану.",
   "day.plan.over_optional": "Нужное — по плану; желаемое — сверх плана на {over}.",
   "day.plan.over_both": "Нужное — сверх плана на {mandatoryOver}; желаемое — сверх плана на {optionalOver}.",
-  "day.plan.no_growth": "Нужное и желаемое — по плану.",
+  "day.plan.no_growth": "Тратил по плану, но звезда будет, когда я сыт и ухожен.",
   "day.savings.kept_goal": "Копилка +{saved}: до цели «{goal}» осталось {left}.",
   "day.savings.reached": "Копилка +{saved}: цель «{goal}» собрана!",
   "day.savings.kept": "Копилка +{saved}.",

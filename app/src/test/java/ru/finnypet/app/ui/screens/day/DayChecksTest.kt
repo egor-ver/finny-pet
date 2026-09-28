@@ -1,6 +1,7 @@
 package ru.finnypet.app.ui.screens.day
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -234,18 +235,20 @@ class DayChecksTest {
     // --- Конец дня без повторов (DESIGN_PLAN 3.6) ---
 
     /**
-     * День 2 эталона: в голодный день причина нуля звучит один раз — в
-     * строке «Сыт» и строкой роста, — а строки плана и копилки её не повторяют
-     * и признают сделанное (раздел 3 плана).
+     * День 2 эталона: тратил по плану, но сова не сыта. Строка плана стоит
+     * рядом с пустым кружком и говорит, почему звезды нет (решение владельца
+     * 28.09, F4): «по плану» без причины выглядело противоречием. Копилка
+     * причину не повторяет и признаёт сделанное (раздел 3 плана).
      */
     @Test
-    fun `голодный день — строки плана и копилки не повторяют причину`() {
+    fun `голодный день — строка плана объясняет пустой кружок, копилка не повторяет причину`() {
         val checks = dayChecks(needsMet = false, report = report(plan(3, 24, 8), fact(0, 24, 8)), goalTitle = "Набор комиксов", goalLeft = Coins(22))
         val lines = checks.map { texts.textOf(it.text) }
 
-        assertEquals("Нужное и желаемое — по плану.", lines[1])
+        assertFalse(checks[1].done)
+        assertEquals("Тратил по плану, но звезда будет, когда я сыт и ухожен.", lines[1])
         assertEquals("Копилка +8 — монеты уже ближе к цели.", lines[2])
-        assertTrue(lines.drop(1).none { "незакрыт" in it || "звёзд" in it })
+        assertFalse("незакрыт" in lines[2] || "звёзд" in lines[2])
         assertEquals("Звёзды растут, только когда питомец сыт. Прогресс никуда не делся.", texts.textOf("growth.no_points"))
     }
 

@@ -635,7 +635,7 @@ private fun TileGrid(
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth()) {
             PlanTile(
-                jars = state.jars,
+                jars = state.jars?.shownWithin(state.balance),
                 onOpen = onPlan,
                 modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.PLAN_TILE),
             )
