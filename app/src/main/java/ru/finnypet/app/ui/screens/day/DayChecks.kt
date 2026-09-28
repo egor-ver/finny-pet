@@ -135,14 +135,18 @@ fun dayMood(checks: List<DayCheck>): PetMood = when {
  * Один совет в итогах (раздел 8 плана) — о первом, что не получилось, в
  * порядке строк итогов. Всё получилось, но еда обошлась дороже обычного —
  * так бывает после голодного дня — совет про еду каждый день. Иначе похвала.
+ *
+ * [goalCollected] — на активную цель уже хватает: «монета в копилку
+ * приближает цель» тогда звучит странно, совет зовёт купить цель (ревью F5).
  */
-fun dayTip(checks: List<DayCheck>, foodSpent: Coins, shop: List<ShopItem>): Explanation {
+fun dayTip(checks: List<DayCheck>, foodSpent: Coins, shop: List<ShopItem>, goalCollected: Boolean): Explanation {
     val (needs, optional, savings) = checks
     val prices = shop.filter(::isFood).map { it.price }
     val usual = prices.maxOrNull()
     return when {
         !needs.done -> Explanation("day.tip.needs_first")
         !optional.done -> Explanation("day.tip.plan")
+        !savings.done && goalCollected -> Explanation("day.tip.goal_collected")
         !savings.done -> Explanation("day.tip.savings")
         usual != null && foodSpent > usual -> Explanation(
             "day.tip.feed_daily",

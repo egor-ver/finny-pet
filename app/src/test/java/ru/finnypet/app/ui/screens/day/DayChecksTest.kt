@@ -200,11 +200,11 @@ class DayChecksTest {
         assertEquals(Coins(22), spent)
         assertEquals(
             Explanation("day.tip.feed_daily", mapOf("min" to "8", "max" to "14", "spent" to "22")),
-            dayTip(checks, spent, shop),
+            dayTip(checks, spent, shop, goalCollected = false),
         )
         assertEquals(
             "Совет: корми меня каждый день. Обычно еда стоит 8–14, а сегодня пришлось 22.",
-            texts.textOf(dayTip(checks, spent, shop)),
+            texts.textOf(dayTip(checks, spent, shop, goalCollected = false)),
         )
     }
 
@@ -214,20 +214,37 @@ class DayChecksTest {
         val over = dayChecks(true, report(plan(30, 5, 5), fact(30, 12, 0)), null, null)
         val noSavings = dayChecks(true, report(plan(30, 5, 0), fact(30, 5, 0)), null, null)
 
-        assertEquals("day.tip.needs_first", dayTip(hungry, Coins(8), shop).key)
-        assertEquals("day.tip.plan", dayTip(over, Coins(8), shop).key)
-        assertEquals("day.tip.savings", dayTip(noSavings, Coins(8), shop).key)
+        assertEquals("day.tip.needs_first", dayTip(hungry, Coins(8), shop, goalCollected = false).key)
+        assertEquals("day.tip.plan", dayTip(over, Coins(8), shop, goalCollected = false).key)
+        assertEquals("day.tip.savings", dayTip(noSavings, Coins(8), shop, goalCollected = false).key)
+    }
+
+    /**
+     * Итоги дня 2 (ревью F5): в копилке 44 при цели 40, пополнение не
+     * планировали — звезды «Отложил» нет, но «монета приближает цель» уже
+     * не про эту цель: совет зовёт её купить. Не собрана — прежний совет.
+     */
+    @Test
+    fun `копилка без звезды, а на цель уже хватает — совет купить цель`() {
+        val unplanned = dayChecks(true, report(plan(20, 0, 0), fact(14, 0, 44)), null, null)
+
+        assertEquals("day.tip.goal_collected", dayTip(unplanned, Coins(8), shop, goalCollected = true).key)
+        assertEquals("day.tip.savings", dayTip(unplanned, Coins(8), shop, goalCollected = false).key)
+        assertEquals(
+            "Совет: на цель уже хватает — её можно купить в копилке, а потом выбрать новую.",
+            texts.textOf(dayTip(unplanned, Coins(8), shop, goalCollected = true)),
+        )
     }
 
     @Test
     fun `всё выполнено и еда по обычной цене — похвала`() {
         val checks = dayChecks(true, report(plan(30, 5, 8), fact(22, 5, 8)), null, null)
-        assertEquals("day.tip.keep", dayTip(checks, Coins(14), shop).key)
+        assertEquals("day.tip.keep", dayTip(checks, Coins(14), shop, goalCollected = false).key)
     }
 
     @Test
     fun `у каждого совета есть текст`() {
-        val keys = listOf("day.tip.needs_first", "day.tip.plan", "day.tip.savings", "day.tip.feed_daily", "day.tip.keep")
+        val keys = listOf("day.tip.needs_first", "day.tip.plan", "day.tip.savings", "day.tip.goal_collected", "day.tip.feed_daily", "day.tip.keep")
         val missing = keys.filterNot(texts::containsKey)
         assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
     }

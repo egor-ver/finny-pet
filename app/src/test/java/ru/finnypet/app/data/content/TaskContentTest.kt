@@ -148,4 +148,16 @@ class TaskContentTest {
         assertTrue("Нет текста в explanations.json для ключей: $missing", missing.isEmpty())
         pack.tasks.forEach { task -> assertFalse(task.id.value, task.outcomes.all { it.correct }) }
     }
+
+    /**
+     * Тексты заданий пишут число монет прямо, без `{coins:…}`, поэтому
+     * неразрывный пробел стоит в самом контенте: «9» оставалось в конце
+     * строки, а «монет» уезжало на следующую (ревью F5).
+     */
+    @Test
+    fun `число и «монет» в текстах не разрываются`() {
+        val broken = pack.texts.filterValues { Regex("""\d монет""").containsMatchIn(it) }.keys
+        assertTrue("Обычный пробел между числом и «монет»: $broken", broken.isEmpty())
+        assertTrue(pack.texts.getValue("task.plan_school_supplies.success").contains("9\u00A0монет"))
+    }
 }

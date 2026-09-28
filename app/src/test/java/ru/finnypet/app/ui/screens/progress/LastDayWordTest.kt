@@ -30,6 +30,13 @@ class LastDayWordTest {
         assertEquals(R.string.progress_day_kept, lastDayWord(line(SpendCategory.SAVINGS, planned = 5, actual = 35)))
     }
 
+    /** Как на экране итогов (ревью F5): в копилку положили 44, не планируя, — не «по плану». */
+    @Test
+    fun `копилку не планировали, а отложили — сверх плана`() {
+        assertEquals(R.string.progress_day_over, lastDayWord(line(SpendCategory.SAVINGS, planned = 0, actual = 44)))
+        assertEquals(R.string.progress_day_kept, lastDayWord(line(SpendCategory.SAVINGS, planned = 0, actual = 0)))
+    }
+
     private fun line(category: SpendCategory, planned: Int, actual: Int) = BudgetLine(
         category = category,
         planned = Coins(planned),

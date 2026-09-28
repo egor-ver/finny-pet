@@ -3,6 +3,7 @@ package ru.finnypet.app.ui.components
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.SpendCategory
 
 /**
  * Двойная полоса итогов (DESIGN_PLAN 3.6): трек — план, заливка — факт.
@@ -44,4 +45,26 @@ class PlanFactBarsTest {
     fun `не планировали, но потратили — только заливка`() {
         assertEquals(PlanFactFractions(plan = 0f, fact = 1f), planFactFractions(Coins.ZERO, Coins(8)))
     }
+
+    /**
+     * Итоги дня 2 (ревью F5): копилку не планировали, а отложили 44 — полоса
+     * полная, и подпись «по плану» спорила со строкой «Пополнение не
+     * планировали». Сверх плана копилки — так и сказано.
+     */
+    @Test
+    fun `копилку не планировали, а отложили — сверх плана`() {
+        assertEquals(PlanFactStatus.OVER, planFactStatus(savings(planned = 0, actual = 44)))
+        assertEquals(PlanFactStatus.OK, planFactStatus(savings(planned = 0, actual = 0)))
+        assertEquals(PlanFactStatus.OK, planFactStatus(savings(planned = 5, actual = 35)))
+        assertEquals(PlanFactStatus.SHORT, planFactStatus(savings(planned = 11, actual = 5)))
+    }
+
+    @Test
+    fun `трата сверх плана — сверх плана, в пределах — по плану`() {
+        assertEquals(PlanFactStatus.OVER, planFactStatus(BudgetLine(SpendCategory.OPTIONAL, Coins(19), Coins(24), followed = false)))
+        assertEquals(PlanFactStatus.OK, planFactStatus(BudgetLine(SpendCategory.OPTIONAL, Coins(0), Coins(0), followed = true)))
+    }
+
+    private fun savings(planned: Int, actual: Int) =
+        BudgetLine(SpendCategory.SAVINGS, Coins(planned), Coins(actual), followed = actual >= planned)
 }

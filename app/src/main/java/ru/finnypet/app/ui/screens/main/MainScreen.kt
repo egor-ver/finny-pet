@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -625,6 +628,10 @@ private fun walletLabel(line: WalletLine): String {
 /**
  * Плитки 2 × 2 (DESIGN_PLAN 3.1): план и копилка сверху, рост и задания
  * снизу. Каждая нажимается целиком и ведёт на свой экран.
+ *
+ * Плитки ряда одной высоты — по самой высокой: три строки банок плана при
+ * системном шрифте чуть крупнее обычного перерастали копилку на ~5 dp, и
+ * ряд выглядел неровным (ревью F5). Высоту ряда это не меняет.
  */
 @Composable
 private fun TileGrid(
@@ -636,30 +643,30 @@ private fun TileGrid(
     onTasks: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             PlanTile(
                 jars = state.jars?.shownWithin(state.balance),
                 onOpen = onPlan,
-                modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.PLAN_TILE),
+                modifier = Modifier.weight(1f).fillMaxHeight().tutorialTarget(targets, TutorialTarget.PLAN_TILE),
             )
             SavingsTile(
                 savings = state.savings,
                 onOpen = onSavings,
-                modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.SAVINGS_TILE),
+                modifier = Modifier.weight(1f).fillMaxHeight().tutorialTarget(targets, TutorialTarget.SAVINGS_TILE),
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             GrowthTile(
                 grownMessage = state.grownMessage,
                 growthPoints = state.growthPoints,
                 growth = state.growth,
                 onOpen = onProgress,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
             )
             TasksTile(
                 task = state.task,
                 onOpen = onTasks,
-                modifier = Modifier.weight(1f).tutorialTarget(targets, TutorialTarget.TASKS_TILE),
+                modifier = Modifier.weight(1f).fillMaxHeight().tutorialTarget(targets, TutorialTarget.TASKS_TILE),
             )
         }
     }
@@ -725,7 +732,7 @@ private fun JarLeft(category: SpendCategory, left: Coins, modifier: Modifier = M
 /**
  * Копилка и цель: эмодзи цели на тарелке и мини-полоса «6/40» («Хватает!»,
  * если накоплено больше цены, — коротко, чтобы влезть в одну строку и не
- * сделать плитку выше соседней «Рост»; полная фраза — в озвучке) — без
+ * сделать плитку выше соседней плитки плана; полная фраза — в озвучке) — без
  * заголовка словами, эмодзи и так узнаётся (DESIGN_PLAN 3.1). Цели может не
  * быть — отложенные монеты всё равно видны в описании для TalkBack, строка
  * зовёт выбрать цель.

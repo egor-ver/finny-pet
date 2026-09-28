@@ -58,7 +58,9 @@ import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.PlanFactBars
+import ru.finnypet.app.ui.components.PlanFactStatus
 import ru.finnypet.app.ui.components.coinsText
+import ru.finnypet.app.ui.components.planFactStatus
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.colors
 import ru.finnypet.app.ui.components.container
@@ -304,12 +306,16 @@ private fun DayChip(line: BudgetLine) {
     }
 }
 
-/** Словом, соблюдён ли план направления: трата — не больше плана, копилка — не меньше (R3). */
+/**
+ * Словом, соблюдён ли план направления: трата — не больше плана, копилка — не
+ * меньше (R3). Тем же [planFactStatus], что и полосы итогов: одно и то же
+ * вчера не должно звучать там «сверх плана», а здесь «по плану».
+ */
 @StringRes
-internal fun lastDayWord(line: BudgetLine): Int = when {
-    line.followed -> R.string.progress_day_kept
-    line.category == SpendCategory.SAVINGS -> R.string.progress_day_short
-    else -> R.string.progress_day_over
+internal fun lastDayWord(line: BudgetLine): Int = when (planFactStatus(line)) {
+    PlanFactStatus.OK -> R.string.progress_day_kept
+    PlanFactStatus.SHORT -> R.string.progress_day_short
+    PlanFactStatus.OVER -> R.string.progress_day_over
 }
 
 /** Задания — «Пройдено 1 из 6» с чипами тем; внутри — список пройденного. */

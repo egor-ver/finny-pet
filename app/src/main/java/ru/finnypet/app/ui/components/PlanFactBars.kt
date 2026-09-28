@@ -180,16 +180,30 @@ private fun PlanFactBar(line: BudgetLine) {
     }
 }
 
+/** Итог строки словом: «по плану», «не хватает N», «сверх плана на N». */
+enum class PlanFactStatus { OK, SHORT, OVER }
+
 /**
  * Траты не соблюдены, только когда потрачено больше плана (R3), — это «сверх
  * плана». Копилку, наоборот, надо добрать до плана — там «не хватает».
+ *
+ * Копилку не планировали, а монеты в неё легли — «сверх плана», хотя по R3
+ * план копилки не нарушен: «44 из 0 · По плану» под полной полосой спорило
+ * со строкой итогов «Пополнение не планировали» (ревью F5).
  */
+fun planFactStatus(line: BudgetLine): PlanFactStatus = when {
+    line.category == SpendCategory.SAVINGS && line.planned == Coins.ZERO && line.actual > Coins.ZERO -> PlanFactStatus.OVER
+    line.followed -> PlanFactStatus.OK
+    line.category == SpendCategory.SAVINGS -> PlanFactStatus.SHORT
+    else -> PlanFactStatus.OVER
+}
+
 @Composable
 private fun statusOf(line: BudgetLine): String {
     val gap = Coins(abs(line.actual.amount - line.planned.amount))
-    return when {
-        line.followed -> stringResource(R.string.budget_status_ok)
-        line.category == SpendCategory.SAVINGS -> stringResource(R.string.budget_status_short, coinsText(gap))
-        else -> stringResource(R.string.budget_status_over, coinsText(gap))
+    return when (planFactStatus(line)) {
+        PlanFactStatus.OK -> stringResource(R.string.budget_status_ok)
+        PlanFactStatus.SHORT -> stringResource(R.string.budget_status_short, coinsText(gap))
+        PlanFactStatus.OVER -> stringResource(R.string.budget_status_over, coinsText(gap))
     }
 }

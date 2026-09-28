@@ -213,8 +213,8 @@ class DayViewModel @Inject constructor(
         val outcome = closed.outcome
         val progress = savings.activeProgress(profile.id)
         val transactions = periods.transactions(outcome.closedPeriod.id)
-        val goal = progress?.let { active -> pack.goals.firstOrNull { it.id == active.goalId } }
-            ?.takeIf { savedOnlyFor(it.id, transactions) }
+        val active = progress?.let { active -> pack.goals.firstOrNull { it.id == active.goalId } }
+        val goal = active?.takeIf { savedOnlyFor(it.id, transactions) }
         val checks = dayChecks(
             needsMet = outcome.needsMet,
             report = outcome.report,
@@ -234,7 +234,14 @@ class DayViewModel @Inject constructor(
                 description = owlDescription(texts, profile.petName, mood, eveningNeed(evening, petState)),
             ),
             checks = checks.map { DayCheckView(done = it.done, text = texts.textOf(it.text)) },
-            tip = texts.textOf(dayTip(checks, foodSpent(transactions, pack.shop), pack.shop)),
+            tip = texts.textOf(
+                dayTip(
+                    checks = checks,
+                    foodSpent = foodSpent(transactions, pack.shop),
+                    shop = pack.shop,
+                    goalCollected = active != null && progress.isReached(active),
+                ),
+            ),
             earnedPoints = closed.earnedPoints,
             growth = growthSummary(outcome.growth, balance.growthThresholds, texts, profile.petName),
             noStarsReason = texts.textOf("growth.no_points").takeUnless { checks.first().done },

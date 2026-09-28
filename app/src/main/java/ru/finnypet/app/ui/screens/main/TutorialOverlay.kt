@@ -268,8 +268,11 @@ private fun StepButtons(step: Int, onNext: () -> Unit, onSkip: () -> Unit, modif
     // Поля кнопок уже обычных: две в ряд на 328 dp, и при шрифте 1,3
     // «Пропустить» иначе не влезало бы в половину ряда одним словом.
     val padding = PaddingValues(horizontal = Dimens.SpaceSmall)
+    // Верхние края вровень, а «Пропустить» высотой с лицевую грань «Дальше»:
+    // по центру ряда объёмная «Дальше» (56 + нижняя грань 4) торчала выше и
+    // казалась крупнее рамочной в 48 dp (ревью F5).
     Row(
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = modifier
             .fillMaxWidth()
@@ -281,7 +284,10 @@ private fun StepButtons(step: Int, onNext: () -> Unit, onSkip: () -> Unit, modif
                 text = stringResource(R.string.tutorial_skip),
                 onClick = onSkip,
                 contentPadding = padding,
-                modifier = Modifier.weight(1f).semantics { traversalIndex = 1f },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = Dimens.ButtonHeight)
+                    .semantics { traversalIndex = 1f },
             )
         }
         FinnyButton(
