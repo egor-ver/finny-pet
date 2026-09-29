@@ -29,6 +29,12 @@ android {
 
     buildTypes {
         release {
+            // К этапу 7.1 заказчику достаточно обычной сборки (ответ на вопрос 13), а
+            // release без отладочного режима заметно плавнее debug. Свой ключ — к финалу
+            // (ТЗ 3.3); ключ и пароли в репозиторий не кладём (ТЗ 8.2), поэтому пока
+            // подписываем отладочным ключом этого компьютера.
+            signingConfig = signingConfigs.getByName("debug")
+            // R8 не включаем: накануне сдачи риск сломать Hilt, Room и kotlinx.serialization.
             optimization {
                 enable = false
             }
