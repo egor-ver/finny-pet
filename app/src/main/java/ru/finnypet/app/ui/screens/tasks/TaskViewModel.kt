@@ -140,7 +140,11 @@ sealed interface TaskStage {
         val index: Int,
         val total: Int,
         val step: StepView,
-    ) : TaskStage
+    ) : TaskStage {
+
+        /** «Шаг 1 из 1» ничего не сообщает — счётчик только у заданий из нескольких шагов. */
+        val counted: Boolean get() = total > 1
+    }
 
     data class Done(val outcome: TaskOutcomeView) : TaskStage
 }
@@ -168,6 +172,8 @@ sealed interface TaskState {
          * (R8). Сообщается до старта, не после.
          */
         val rewardAvailable: Boolean,
+        /** Лимит наград дня выбран — без монет любое задание, а не только это. */
+        val limitReached: Boolean,
         val stage: TaskStage,
         /** Ответ отправлен и разбирается. */
         val submitting: Boolean = false,
@@ -431,6 +437,7 @@ class TaskViewModel @Inject constructor(
             balance = wallet,
             maxReward = task.maxReward,
             rewardAvailable = TaskSchedule.rewardable(task.id, completed, transactions, balance),
+            limitReached = !TaskSchedule.rewardAvailable(transactions, balance),
             stage = stageOf(task, current),
             submitting = current.submitting,
         )

@@ -45,10 +45,21 @@ object TaskSchedule {
      * секундами, правило работает так же. Оба времени — от одних часов.
      */
     fun triedToday(taskId: TaskId, completed: List<CompletedTask>, transactions: List<Transaction>): Boolean {
-        val dayStart = transactions.filter { it.type == TransactionType.INCOME_PERIOD }.minOfOrNull { it.createdAt }
-            ?: return false
+        val dayStart = dayStart(transactions) ?: return false
         return completed.any { it.taskId == taskId && it.completedAt >= dayStart }
     }
+
+    /**
+     * Сегодня пробовали, но верно ещё не решили — после ошибки главный зовёт
+     * на это же задание уже без награды (ревью F7): иначе ошибка прятала бы
+     * кнопку до завтра, а разбор, которого нет в списке заданий, пропадал бы
+     * совсем.
+     */
+    fun unsolvedToday(task: LearningTask, completed: List<CompletedTask>, transactions: List<Transaction>): Boolean =
+        triedToday(task.id, completed, transactions) && !solvedToday(task, completed, transactions)
+
+    private fun dayStart(transactions: List<Transaction>): Long? =
+        transactions.filter { it.type == TransactionType.INCOME_PERIOD }.minOfOrNull { it.createdAt }
 
     /** Обычные задания: разбор не в списке, не в счётчиках и не в минимуме ТЗ 2.6 (AD-7). */
     fun listed(tasks: List<LearningTask>): List<LearningTask> = tasks.filterNot { it.isReview }
@@ -65,11 +76,16 @@ object TaskSchedule {
      *
      * Разбор — первым, пока сова грустит из-за своего показателя или если его
      * уже начали сегодня: иначе он пропадал бы, стоило покормить сову между
-     * попытками (R9). Дальше — обычные задания, которые сегодня ещё не
-     * проходили: неверный ответ не тратит лимит, и монеты можно заработать на
-     * другом. Среди них первое непройденное в порядке списка (темы ТЗ 2.5.8,
-     * внутри темы — порядок контент-пака), а когда пройдены все — то, которое
-     * верно проходили давнее всех. Замков нет — это только подсказка.
+     * попытками (R9). Решённый сегодня верно разбор уходит — иначе кнопка
+     * весь день вела бы в уже решённое.
+     *
+     * Дальше — обычные задания. Выполнено только верно (решение владельца
+     * 29.09), поэтому после ошибки возвращается это же задание — сегодня и в
+     * следующие дни, пока его не решат. Иначе ребёнок уходил бы на другое, а
+     * нерешённое всплывало снова. Нерешённых начатых нет — первое непройденное
+     * в порядке списка (темы ТЗ 2.5.8, внутри темы — порядок контент-пака), а
+     * когда пройдены все — то, которое верно проходили давнее всех. Замков
+     * нет — это только подсказка.
      */
     fun taskOfTheDay(
         tasks: List<LearningTask>,
@@ -80,16 +96,24 @@ object TaskSchedule {
     ): LearningTask? {
         tasks.firstOrNull { review ->
             val stat = review.showWhenSadAbout ?: return@firstOrNull false
-            pet.statFor(stat) < Stat(balance.sadThreshold) || triedToday(review.id, completed, transactions)
+            val wanted = pet.statFor(stat) < Stat(balance.sadThreshold) || triedToday(review.id, completed, transactions)
+            wanted && !solvedToday(review, completed, transactions)
         }?.let { return it }
 
         val ordered = listed(tasks).sortedBy { it.topic.ordinal }
         if (ordered.isEmpty()) return null
-        val fresh = ordered.filterNot { triedToday(it.id, completed, transactions) }.ifEmpty { ordered }
         val lastPassed = correctPasses(tasks, completed)
             .groupBy { it.taskId }
             .mapValues { (_, passes) -> passes.maxOf { it.completedAt } }
-        return fresh.firstOrNull { it.id !in lastPassed } ?: fresh.minBy { lastPassed.getValue(it.id) }
+        val unsolved = ordered.filterNot { it.id in lastPassed }
+        if (unsolved.isEmpty()) return ordered.minBy { lastPassed.getValue(it.id) }
+        val lastTry = completed.groupBy { it.taskId }.mapValues { (_, tries) -> tries.maxOf { it.completedAt } }
+        return unsolved.filter { it.id in lastTry }.maxByOrNull { lastTry.getValue(it.id) } ?: unsolved.first()
+    }
+
+    private fun solvedToday(task: LearningTask, completed: List<CompletedTask>, transactions: List<Transaction>): Boolean {
+        val dayStart = dayStart(transactions) ?: return false
+        return correctPasses(listOf(task), completed).any { it.completedAt >= dayStart }
     }
 
     private fun correctPasses(tasks: List<LearningTask>, completed: List<CompletedTask>): List<CompletedTask> {

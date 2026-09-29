@@ -37,6 +37,25 @@ class NextStepTest {
     }
 
     /**
+     * Ревью F7: после ошибки награды сегодня уже нет, но кнопка задания
+     * остаётся — ведёт на это же задание (и на разбор, которого нет в списке).
+     * Без «+10» сова говорит утреннюю фразу, а не зовёт за наградой.
+     */
+    @Test
+    fun `сегодня ошиблись в задании — кнопка задания без награды`() {
+        assertEquals(NextStep.Task, step(PeriodStatus.PLANNING, taskUnsolved = true))
+        assertEquals(NextStep.Plan, step(PeriodStatus.PLANNING, taskUnsolved = false))
+        assertEquals(Explanation("owl.say.morning", mapOf("income" to "35")), phrase(NextStep.Task))
+    }
+
+    /** План подтверждён — день ведут потребности совы, нерешённое задание кнопку не занимает. */
+    @Test
+    fun `после плана нерешённое задание кнопку не меняет`() {
+        assertEquals(NextStep.Shop, step(PeriodStatus.RUNNING, hasNeeds = true, taskUnsolved = true))
+        assertEquals(NextStep.Sleep, step(PeriodStatus.RUNNING, taskUnsolved = true))
+    }
+
+    /**
      * Все задания пройдены, а награда ещё ждёт — сова зовёт повторить: «6 из 6»
      * на плитке и «+10» на кнопке иначе выглядели ошибкой (ревью F4-fix).
      * Награда та же.
@@ -383,7 +402,8 @@ class NextStepTest {
         hasNeeds: Boolean = false,
         wallet: Int = 50,
         taskReward: Int? = null,
-    ) = nextStep(status, hasNeeds, Coins(wallet), CHEAPEST_NEEDED, taskReward?.let(::Coins))
+        taskUnsolved: Boolean = false,
+    ) = nextStep(status, hasNeeds, Coins(wallet), CHEAPEST_NEEDED, taskReward?.let(::Coins), taskUnsolved)
 
     private fun phrase(
         step: NextStep,

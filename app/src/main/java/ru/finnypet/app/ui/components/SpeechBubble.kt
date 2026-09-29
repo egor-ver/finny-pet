@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -65,7 +66,11 @@ fun SpeechBubble(owl: OwlLook, text: String, modifier: Modifier = Modifier) {
  * сове под ней, а не в сторону, как у [SpeechBubble].
  */
 @Composable
-fun TopSpeechBubble(text: String, modifier: Modifier = Modifier) {
+fun TopSpeechBubble(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodyLarge,
+) {
     val shape = RoundedCornerShape(Dimens.CornerCard)
     val shadowColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
     val surface = MaterialTheme.colorScheme.surface
@@ -78,7 +83,7 @@ fun TopSpeechBubble(text: String, modifier: Modifier = Modifier) {
                 .background(surface)
                 .padding(horizontal = Dimens.Space, vertical = Dimens.SpaceMedium),
         ) {
-            Text(text = text, style = MaterialTheme.typography.bodyLarge)
+            Text(text = text, style = style)
         }
         Canvas(
             modifier = Modifier

@@ -152,13 +152,86 @@ class TaskScheduleTest {
         assertEquals(TaskId("save"), dayTask(tasks, listOf(passed("plan", 1)))?.id)
     }
 
-    /** Неверный ответ лимит не тратит: монеты можно заработать на другом задании. */
+    /**
+     * Решение владельца 29.09: выполнено — только верный ответ, после ошибки
+     * возвращается это же задание, пока не будет решено. Раньше кнопка
+     * уводила на другое, и нерешённое всплывало снова на следующий день.
+     */
     @Test
-    fun `после ошибки задание дня — другое задание`() {
+    fun `после ошибки задание дня — то же задание`() {
         val tasks = listOf(task("a"), task("b"))
         val wrongToday = listOf(passed("a", DAY_START + 5, outcome = "otherwise"))
 
-        assertEquals(TaskId("b"), dayTask(tasks, wrongToday, today)?.id)
+        assertEquals(TaskId("a"), dayTask(tasks, wrongToday, today)?.id)
+    }
+
+    /** Ревью F7: то, что главный кладёт в TaskOfDay.unsolvedToday, — кнопка задания после ошибки. */
+    @Test
+    fun `сегодня ошиблись и не решили — задание нерешённое сегодня`() {
+        val a = task("a")
+        val wrongToday = listOf(passed("a", DAY_START + 5, outcome = "otherwise"))
+
+        assertTrue(TaskSchedule.unsolvedToday(a, wrongToday, today))
+        assertFalse("ещё не пробовали", TaskSchedule.unsolvedToday(a, emptyList(), today))
+        assertFalse("решили после ошибки", TaskSchedule.unsolvedToday(a, wrongToday + passed("a", DAY_START + 9), today))
+        assertFalse("ошибка вчера", TaskSchedule.unsolvedToday(a, listOf(passed("a", DAY_START - 5, outcome = "otherwise")), today))
+    }
+
+    /** Разбор после ошибки: он же задание дня и он же нерешённый сегодня — кнопка на главном ведёт в него. */
+    @Test
+    fun `разбор с ошибкой сегодня — задание дня и нерешённое сегодня`() {
+        val review = task("review", review = true)
+        val tasks = listOf(task("a"), review)
+        val wrong = listOf(passed("review", DAY_START + 5, outcome = "otherwise"))
+
+        val day = dayTask(tasks, wrong, today, pet = fed)
+        assertEquals(TaskId("review"), day?.id)
+        assertTrue(TaskSchedule.unsolvedToday(day!!, wrong, today))
+    }
+
+    @Test
+    fun `нерешённое задание остаётся заданием дня и назавтра`() {
+        val tasks = listOf(task("a"), task("b"))
+        val wrongYesterday = listOf(passed("a", DAY_START - 5, outcome = "otherwise"))
+
+        assertEquals(TaskId("a"), dayTask(tasks, wrongYesterday, today)?.id)
+    }
+
+    /** Ошибка в задании из середины списка — возвращается оно, а не первое непройденное. */
+    @Test
+    fun `после ошибки не по порядку списка возвращается то задание где ошиблись`() {
+        val tasks = listOf(task("a"), task("b"), task("c"))
+        val wrongOnC = listOf(passed("c", DAY_START + 5, outcome = "otherwise"))
+
+        assertEquals(TaskId("c"), dayTask(tasks, wrongOnC, today)?.id)
+    }
+
+    @Test
+    fun `после верного ответа — следующее непройденное по списку`() {
+        val tasks = listOf(task("a"), task("b"), task("c"))
+        val completed = listOf(
+            passed("a", DAY_START + 1, outcome = "otherwise"),
+            passed("a", DAY_START + 5),
+        )
+
+        assertEquals(TaskId("b"), dayTask(tasks, completed, today)?.id)
+    }
+
+    /** Пройденное не предлагается, пока есть непройденные, — даже если его пробовали позже всех. */
+    @Test
+    fun `пройденное с поздней ошибкой не возвращается пока есть непройденные`() {
+        val tasks = listOf(task("a"), task("b"))
+        val completed = listOf(passed("a", 10), passed("a", DAY_START + 5, outcome = "otherwise"))
+
+        assertEquals(TaskId("b"), dayTask(tasks, completed, today)?.id)
+    }
+
+    @Test
+    fun `все пройдены и последнюю попытку провалили — всё равно давнее всех`() {
+        val tasks = listOf(task("a"), task("b"))
+        val completed = listOf(passed("a", 10), passed("b", 20), passed("b", DAY_START + 5, outcome = "otherwise"))
+
+        assertEquals(TaskId("a"), dayTask(tasks, completed, today)?.id)
     }
 
     @Test
@@ -195,6 +268,27 @@ class TaskScheduleTest {
         val triedReview = listOf(passed("review", DAY_START + 5, outcome = "otherwise"))
 
         assertEquals(TaskId("review"), dayTask(tasks, triedReview, today, pet = fed)?.id)
+    }
+
+    /** Разбор решён верно — кнопка главного больше не ведёт в него весь день. */
+    @Test
+    fun `верно пройденный сегодня разбор больше не задание дня`() {
+        val tasks = listOf(task("a"), task("review", review = true))
+        val solved = listOf(
+            passed("review", DAY_START + 1, outcome = "otherwise"),
+            passed("review", DAY_START + 5),
+        )
+
+        assertEquals(TaskId("a"), dayTask(tasks, solved, today, pet = fed)?.id)
+        assertEquals(TaskId("a"), dayTask(tasks, solved, today, pet = hungry)?.id)
+    }
+
+    @Test
+    fun `вчера решённый разбор голодной сове предлагается снова`() {
+        val tasks = listOf(task("a"), task("review", review = true))
+        val solvedYesterday = listOf(passed("review", DAY_START - 5))
+
+        assertEquals(TaskId("review"), dayTask(tasks, solvedYesterday, today, pet = hungry)?.id)
     }
 
     @Test

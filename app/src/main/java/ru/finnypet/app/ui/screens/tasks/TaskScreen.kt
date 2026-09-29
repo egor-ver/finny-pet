@@ -50,7 +50,9 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -197,7 +199,7 @@ private fun Screen(
 
 /**
  * Вступление: сова просит совета. Правило дня — здесь, до первого шага:
- * если монеты за сегодня получены, ребёнок узнаёт об этом до того, как
+ * если за это задание сегодня без монет, ребёнок узнаёт об этом до того, как
  * вложит усилия. По центру высоты: четыре блока, прижатые к верху,
  * оставляли над кнопкой пустую половину экрана (DESIGN_PLAN 1, №6).
  */
@@ -232,7 +234,7 @@ private fun Intro(
             )
         }
         SpeechBubble(owl = state.owl, owlRole = OwlRole.Dialog) {
-            Text(text = state.intro, style = MaterialTheme.typography.bodyLarge)
+            Text(text = state.intro, style = MaterialTheme.typography.bodyLarge.wholeWords())
         }
         // Баланс на главном другой, чем в истории: без этой строки ребёнок
         // принимает монеты задания за свои.
@@ -245,7 +247,7 @@ private fun Intro(
                 modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
             )
         } else {
-            BulbNote(text = stringResource(R.string.task_training_note))
+            BulbNote(text = stringResource(noCoinsNote(state.limitReached)))
         }
     }
 }
@@ -276,9 +278,12 @@ private fun Step(
     // остатка над кнопкой. Свой набор на каждый шаг, чтобы движение ползунка
     // одного шага не досталось следующему.
     val drafts = key(stage.index) { rememberPlanDrafts() }
+    // Без кошелька в шапке: на шаге ребёнок считает монеты истории, и свой
+    // баланс рядом путался с ними («40» в шапке при комиксах за 40 в
+    // вопросе). Кошелёк есть на вступлении — рядом с плашкой «история
+    // понарошку» — и в итоге, куда летит награда.
     Screen(
         onBack = onBack,
-        balance = state.balance,
         bottomBar = {
             ButtonColumn {
                 // Счётчик закреплён над «Ответить», как на плане дня (DESIGN_PLAN
@@ -295,12 +300,14 @@ private fun Step(
             }
         },
     ) {
-        Text(
-            text = stringResource(R.string.task_step, stage.index + 1, stage.total),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = stage.step.prompt, style = MaterialTheme.typography.titleMedium)
+        if (stage.counted) {
+            Text(
+                text = stringResource(R.string.task_step, stage.index + 1, stage.total),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(text = stage.step.prompt, style = MaterialTheme.typography.titleMedium.wholeWords())
 
         when (val step = stage.step) {
             is StepView.Choice -> step.options.forEach { option ->
@@ -354,7 +361,7 @@ private fun OptionRow(option: OptionView, selected: Boolean, onClick: () -> Unit
         Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
             Text(
                 text = option.label,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.wholeWords(),
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             )
             if (selected) {
@@ -564,7 +571,7 @@ private fun Done(
                     .fillMaxWidth()
                     .semantics { heading() },
             )
-            TopSpeechBubble(text = outcome.text)
+            TopSpeechBubble(text = outcome.text, style = MaterialTheme.typography.bodyLarge.wholeWords())
             Box(contentAlignment = Alignment.Center, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                 Owl(look = state.owl, size = OwlRole.TaskResult.size, reactOnAppear = outcome.correct)
                 if (outcome.correct) Sparkles(modifier = Modifier.matchParentSize())
@@ -601,6 +608,14 @@ private fun Done(
         }
     }
 }
+
+/**
+ * Текст истории без переносов внутри слова: вопрос, варианты и объяснения
+ * идут во всю ширину, целое слово на следующей строке помещается, а
+ * «Спин-нер» ребёнок 7–11 лет читает как два слова (F7). Названия товаров
+ * на полке — в половине ширины, там переносы остаются.
+ */
+private fun TextStyle.wholeWords(): TextStyle = copy(hyphens = Hyphens.None)
 
 /**
  * Звёздочки-искры вокруг совы при «Верно!» (DESIGN_PLAN 3.8, `Celebrate`):

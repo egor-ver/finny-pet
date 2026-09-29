@@ -1,5 +1,6 @@
 package ru.finnypet.app.ui.screens.tasks
 
+import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.LearningTask
 import ru.finnypet.app.domain.model.PetMood
@@ -38,3 +39,11 @@ fun taskMood(correct: Boolean): PetMood = if (correct) PetMood.HAPPY else PetMoo
 /** Наибольшая награда за верный исход — «до +10» на вступлении и «+10» в списке. */
 val LearningTask.maxReward: Coins
     get() = outcomes.filter { it.correct }.maxOf { it.reward }
+
+/**
+ * Почему за задание сегодня без монет (R8). После ошибки утром монет не
+ * давали, и «монеты получены» было бы неправдой — там без монет только
+ * это задание, а за другое ещё заплатят (ревью F7).
+ */
+fun noCoinsNote(limitReached: Boolean): Int =
+    if (limitReached) R.string.task_training_note else R.string.task_retry_note

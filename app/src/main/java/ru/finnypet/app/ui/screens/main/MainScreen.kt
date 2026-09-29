@@ -75,6 +75,7 @@ import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.needLabel
 import ru.finnypet.app.ui.components.starsText
+import ru.finnypet.app.ui.screens.tasks.noCoinsNote
 import ru.finnypet.app.ui.sound.Sound
 import ru.finnypet.app.ui.sound.SoundOnce
 import ru.finnypet.app.ui.theme.Dimens
@@ -406,7 +407,7 @@ private fun DayButtons(
     val onSecondary: () -> Unit
     when (step) {
         NextStep.Task -> {
-            main = taskText; onMain = onTask; reward = task?.reward
+            main = taskText; onMain = onTask; reward = task?.reward?.takeIf { task.rewardAvailable }
             secondary = planText; onSecondary = onPlan
         }
         NextStep.Shop -> {
@@ -896,7 +897,7 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
     if (task == null) return
     val title = stringResource(R.string.tasks_title)
     val progress = stringResource(R.string.main_tasks_progress, task.completedCount, task.totalCount)
-    val reward = stringResource(if (task.rewardAvailable) R.string.main_task_reward else R.string.main_task_reward_taken)
+    val reward = stringResource(tileRewardText(task))
     val spoken = if (task.allDone) {
         val repeat = if (task.rewardAvailable) " $reward" else ""
         "$title: $progress. ${stringResource(R.string.main_task_all_done)}$repeat"
@@ -929,11 +930,21 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-            } else {
+            } else if (task.limitReached) {
                 Icon(imageVector = FinnyIcons.Check, contentDescription = null)
             }
         }
     }
+}
+
+/**
+ * Что плитка говорит про монеты. Галочка «получено» — только при выбранном
+ * лимите: после ошибки утром монет не давали, без них лишь это задание (R8).
+ */
+internal fun tileRewardText(task: TaskOfDay): Int = when {
+    task.rewardAvailable -> R.string.main_task_reward
+    task.limitReached -> R.string.main_task_reward_taken
+    else -> noCoinsNote(limitReached = false)
 }
 
 private val PetStatKind.tutorialTarget: TutorialTarget

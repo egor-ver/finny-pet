@@ -97,6 +97,35 @@ class ContentTextTest {
         assertEquals("Дадут 10${NBSP}монет.", words.textOf(Explanation("rest", mapOf("reward" to "10"))))
     }
 
+    /**
+     * F7: число прямо в тексте истории («{coins:40}», «{days:2}») согласуется
+     * тем же правилом, что и число из домена, — «1 день», «2 дня», «5 дней».
+     */
+    @Test
+    fun `число в тексте истории склоняется со словом`() {
+        val words = mapOf(
+            "story" to "Коплю на комиксы за {coins:40}, будут через {days:2}, а не {days:1} и не {days:5}. Монета: {coins:21}.",
+            "word.coins.ONE" to "монета",
+            "word.coins.FEW" to "монеты",
+            "word.coins.MANY" to "монет",
+            "word.days.ONE" to "день",
+            "word.days.FEW" to "дня",
+            "word.days.MANY" to "дней",
+        )
+
+        assertEquals(
+            "Коплю на комиксы за 40${NBSP}монет, будут через 2${NBSP}дня, а не 1${NBSP}день и не 5${NBSP}дней. Монета: 21${NBSP}монета.",
+            words.textOf("story"),
+        )
+    }
+
+    @Test
+    fun `число в тексте склоняется и в объяснении с аргументами`() {
+        val words = mapOf("k" to "Дадут {coins:reward}, а было {coins:3}.", "word.coins.FEW" to "монеты", "word.coins.MANY" to "монет")
+
+        assertEquals("Дадут 10${NBSP}монет, а было 3${NBSP}монеты.", words.textOf(Explanation("k", mapOf("reward" to "10"))))
+    }
+
     @Test
     fun `не число в месте для монет остаётся как есть`() {
         assertEquals("Цена: много.", mapOf("x" to "Цена: {coins:p}.").textOf(Explanation("x", mapOf("p" to "много"))))

@@ -35,6 +35,8 @@ sealed interface NextStep {
  *
  * [taskReward] — награда за задание, если её сегодня ещё не забрали;
  * `null` вне зависимости от фазы значит «кнопка задания не нужна».
+ * [taskUnsolved] — задание дня сегодня пробовали и не решили: кнопка
+ * остаётся и без награды, чтобы ошибку можно было исправить сразу (ревью F7).
  */
 fun nextStep(
     status: PeriodStatus,
@@ -42,8 +44,9 @@ fun nextStep(
     wallet: Coins,
     cheapestNeeded: Coins?,
     taskReward: Coins? = null,
+    taskUnsolved: Boolean = false,
 ): NextStep {
-    if (status == PeriodStatus.PLANNING) return if (taskReward != null) NextStep.Task else NextStep.Plan
+    if (status == PeriodStatus.PLANNING) return if (taskReward != null || taskUnsolved) NextStep.Task else NextStep.Plan
     val canBuy = cheapestNeeded != null && wallet.covers(cheapestNeeded)
     return if (hasNeeds && canBuy) NextStep.Shop else NextStep.Sleep
 }

@@ -396,6 +396,7 @@ class ScreensTest {
             rewardAvailable = false,
             allDone = true,
             reward = Coins(10),
+            limitReached = true,
         )
         showMain(readyState(task = task))
 
@@ -760,7 +761,8 @@ class ScreensTest {
         )
         showTask(taskReady(stage = TaskStage.Step(index = 0, total = 1, step = step)), onChoose = { chosen = it }, onNext = { next = true })
 
-        scrollToText(text(R.string.task_step, 1, 1))
+        // F7: у задания из одного шага счётчика «Шаг 1 из 1» нет.
+        compose.onNodeWithText(text(R.string.task_step, 1, 1)).assertDoesNotExist()
         scrollToText(text(R.string.task_selected))
         // Состояние «выбрано» доступно и озвучке, не только словом.
         compose.onNodeWithText("Отложить").assertIsSelected()
@@ -898,6 +900,7 @@ class ScreensTest {
         balance = Coins(40),
         maxReward = Coins(15),
         rewardAvailable = rewardAvailable,
+        limitReached = !rewardAvailable,
         stage = stage,
     )
 

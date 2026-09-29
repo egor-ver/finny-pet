@@ -3,6 +3,7 @@ package ru.finnypet.app.ui.screens.main
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import ru.finnypet.app.R
 import ru.finnypet.app.domain.model.BudgetPlan
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.GoalId
@@ -11,6 +12,8 @@ import ru.finnypet.app.domain.model.ItemId
 import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetGrowth
+import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.TaskTopic
 import ru.finnypet.app.domain.model.Transaction
 import ru.finnypet.app.domain.model.TransactionType
 import ru.finnypet.app.ui.components.GrowthView
@@ -161,6 +164,18 @@ class MainRowsTest {
             listOf(TransactionType.INCOME_PERIOD, TransactionType.INCOME_TASK),
             walletLines(Coins.ZERO, listOf(second, first)) { null }.map { it.type },
         )
+    }
+
+    // --- Плитка «Задания» ---
+
+    /** Ревью F7: галочка и «получено» — только когда монеты за сегодня правда дали. */
+    @Test
+    fun `плитка заданий — «получено» только при выбранном лимите`() {
+        val task = TaskOfDay(TaskId("a"), TaskTopic.SAVING, rewardAvailable = true, allDone = false, reward = Coins(10))
+
+        assertEquals(R.string.main_task_reward, tileRewardText(task))
+        assertEquals(R.string.task_retry_note, tileRewardText(task.copy(rewardAvailable = false, unsolvedToday = true)))
+        assertEquals(R.string.main_task_reward_taken, tileRewardText(task.copy(rewardAvailable = false, limitReached = true)))
     }
 
     private companion object {

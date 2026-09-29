@@ -67,7 +67,7 @@ data class SavingsView(
 data class TaskOfDay(
     val id: TaskId,
     val topic: TaskTopic,
-    /** Остался ли на сегодня лимит наград: «+10» или галочка «получено». */
+    /** Платят ли сегодня за это задание (R8): «+10» на плитке и кнопке. */
     val rewardAvailable: Boolean,
     /** Все задания уже пройдены — предлагается повторить давнее всех. */
     val allDone: Boolean,
@@ -76,6 +76,10 @@ data class TaskOfDay(
     /** Пройдено заданий из общего числа — плитка «Задания» на главном: «2 из 6». */
     val completedCount: Int = 0,
     val totalCount: Int = 0,
+    /** Сегодня пробовали и ещё не решили — кнопка задания без «+10» ведёт на него же. */
+    val unsolvedToday: Boolean = false,
+    /** Лимит наград дня выбран — галочка «получено»; иначе без «+10» только это задание. */
+    val limitReached: Boolean = false,
 )
 
 /**
@@ -210,6 +214,7 @@ class MainViewModel @Inject constructor(
                         wallet = wallet,
                         cheapestNeeded = cheapestNeeded,
                         taskReward = taskReward,
+                        taskUnsolved = task?.unsolvedToday == true,
                     )
                     val event = eventOf(transactions)
                     val jars = jarsLeft(period.status, plan, periodEngine.factOf(transactions))
@@ -287,6 +292,8 @@ class MainViewModel @Inject constructor(
             reward = balance.taskReward,
             completedCount = done.size,
             totalCount = listed.size,
+            unsolvedToday = TaskSchedule.unsolvedToday(task, completed, transactions),
+            limitReached = !TaskSchedule.rewardAvailable(transactions, balance),
         )
     }
 

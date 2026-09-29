@@ -344,12 +344,13 @@
     <string name="task_story_note">Это история понарошку: монеты в ней не из твоего кошелька. Настоящие монеты — только награда.</string>
     <string name="task_start_training">Потренироваться</string>
     <string name="task_training_note">Монеты за сегодня уже получены — это задание без монет, для тренировки.</string>
+    <string name="task_retry_note">За это задание сегодня монет уже не будет — это тренировка.</string>
     <string name="task_reward_upto">до +%1$d</string>
     <string name="task_reward_upto_spoken">Наибольшая награда — %1$s</string>
     <string name="task_step">Шаг %1$d из %2$d</string>
     <string name="task_next">Дальше</string>
     <string name="task_answer">Ответить</string>
-    <string name="task_budget">Монет на этот шаг</string>
+    <string name="task_budget">Монет в задании</string>
     <string name="task_basket">В корзине</string>
     <string name="task_basket_progress">В корзине %1$s из %2$d</string>
     <string name="task_pick">Взять</string>

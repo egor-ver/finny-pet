@@ -165,6 +165,7 @@ class DesignSystemTest {
         balance = Coins(40),
         maxReward = Coins(15),
         rewardAvailable = true,
+        limitReached = false,
         stage = TaskStage.Step(index = 0, total = 1, step = step),
     )
 
