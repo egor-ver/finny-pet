@@ -11,8 +11,6 @@
 ![minSdk](https://img.shields.io/badge/minSdk-26-informational)
 
 <a href="https://github.com/egor-ver/finny-pet/releases/latest"><img src="https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C_APK-Android_8.0%2B-2FA36B?style=for-the-badge&logo=android&logoColor=white&labelColor=1F7A53" alt="Скачать APK" width="500"></a>
-<br>
-<a href="https://disk.yandex.ru/d/TazEoGeKo9W6QQ"><img src="https://img.shields.io/badge/%D0%97%D0%B5%D1%80%D0%BA%D0%B0%D0%BB%D0%BE_APK-%D0%AF%D0%BD%D0%B4%D0%B5%D0%BA%D1%81_%D0%94%D0%B8%D1%81%D0%BA-FC3F1D?style=for-the-badge&labelColor=B22E14&logo=yandexcloud&logoColor=white" alt="Зеркало APK на Яндекс Диске" width="490"></a>
 
 <img src="docs/screenshots/02-main.png" width="240" alt="Главный экран: сова, показатели, плитки плана, копилки, роста и заданий">&nbsp;
 <img src="docs/screenshots/04-plan.png" width="240" alt="План на день: монеты раскладываются по банкам">&nbsp;
@@ -134,8 +132,7 @@
 `app/build.gradle.kts`), выровняем с тегом к финалу.
 Сервера нет, игра полностью офлайн; ИИ и машинное обучение не применяются.
 
-**Готовый APK:** [последний релиз](https://github.com/egor-ver/finny-pet/releases/latest) ·
-[зеркало на Яндекс Диске](https://disk.yandex.ru/d/TazEoGeKo9W6QQ) или сборка по инструкции ниже.
+**Готовый APK:** [последний релиз](https://github.com/egor-ver/finny-pet/releases/latest) или сборка по инструкции ниже.
 
 Нужны Android SDK с платформой **android-37.1** и JDK 21 (Gradle подтянет его сам
 или возьмёт JBR из Android Studio **2026.1.1+**).
