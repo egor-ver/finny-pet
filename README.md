@@ -55,8 +55,8 @@ flowchart LR
 
 | | | |
 |:-:|:-:|:-:|
-| <img src="docs/screenshots/01-create.png" width="240" alt="Создание питомца"> | <img src="docs/screenshots/02-main.png" width="240" alt="Главный экран"> | <img src="docs/screenshots/03-tutorial.png" width="240" alt="Обучение"> |
-| Создание: окрас, аксессуар, имена | Главный: сова, показатели, план, цель | Обучение: сова со стрелкой |
+| <img src="docs/screenshots/01-create.png" width="240" alt="Создание питомца"> | <img src="docs/screenshots/02-main.png" width="240" alt="Главный экран"> | <img src="docs/screenshots/03-settings.png" width="240" alt="Окно настроек"> |
+| Создание: окрас, аксессуар, имена | Главный: сова, показатели, план, цель | Настройки: звуки, мелодия, движение |
 | <img src="docs/screenshots/04-plan.png" width="240" alt="План на день"> | <img src="docs/screenshots/05-shop.png" width="240" alt="Магазин"> | <img src="docs/screenshots/06-savings.png" width="240" alt="Копилка"> |
 | План: монеты по трём банкам | Магазин: «потрачено 14 из 29» | Копилка: цель собрана |
 | <img src="docs/screenshots/07-task.png" width="240" alt="Задание"> | <img src="docs/screenshots/08-day-end.png" width="240" alt="Итоги дня"> | <img src="docs/screenshots/09-progress.png" width="240" alt="Мой прогресс"> |
@@ -64,8 +64,8 @@ flowchart LR
 | <img src="docs/screenshots/10-adult.png" width="240" alt="Раздел для взрослого"> | | |
 | Раздел взрослого: темы и советы | | |
 
-Снимки с телефона Vivo (720×1600, ширина 384 dp). Звук, мелодия и движение
-включаются шестерёнкой рядом с «?» на главном.
+Снимки с телефона Vivo (720×1600, ширина 384 dp). Окно настроек открывается
+шестерёнкой рядом с «?» на главном; «?» заново запускает обучение.
 
 ## Статус на 29.09
 
