@@ -72,6 +72,7 @@ import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.label
+import ru.finnypet.app.ui.components.shortageLine
 import ru.finnypet.app.ui.components.tile
 import ru.finnypet.app.ui.screens.main.JarsLeft
 import ru.finnypet.app.ui.sound.Sound
@@ -179,7 +180,9 @@ private fun Ready(
     val done = state.outcome as? PurchaseOutcome.Done
     // Итог покупки — в облачке совы наверху списка. Купили снизу — облачко
     // за краем, и ребёнок не видит, что изменилось: после полёта монет
-    // список сам возвращается к нему.
+    // список сам возвращается к нему. Место в списке при этом теряется
+    // (ревью F6), но наверху не только облачко, а и банки с новым «потрачено»:
+    // оставшись внизу, ребёнок не увидел бы ни того, ни другого.
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val motion = LocalAnimationsEnabled.current
@@ -341,8 +344,11 @@ private fun OwlBubble(owl: OwlLook, phrase: String, done: PurchaseOutcome.Done?)
             // Фраза на всю ширину облачка: тарелка товара рядом сжимала её до 4–5 строк (DESIGN_PLAN 3.5).
             Text(text = said, style = MaterialTheme.typography.bodyLarge)
             val spent = stringResource(R.string.shop_spent, coinsText(done.price))
+            // Между чипами 4 dp, как у чипов на плитке товара: при 8 dp «−10» и
+            // «Радость +10» (220 dp) не помещались в облачко на 384 dp (220 dp)
+            // и уходили в две строки, облачко росло и сдвигало банки (ревью F6).
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
                 verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
             ) {
                 CoinChip(

@@ -10,6 +10,7 @@ import ru.finnypet.app.domain.economy.GameClock
 import ru.finnypet.app.domain.economy.WalletEngine
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.ui.components.shortageLine
 import java.io.File
 
 /**
@@ -80,9 +81,9 @@ class ShopShortageTest {
     @Test
     fun `строка нехватки — в родительном падеже при любом числе`() {
         val names = mapOf(
-            R.string.shop_shortage_one to "shop_shortage_one",
-            R.string.shop_shortage_few to "shop_shortage_few",
-            R.string.shop_shortage_many to "shop_shortage_many",
+            R.string.shortage_one to "shortage_one",
+            R.string.shortage_few to "shortage_few",
+            R.string.shortage_many to "shortage_many",
         )
         val strings = stringsXml()
 

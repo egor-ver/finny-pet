@@ -1,5 +1,6 @@
 package ru.finnypet.app.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -78,6 +79,29 @@ fun coinsText(amount: Coins): String = stringResource(
     },
     amount.amount,
 )
+
+/**
+ * «Не хватает 2 монет»: после «не хватает» число в родительном падеже, и
+ * общая строка «2 монеты» ([coinsText]) здесь была бы ошибкой. Одна строка
+ * на нехватку в магазине и на недобор копилки в итогах дня.
+ */
+@StringRes
+fun shortageLine(shortfall: Coins): Int = when (wordFormOf(shortfall.amount)) {
+    WordForm.ONE -> R.string.shortage_one
+    WordForm.FEW -> R.string.shortage_few
+    WordForm.MANY -> R.string.shortage_many
+}
+
+/**
+ * «Сверх плана на 1 монету»: после «на» — винительный падеж, а [coinsText]
+ * дал бы «на 1 монета» (замечено в F6).
+ */
+@StringRes
+fun overPlanLine(gap: Coins): Int = when (wordFormOf(gap.amount)) {
+    WordForm.ONE -> R.string.budget_status_over_one
+    WordForm.FEW -> R.string.budget_status_over_few
+    WordForm.MANY -> R.string.budget_status_over_many
+}
 
 /**
  * Чип с монетой: «+10», «Сегодня: +10», «−8». Число без слова «монет» — его

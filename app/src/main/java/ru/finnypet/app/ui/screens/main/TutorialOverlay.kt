@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -425,13 +426,19 @@ private fun DrawScope.drawArrow(arc: ArrowArc, nudge: Float) {
         moveTo(arc.start.x, arc.start.y)
         quadraticTo(arc.control.x, arc.control.y, base.x, base.y)
     }
-    drawPath(line, color = ARROW, style = Stroke(width = ARROW_WIDTH.toPx(), cap = StrokeCap.Butt))
     val arrowhead = Path().apply {
         moveTo(tip.x, tip.y)
         lineTo(base.x + side.x, base.y + side.y)
         lineTo(base.x - side.x, base.y - side.y)
         close()
     }
+    // Тёмная обводка под стрелкой: на шаге 3 облачку негде встать, кроме как
+    // под «Едой», и стрелка к ней идёт через плитку плана — без обводки белая
+    // линия сливалась с буквами «Монеты ещё не разложены» (ревью F6).
+    val halo = ARROW_HALO.toPx()
+    drawPath(line, color = SCRIM, style = Stroke(width = ARROW_WIDTH.toPx() + halo * 2, cap = StrokeCap.Butt))
+    drawPath(arrowhead, color = SCRIM, style = Stroke(width = halo * 2, join = StrokeJoin.Round))
+    drawPath(line, color = ARROW, style = Stroke(width = ARROW_WIDTH.toPx(), cap = StrokeCap.Butt))
     drawPath(arrowhead, color = ARROW)
 }
 
@@ -459,6 +466,9 @@ private val ARROW = Color.White
 private val CUTOUT_PADDING = 6.dp
 private val CUTOUT_CORNER = 20.dp
 private val ARROW_WIDTH = 3.dp
+
+/** Не шире зазора до выреза с его полями: обводка у кончика не должна темнить цель. */
+private val ARROW_HALO = 3.dp
 private val ARROW_HEAD = 12.dp
 private val ARROW_HEAD_WIDTH = 14.dp
 private val ARROW_GAP = 2.dp

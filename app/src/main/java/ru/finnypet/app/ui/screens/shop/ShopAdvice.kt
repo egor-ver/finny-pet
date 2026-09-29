@@ -1,7 +1,5 @@
 package ru.finnypet.app.ui.screens.shop
 
-import androidx.annotation.StringRes
-import ru.finnypet.app.R
 import ru.finnypet.app.domain.economy.PetStateEngine
 import ru.finnypet.app.domain.economy.PurchaseResult
 import ru.finnypet.app.domain.model.BudgetPlan
@@ -17,9 +15,7 @@ import ru.finnypet.app.domain.model.totalPrice
 import ru.finnypet.app.ui.components.BudgetLine
 import ru.finnypet.app.ui.components.jarLevel
 import ru.finnypet.app.ui.screens.main.JarsLeft
-import ru.finnypet.app.ui.text.WordForm
 import ru.finnypet.app.ui.text.textOf
-import ru.finnypet.app.ui.text.wordFormOf
 
 /** Метка на карточке товара (раздел 8 плана). Цвет не единственный признак — метка словами. */
 enum class ItemMark { NEEDED_NOW, NOT_NEEDED, NOT_IN_PLAN, NONE }
@@ -157,16 +153,4 @@ fun shortageOf(result: PurchaseResult, texts: Map<String, String>): ItemShortage
         },
         recommended = rejected.explanation.nextStep,
     )
-}
-
-/**
- * «Не хватает 2 монет»: после «не хватает» число в родительном падеже, и
- * общая строка «2 монеты» ([ru.finnypet.app.ui.components.coinsText]) здесь
- * была бы ошибкой. Форма — по русскому правилу, как у монет.
- */
-@StringRes
-fun shortageLine(shortfall: Coins): Int = when (wordFormOf(shortfall.amount)) {
-    WordForm.ONE -> R.string.shop_shortage_one
-    WordForm.FEW -> R.string.shop_shortage_few
-    WordForm.MANY -> R.string.shop_shortage_many
 }

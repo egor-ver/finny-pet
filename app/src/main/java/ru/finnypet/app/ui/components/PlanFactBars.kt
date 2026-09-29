@@ -203,7 +203,7 @@ private fun statusOf(line: BudgetLine): String {
     val gap = Coins(abs(line.actual.amount - line.planned.amount))
     return when (planFactStatus(line)) {
         PlanFactStatus.OK -> stringResource(R.string.budget_status_ok)
-        PlanFactStatus.SHORT -> stringResource(R.string.budget_status_short, coinsText(gap))
-        PlanFactStatus.OVER -> stringResource(R.string.budget_status_over, coinsText(gap))
+        PlanFactStatus.SHORT -> stringResource(shortageLine(gap), gap.amount)
+        PlanFactStatus.OVER -> stringResource(overPlanLine(gap), gap.amount)
     }
 }

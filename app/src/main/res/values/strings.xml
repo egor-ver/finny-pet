@@ -57,8 +57,9 @@
     <string name="main_growth_points_short">%1$d/%2$d</string>
     <string name="main_growth_done">Взрослый — дорога пройдена</string>
     <string name="main_coins_unplanned">Монеты ещё не разложены</string>
-    <string name="main_jar_left">ещё %1$d</string>
-    <string name="main_jar_left_description">%1$s: ещё %2$d</string>
+    <!-- Те же слова, что на банках плана и магазина: «ещё 23» ребёнок не понимал — чего «ещё» (ревью F6) -->
+    <string name="main_jar_left">осталось %1$d</string>
+    <string name="main_jar_left_description">%1$s: осталось %2$d</string>
     <string name="main_jar_goal">%1$s %2$d/%3$d</string>
     <string name="main_jar_goal_description">Копилка: %1$s, %2$d из %3$d</string>
     <string name="main_jar_goal_enough">Хватает!</string>
@@ -244,8 +245,10 @@
     <string name="budget_status_ok">По плану</string>
     <!-- «14 из 20»: сумма с монетой, затем план -->
     <string name="plan_fact_of">из %1$d</string>
-    <string name="budget_status_short">Не хватает %1$s</string>
-    <string name="budget_status_over">Сверх плана на %1$s</string>
+    <!-- «Сверх плана на» — винительный падеж: «на 1 монету», «на 2 монеты», «на 5 монет» -->
+    <string name="budget_status_over_one">Сверх плана на %1$d монету</string>
+    <string name="budget_status_over_few">Сверх плана на %1$d монеты</string>
+    <string name="budget_status_over_many">Сверх плана на %1$d монет</string>
     <string name="budget_failed">Не получилось сохранить план. Попробуй ещё раз.</string>
 
     <!-- Магазин (ТЗ 2.5.6) -->
@@ -271,10 +274,10 @@
     <string name="shop_buy">Купить</string>
     <string name="shop_done_title">Готово!</string>
     <string name="shop_no_change">Мне и так хорошо — ничего не изменилось.</string>
-    <!-- Нехватка в окне товара (DESIGN_PLAN 3.5): «не хватает» требует родительного падежа — «2 монет», а не «2 монеты» -->
-    <string name="shop_shortage_one">Не хватает %1$d монеты</string>
-    <string name="shop_shortage_few">Не хватает %1$d монет</string>
-    <string name="shop_shortage_many">Не хватает %1$d монет</string>
+    <!-- Нехватка в окне товара (DESIGN_PLAN 3.5) и недобор копилки в итогах дня: «не хватает» требует родительного падежа — «2 монет», а не «2 монеты» -->
+    <string name="shortage_one">Не хватает %1$d монеты</string>
+    <string name="shortage_few">Не хватает %1$d монет</string>
+    <string name="shortage_many">Не хватает %1$d монет</string>
     <!-- Мягкий план (AD-4): в подтверждении покупки, а не отдельным запретом -->
     <string name="shop_over_plan">Сверх плана</string>
     <string name="shop_balance_after">В кошельке останется</string>
