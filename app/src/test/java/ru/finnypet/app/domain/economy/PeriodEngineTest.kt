@@ -216,6 +216,23 @@ class PeriodEngineTest {
         assertEquals("period.plan_followed", result.explanation.key)
     }
 
+    /** Ревью R1: копилка 0 из 0 — звезды «Отложил» нет, и сова не хвалит «отложили не меньше». */
+    @Test
+    fun `план без копилки выполнен — похвала без слов об отложенном`() {
+        val noSavings = plan.copy(savings = Coins.ZERO)
+        val spentOnly = onPlan.filter { it.type != TransactionType.SAVINGS_DEPOSIT }
+        val result = engine().close(period, noSavings, spentOnly, state, PetGrowth.INITIAL)
+        assertEquals("period.plan_followed_no_savings", result.explanation.key)
+    }
+
+    /** Копилку не планировали, а отложили — звезды «Отложил» всё равно нет, фраза та же. */
+    @Test
+    fun `незапланированное пополнение не делает похвалу за отложенное`() {
+        val noSavings = plan.copy(savings = Coins.ZERO)
+        val result = engine().close(period, noSavings, onPlan, state, PetGrowth.INITIAL)
+        assertEquals("period.plan_followed_no_savings", result.explanation.key)
+    }
+
     @Test
     fun `обычный период объясняется нейтрально и без подсказки`() {
         val overspent = listOf(

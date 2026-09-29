@@ -6,6 +6,7 @@ import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.Explanation
 import ru.finnypet.app.domain.model.GamePeriod
 import ru.finnypet.app.domain.model.GameResult
+import ru.finnypet.app.domain.model.GrowthStar
 import ru.finnypet.app.domain.model.PeriodFact
 import ru.finnypet.app.domain.model.PeriodStatus
 import ru.finnypet.app.domain.model.PetGrowth
@@ -113,7 +114,12 @@ class PeriodEngine(
 
         stageChanged -> Explanation(key = KEY_STAGE_UP)
 
-        report.planFollowed -> Explanation(key = KEY_PLAN_FOLLOWED)
+        // Хвалить «отложили не меньше» можно, только если за это дана звезда «Отложил»:
+        // при нулевом плане копилки её нет, и похвала спорила бы с пустым слотом (ревью R1).
+        report.planFollowed && GrowthStar.SAVED in GrowthEngine.starsFor(report, needsMet) ->
+            Explanation(key = KEY_PLAN_FOLLOWED)
+
+        report.planFollowed -> Explanation(key = KEY_PLAN_FOLLOWED_NO_SAVINGS)
 
         else -> Explanation(key = KEY_CLOSED)
     }
@@ -123,6 +129,7 @@ class PeriodEngine(
         const val KEY_MISSED_MANDATORY = "period.missed_mandatory"
         const val KEY_STAGE_UP = "period.stage_up"
         const val KEY_PLAN_FOLLOWED = "period.plan_followed"
+        const val KEY_PLAN_FOLLOWED_NO_SAVINGS = "period.plan_followed_no_savings"
         const val KEY_CLOSED = "period.closed"
     }
 }

@@ -23,9 +23,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -299,15 +302,29 @@ private fun CategoryRow(
                 onSet = onSet,
             )
         }
-        if (fillAmount != null) {
+        // Нажатая кнопка пропадала, и банки ниже прыгали вверх на её высоту —
+        // «+» желаемого уезжал из-под пальца (ревью R1). Раз показанная, она
+        // оставляет своё место невидимым и немым, пока редактор на экране.
+        var keptFill by remember { mutableStateOf<Coins?>(null) }
+        LaunchedEffect(fillAmount) { if (fillAmount != null) keptFill = fillAmount }
+        fillSlot(fillAmount, keptFill)?.let { slot ->
             FinnySecondaryButton(
-                text = stringResource(R.string.budget_fill_mandatory, coinsText(fillAmount)),
-                onClick = { onSet(fillAmount) },
+                text = stringResource(R.string.budget_fill_mandatory, coinsText(slot)),
+                onClick = { onSet(slot) },
+                enabled = fillAmount != null,
+                modifier = if (fillAmount != null) Modifier else Modifier.alpha(0f).clearAndSetSemantics {},
             )
         }
         if (hint != null) HintLine(hint)
     }
 }
+
+/**
+ * Что стоит на месте кнопки «Положить N на нужное»: сама кнопка, пока она
+ * нужна, иначе — последняя показанная сумма как невидимая заглушка того же
+ * размера. `null` — кнопки ещё не было, и место не занято.
+ */
+internal fun fillSlot(fillAmount: Coins?, kept: Coins?): Coins? = fillAmount ?: kept
 
 /** Пояснение под банкой: лампочка отличает совет от суммы и названия (DESIGN_PLAN 3.2). */
 @Composable
