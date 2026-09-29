@@ -208,7 +208,8 @@ class ProgressFlowTest {
 
         assertEquals(listOf("budget"), ready.terms.map { it.id })
         assertEquals(listOf("Бюджет"), ready.terms.map { it.title })
-        assertEquals("Это сколько у тебя есть монеток.", ready.terms.first().body)
+        // F7: однобуквенное «у» привязано к следующему слову неразрывным пробелом.
+        assertEquals("Это сколько у тебя есть монеток.", ready.terms.first().body)
     }
 
     private suspend fun closeFirstDay() {

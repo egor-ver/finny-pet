@@ -71,8 +71,9 @@ private fun Line(kind: PetStatKind, delta: Int, modifier: Modifier) {
     )
 }
 
+/** «Еда +15» — и для чипа, и для подписи плитки товара в TalkBack. */
 @Composable
-private fun statChangeText(kind: PetStatKind, delta: Int): String {
+fun statChangeText(kind: PetStatKind, delta: Int): String {
     val signed = if (delta > 0) "+$delta" else delta.toString()
     return stringResource(R.string.stat_change, stringResource(kind.label), signed)
 }

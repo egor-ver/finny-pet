@@ -246,7 +246,7 @@ class ShopPurchaseTest {
         viewModel.buy(toy.id)
 
         val done = awaitOutcome<PurchaseOutcome.Done>()
-        assertEquals("Пушок играет с новой игрушкой!", done.toyPhrase)
+        assertEquals("Пушок играет с новой игрушкой!", done.toyPhrase)
     }
 
     /**

@@ -87,6 +87,7 @@
     <!-- Кошелёк сегодня (ТЗ 2.5.4) -->
     <string name="main_things">Мои вещи: %1$s</string>
     <string name="wallet_open">Кошелёк сегодня</string>
+    <string name="wallet_description">Кошелёк, %1$s</string>
     <string name="wallet_title">В кошельке %1$d</string>
     <string name="wallet_carry_over">Осталось со вчера</string>
     <string name="wallet_income">Доход дня</string>
@@ -152,6 +153,8 @@
     <string name="adult_about">Чему учит игра</string>
     <string name="adult_about_more">Подробнее</string>
     <string name="adult_about_less">Свернуть</string>
+    <string name="adult_about_more_spoken">Подробнее о том, чему учит игра</string>
+    <string name="adult_about_less_spoken">Свернуть рассказ о том, чему учит игра</string>
     <string name="adult_topics">Пройденные темы</string>
     <string name="adult_topic_passed">пройдено %1$d из %2$d</string>
     <string name="adult_topic_none">заданий по теме пока нет</string>
@@ -320,8 +323,8 @@
     <string name="savings_withdraw_eta">Сейчас цель через %1$s, после снятия — через %2$s</string>
     <string name="savings_withdraw_eta_reached">Цель уже собрана, после снятия — через %1$s</string>
     <string name="savings_withdraw_eta_unknown">Срок пока не посчитать — пополнений ещё не было.</string>
-    <string name="savings_amount_more">Больше</string>
-    <string name="savings_amount_less">Меньше</string>
+    <string name="savings_amount_more">Больше монет</string>
+    <string name="savings_amount_less">Меньше монет</string>
     <string name="savings_planning_hint">Сначала спланируй день — потом можно откладывать, брать из копилки и покупать цель.</string>
     <string name="savings_done_title">Готово!</string>
     <string name="savings_failed">Не получилось открыть копилку. Попробуй ещё раз.</string>

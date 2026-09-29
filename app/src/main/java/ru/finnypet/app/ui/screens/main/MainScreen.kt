@@ -67,6 +67,7 @@ import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
 import ru.finnypet.app.ui.components.StarMark
 import ru.finnypet.app.ui.components.TopSpeechBubble
+import ru.finnypet.app.ui.components.coinsText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.container
 import ru.finnypet.app.ui.components.direction
@@ -594,7 +595,11 @@ private fun WalletChip(balance: Coins, onOpen: () -> Unit, modifier: Modifier = 
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(horizontal = Dimens.SpaceMedium),
     ) {
-        MoneyAmount(amount = balance)
+        // Без слова «Кошелёк» TalkBack читал одно «80 монет» — непонятно, чьих.
+        val spoken = stringResource(R.string.wallet_description, coinsText(balance))
+        Box(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
+            MoneyAmount(amount = balance)
+        }
     }
 }
 

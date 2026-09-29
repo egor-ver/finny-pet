@@ -18,7 +18,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import ru.finnypet.app.data.local.FinnyDatabase
@@ -163,10 +162,12 @@ class TasksFlowTest {
         assertEquals(TaskId("jars"), allDone.task?.id)
     }
 
-    /** Подсказка на главном идёт за игрой: награда за задание получена — дальше нужное по плану. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /**
+     * Подсказка на главном идёт за игрой: награда за задание получена — кнопка
+     * больше не зовёт в задание, а полка пуста, поэтому следующий шаг «Уложить спать».
+     */
     @Test
-    fun следующий_шаг_после_задания_ведёт_к_нужному() = runBlocking {
+    fun следующий_шаг_после_задания_с_пустой_полкой_ведёт_спать() = runBlocking {
         val plan = BudgetPlan(mandatory = Coins(10), optional = Coins.ZERO, savings = Coins.ZERO)
         periods.savePlan(periods.current(profileId)!!.id, plan)
         val main = mainViewModel()
@@ -174,7 +175,11 @@ class TasksFlowTest {
 
         pass(planning, reward = Coins(15))
 
-        assertEquals(NextStep.Shop, main.await { it.step is NextStep.Shop }.step)
+        // Магазин главной кнопкой — только когда сове что-то нужно и нужное есть
+        // на полке (NextStep.kt); здесь полка пустая, и день идёт к «Уложить
+        // спать». Главное — награда получена, кнопка больше не зовёт в задание.
+        val after = main.await { it.task?.rewardAvailable == false }
+        assertEquals(NextStep.Sleep, after.step)
     }
 
     private suspend fun pass(task: LearningTask, reward: Coins) {

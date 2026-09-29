@@ -92,6 +92,7 @@ class DemoModeTest {
     private lateinit var openPeriod: OpenPeriodIfNeeded
     private lateinit var periodEngine: PeriodEngine
     private lateinit var recorder: OutcomeRecorderImpl
+    private lateinit var confirmPlan: ConfirmPlan
 
     @Before
     fun setUp() {
@@ -125,6 +126,16 @@ class DemoModeTest {
         openPeriod = OpenPeriodIfNeeded(
             periods, WalletEngine(clock), balance, content.pack().events, recorder, clock,
         )
+        confirmPlan = ConfirmPlan(
+            openPeriod = openPeriod,
+            periods = periods,
+            savings = savings,
+            content = content,
+            budget = BudgetEngine(),
+            periodEngine = periodEngine,
+            savingsEngine = SavingsEngine(clock),
+            recorder = recorder,
+        )
         playDay = PlayDemoDay(
             profiles = profiles,
             periods = periods,
@@ -133,16 +144,7 @@ class DemoModeTest {
             content = content,
             openPeriod = openPeriod,
             closeDay = CloseDay(periods, profiles, periodEngine, DayRecorderImpl(db)),
-            confirmPlan = ConfirmPlan(
-                openPeriod = openPeriod,
-                periods = periods,
-                savings = savings,
-                content = content,
-                budget = BudgetEngine(),
-                periodEngine = periodEngine,
-                savingsEngine = SavingsEngine(clock),
-                recorder = recorder,
-            ),
+            confirmPlan = confirmPlan,
             wallet = WalletEngine(clock),
             taskEngine = TaskEngine(clock),
             pet = PetStateEngine(balance),
@@ -391,8 +393,12 @@ class DemoModeTest {
     fun ручная_покупка_до_кнопки_не_дублируется_демо() = runBlocking {
         val demo = startDemo()
         val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
-        val manual = BudgetPlan(mandatory = Coins(23), optional = Coins(11), savings = Coins(11))
+        // Магазин открыт только после подтверждённого плана (правка владельца №2),
+        // поэтому эксперт сначала подтверждает план и лишь потом покупает. План —
+        // в доход дня (35): без выбранной цели копилка ноль.
+        val manual = BudgetPlan(mandatory = Coins(23), optional = Coins(11), savings = Coins.ZERO)
         periods.savePlan(period.id, manual)
+        check(confirmPlan(demo.id))
         val sticker = content.pack().shop.single { it.id == ItemId("sticker-star") }
         val bought = WalletEngine(clock).purchase(sticker, periods.balance(period), period.id)
         check(bought is PurchaseResult.Success)

@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -213,10 +214,14 @@ private fun About(about: List<String>) {
         if (about.size > 1) {
             // Без внутренних полей кнопки: слово стоит ровно по левому краю
             // абзаца, а не сдвинуто на 12 dp; высота нажатия — те же 48 dp.
+            // TalkBack слышит, что раскроется: одно «Подробнее» вне карточки непонятно (F9).
+            val spoken = stringResource(if (open) R.string.adult_about_less_spoken else R.string.adult_about_more_spoken)
             TextButton(
                 onClick = { open = !open },
                 contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.defaultMinSize(minHeight = Dimens.TouchTarget),
+                modifier = Modifier
+                    .defaultMinSize(minHeight = Dimens.TouchTarget)
+                    .semantics { contentDescription = spoken },
             ) {
                 Text(
                     text = stringResource(if (open) R.string.adult_about_less else R.string.adult_about_more),

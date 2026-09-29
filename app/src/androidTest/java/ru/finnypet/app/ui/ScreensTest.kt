@@ -1,6 +1,14 @@
 package ru.finnypet.app.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -30,7 +38,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +67,7 @@ import ru.finnypet.app.ui.screens.adult.TopicProgress
 import ru.finnypet.app.ui.screens.budget.BudgetContent
 import ru.finnypet.app.ui.screens.demo.DemoChipContent
 import ru.finnypet.app.ui.components.BudgetLine
+import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.GrowthSummary
 import ru.finnypet.app.ui.components.GrowthView
 import ru.finnypet.app.ui.screens.day.DayContent
@@ -86,7 +94,10 @@ import ru.finnypet.app.ui.screens.savings.SavingsContent
 import ru.finnypet.app.ui.screens.savings.SavingsDraft
 import ru.finnypet.app.ui.screens.savings.SavingsOutcomeView
 import ru.finnypet.app.ui.screens.savings.SavingsState
+import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.ui.screens.shop.ItemShortage
 import ru.finnypet.app.ui.screens.shop.PurchaseOutcome
+import ru.finnypet.app.ui.screens.shop.RecoveryChoice
 import ru.finnypet.app.ui.screens.shop.ShopContent
 import ru.finnypet.app.ui.screens.shop.ShopItemView
 import ru.finnypet.app.ui.screens.shop.ShopState
@@ -124,8 +135,7 @@ class ScreensTest {
     private fun text(id: Int, vararg args: Any) = context.getString(id, *args)
 
     // Знакомство стало обучением поверх главного (DESIGN_PLAN 3.4, U8):
-    // экрана OnboardingScreen больше нет, проверки переедут на слой в U18.
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    // экрана OnboardingScreen больше нет, три решения проверяем на этом слое.
     @Test
     fun знакомство_показывает_три_типа_решений() {
         compose.setContent {
@@ -137,7 +147,6 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.tutorial_next)).assertIsDisplayed()
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun знакомство_ведёт_дальше_по_кнопке() {
         var next: Int? = null
@@ -202,54 +211,77 @@ class ScreensTest {
 
     /**
      * ТЗ 2.5.3 требует, чтобы питомец, баланс, накопления, цель и показатели
-     * жили на одном экране, без переходов и меню. На 360 dp — минимальной
-     * ширине по ТЗ 3.1 — всё это в один экран не помещается и прокручивается,
-     * поэтому проверяем, что каждый блок есть и до него можно доскроллить,
-     * не уходя с экрана.
+     * жили на одном экране, без переходов и меню. Блоки главного говорят с
+     * TalkBack одной фразой каждый (DESIGN_PLAN 3.1), поэтому ищем их по
+     * описанию: кошелёк — в шапке, остальное — в прокручиваемой части.
      */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `главный_экран_показывает_всё_разом`() {
         showMain(readyState())
 
-        // Приветствие стоит в шапке экрана, а не в прокручиваемой части.
-        compose.onNodeWithText("Привет, Егор!").assertIsDisplayed()
-        scrollToText("Пушок")
-        scrollToText(text(R.string.stage_cub))
-        scrollToDescription("80 монет")
-        scrollToText("Самокат мечты")
-        scrollToDescription("30 монет")
-        scrollToDescription("90 монет")
-        scrollToText(text(R.string.main_pet_state, "Пушок"))
-        scrollToDescription(text(R.string.stat_mood) + ": 75 из 100")
-        scrollToDescription(text(R.string.stat_satiety) + ": 80 из 100")
-        scrollToDescription(text(R.string.stat_care) + ": 60 из 100")
+        compose.onNodeWithContentDescription("80 монет", substring = true).assertIsDisplayed()
+        scrollToDescription(text(R.string.main_pet_stage, "Пушок", text(R.string.stage_cub)))
+        scrollToDescription(text(R.string.stat_description, text(R.string.stat_mood), 75, 100))
+        scrollToDescription(text(R.string.stat_description, text(R.string.stat_satiety), 80, 100))
+        scrollToDescription(text(R.string.stat_description, text(R.string.stat_care), 60, 100))
+        scrollToDescription(text(R.string.main_coins_unplanned))
+        scrollToDescription(text(R.string.main_jar_goal_description, "Самокат мечты", 30, 120))
+    }
+
+    /** F9, TalkBack: кошелёк в шапке — кнопка со словом «Кошелёк», а не одно «80 монет». */
+    @Test
+    fun `кошелёк_на_главном_подписан_словом`() {
+        showMain(readyState())
+
+        compose.onNodeWithContentDescription(text(R.string.wallet_description, "80 монет"))
+            .assertIsDisplayed()
+            .assert(hasClickLabel(text(R.string.wallet_open)))
+            .performClick()
+
+        compose.onNodeWithText(text(R.string.wallet_title, 80)).assertIsDisplayed()
+    }
+
+    /** F9: при шрифте 2,0 в ширине 360 dp текст кнопки переносится, а чип «+10» остаётся. */
+    @Test
+    fun `чип_награды_виден_при_крупном_шрифте`() {
+        compose.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
+                FinnypetTheme {
+                    Box(modifier = Modifier.width(328.dp)) {
+                        FinnyButton(text = text(R.string.main_task_action), onClick = {}, reward = Coins(10))
+                    }
+                }
+            }
+        }
+
+        compose.onNodeWithText("+10", useUnmergedTree = true)
+            .assertIsDisplayed()
+            .assertWidthIsAtLeast(24.dp)
     }
 
     /** Отложенные монеты не должны исчезать с экрана из-за невыбранной цели. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `без_цели_накопления_всё_равно_видны`() {
         showMain(readyState(savings = SavingsView(saved = Coins(30))))
 
-        scrollToText(text(R.string.main_goal_none))
-        scrollToDescription("30 монет")
+        scrollToDescription(text(R.string.main_jar_no_goal_description, 30))
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** Накоплено больше цены — «хватает на цель», а не «130 из 120» (ревью F5). */
     @Test
     fun `собранная_цель_названа_собранной`() {
         showMain(
             readyState(
                 savings = SavingsView(
-                    saved = Coins(120),
+                    saved = Coins(130),
                     goalTitle = "Самокат мечты",
                     price = Coins(120),
                 )
             )
         )
 
-        scrollToText(text(R.string.main_goal_reached))
+        scrollToDescription(text(R.string.main_jar_goal_enough_description, "Самокат мечты", 130))
     }
 
     /** ТЗ 3.4: сбой не оставляет экран без выхода. */
@@ -274,44 +306,51 @@ class ScreensTest {
         assertTrue(opened)
     }
 
-    /** DESIGN_PLAN 3.1, правка владельца №2: магазин в фазе планирования больше не показывается. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** DESIGN_PLAN 3.1, правка владельца №2: магазин — после плана, главной кнопкой. */
     @Test
     fun `с_главного_экрана_можно_перейти_в_магазин`() {
         var opened = false
-        showMain(readyState(), onShop = { opened = true })
+        showMain(readyState(periodStatus = PeriodStatus.RUNNING), onShop = { opened = true })
 
         compose.onNodeWithText(text(R.string.shop_action)).performClick()
 
         assertTrue(opened)
     }
 
-    /** ТЗ 2.5.3: активное задание видно на главном, карточка — кнопка в него. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /**
+     * ТЗ 2.5.3: задание дня видно на главном. Плитка «Задания» говорит про
+     * монеты и ведёт в список, само задание — главной кнопкой утра.
+     */
     @Test
     fun `задание_дня_на_главном_ведёт_в_задание`() {
         var opened: TaskId? = null
+        var list = false
         val task = TaskOfDay(
             id = TaskId("story"),
             topic = TaskTopic.SAVING,
             rewardAvailable = true,
             allDone = false,
             reward = Coins(10),
+            completedCount = 2,
+            totalCount = 6,
         )
-        showMain(readyState(task = task, periodStatus = PeriodStatus.RUNNING), onTask = { opened = it })
+        showMain(
+            readyState(task = task, periodStatus = PeriodStatus.RUNNING, step = NextStep.Task),
+            onTask = { opened = it },
+            onTasks = { list = true },
+        )
 
-        scrollToText(text(R.string.main_task))
-        scrollToText("Сова нашла монеты. Что с ними делать?")
-        scrollToText(text(R.string.main_task_reward))
-        compose.onNodeWithText("Открыть").performClick()
+        scrollToDescription(text(R.string.main_task_reward))
+        compose.onNodeWithContentDescription(text(R.string.main_task_reward), substring = true).performClick()
+        compose.onNodeWithText(text(R.string.main_task_action)).performClick()
 
+        assertTrue(list)
         assertEquals(TaskId("story"), opened)
     }
 
-    /** Пока плана нет, задания закрыты: карточка так и говорит, а не зовёт в стену. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** R7: задания открыты и до плана — сначала заработай, потом распредели. */
     @Test
-    fun `до_плана_задание_дня_закрыто`() {
+    fun `до_плана_задание_дня_открыто`() {
         var opened: TaskId? = null
         val task = TaskOfDay(
             id = TaskId("story"),
@@ -320,74 +359,71 @@ class ScreensTest {
             allDone = false,
             reward = Coins(10),
         )
-        showMain(readyState(task = task), onTask = { opened = it })
+        showMain(readyState(task = task, step = NextStep.Task), onTask = { opened = it })
 
-        scrollToText("Откроется после плана")
-        compose.onNodeWithText("Вступление").performClick()
+        compose.onNodeWithText(text(R.string.main_task_action)).performClick()
 
-        compose.onAllNodesWithText("Открыть").assertCountEquals(0)
-        assertEquals(null, opened)
+        assertEquals(TaskId("story"), opened)
     }
 
-    /** ТЗ 8.4: главная кнопка — следующий шаг цикла, подсказка над ней словами. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** ТЗ 8.4: главная кнопка — следующий шаг цикла; утром это задание с наградой, план — второй. */
     @Test
     fun `главная_кнопка_ведёт_к_заданию`() {
         var opened: TaskId? = null
+        var planned = false
         val task = TaskOfDay(TaskId("story"), TaskTopic.SAVING, rewardAvailable = true, allDone = false, reward = Coins(10))
-        showMain(readyState(task = task, periodStatus = PeriodStatus.RUNNING, step = NextStep.Plan), onTask = { opened = it })
+        showMain(readyState(task = task, step = NextStep.Task), onTask = { opened = it }, onPlan = { planned = true })
 
-        compose.onNodeWithText("Выполни задание дня — за него дают монеты.").assertIsDisplayed()
-        compose.onNodeWithText("Выполнить задание").performClick()
+        compose.onNodeWithText(text(R.string.main_task_action)).performClick()
+        compose.onNodeWithText(text(R.string.budget_action_plan)).performClick()
 
         assertEquals(TaskId("story"), opened)
+        assertTrue(planned)
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** После плана вторая кнопка — «Уложить спать», а план открывается плиткой. */
     @Test
-    fun `на_шаге_покупки_вторая_кнопка_ведёт_к_плану`() {
-        var shop = false
+    fun `на_шаге_покупки_вторая_кнопка_укладывает_спать`() {
+        var sleep = false
         var plan = false
         showMain(
             readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Shop),
-            onShop = { shop = true },
+            onFinishDay = { sleep = true },
             onPlan = { plan = true },
         )
 
-        compose.onNodeWithText(text(R.string.shop_action)).performClick()
-        compose.onNodeWithText("Посмотреть план").performClick()
+        compose.onNodeWithText(text(R.string.main_action_sleep)).performClick()
+        scrollToDescription(text(R.string.main_coins_unplanned))
+        compose.onNodeWithContentDescription(text(R.string.main_coins_unplanned)).performClick()
 
-        assertTrue(shop)
+        assertTrue(sleep)
         assertTrue(plan)
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** Вечером главная — «Уложить спать», а магазин остаётся второй кнопкой. */
     @Test
-    fun `главная_кнопка_ведёт_в_копилку`() {
-        var opened = false
-        showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Sleep), onSavings = { opened = true })
+    fun `вечером_вторая_кнопка_ведёт_в_магазин`() {
+        var shop = false
+        showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Sleep), onShop = { shop = true })
 
-        compose.onNodeWithText("В копилку").performClick()
+        compose.onNodeWithText(text(R.string.shop_action)).performClick()
 
-        assertTrue(opened)
+        assertTrue(shop)
     }
 
-    /** Итоги на главной кнопке — строка дня их не дублирует. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** Итоги — одной кнопкой «Уложить спать», без второй такой же. */
     @Test
     fun `когда_всё_по_плану_главная_кнопка_заканчивает_день`() {
         var opened = false
         showMain(readyState(periodStatus = PeriodStatus.RUNNING, step = NextStep.Sleep), onFinishDay = { opened = true })
 
-        compose.onNodeWithText("Всё по плану! Можно заканчивать день.").assertIsDisplayed()
-        compose.onAllNodesWithText(text(R.string.day_action_close)).assertCountEquals(1)
-        compose.onNodeWithText(text(R.string.day_action_close)).performClick()
+        compose.onAllNodesWithText(text(R.string.main_action_sleep)).assertCountEquals(1)
+        compose.onNodeWithText(text(R.string.main_action_sleep)).performClick()
 
         assertTrue(opened)
     }
 
     /** DESIGN_PLAN 3.1: плитка «Задания» показывает это в описании для TalkBack, не строкой текста. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `когда_монеты_за_сегодня_получены_главный_об_этом_говорит`() {
         val task = TaskOfDay(
@@ -400,27 +436,23 @@ class ScreensTest {
         )
         showMain(readyState(task = task))
 
-        scrollToText(text(R.string.main_task_all_done))
+        scrollToDescription(text(R.string.main_task_all_done))
     }
 
-    /** Карточка копилки — кнопка, и подписана словами, а не только цветом. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** Плитка копилки — кнопка, и подписана словами, а не только цветом. */
     @Test
     fun `карточка_копилки_ведёт_в_копилку`() {
         var opened = false
         showMain(readyState(), onSavings = { opened = true })
 
-        scrollToText("Открыть копилку")
-        compose.onNodeWithText("Открыть копилку").performClick()
+        val spoken = text(R.string.main_jar_goal_description, "Самокат мечты", 30, 120)
+        scrollToDescription(spoken)
+        compose.onNodeWithContentDescription(spoken).performClick()
 
         assertTrue(opened)
     }
 
-    /**
-     * Дорога к итогам живёт в строке дня, а не третьей кнопкой внизу: при
-     * крупном системном шрифте три кнопки съедали больше половины экрана.
-     */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** Дорога к итогам — второй кнопкой, пока день идёт, а не третьей внизу. */
     @Test
     fun `из_идущего_дня_можно_попасть_в_итоги`() {
         var opened = false
@@ -429,7 +461,7 @@ class ScreensTest {
             onFinishDay = { opened = true },
         )
 
-        compose.onNodeWithText(text(R.string.day_action_close)).performClick()
+        compose.onNodeWithText(text(R.string.main_action_sleep)).performClick()
 
         assertTrue(opened)
     }
@@ -448,13 +480,28 @@ class ScreensTest {
     fun `магазин_показывает_товары_с_ценой_направлением_и_влиянием`() {
         showShop(ready())
 
-        scrollToDescription("80 монет")
+        // Кошелёк — в шапке, над прокручиваемым списком.
+        compose.onNodeWithContentDescription("80 монет").assertIsDisplayed()
         scrollToText("Вкусная каша")
         scrollToText(text(R.string.category_mandatory))
         scrollToText(text(R.string.stat_change, text(R.string.stat_satiety), "+20"))
         scrollToDescription("12 монет")
         scrollToText("Яркий мячик")
         scrollToText(text(R.string.category_optional))
+    }
+
+    /** F9, TalkBack: плитка товара — одна фраза, название первым, затем цена и влияние. */
+    @Test
+    fun `плитка_товара_читается_названием_и_ценой`() {
+        var bought: ItemId? = null
+        showShop(ready(), onBuy = { bought = it })
+
+        val spoken = "Вкусная каша, 12 монет, " + text(R.string.stat_change, text(R.string.stat_satiety), "+20")
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription(spoken))
+        compose.onNodeWithContentDescription(spoken).assertIsDisplayed().performClick()
+        compose.onNodeWithText(text(R.string.shop_buy)).performClick()
+
+        assertEquals(ItemId("food"), bought)
     }
 
     /** Покупка — решение, и до списания ребёнок видит цену и что изменится. */
@@ -514,10 +561,8 @@ class ScreensTest {
         assertEquals(null, bought)
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `покупка_объясняется_словами_из_контента`() {
-        var dismissed = false
         val done = PurchaseOutcome.Done(
             number = 1,
             itemId = food.id,
@@ -526,14 +571,14 @@ class ScreensTest {
             effects = food.effects,
             changes = listOf(Change.PetStat(PetStatKind.SATIETY, from = Stat(75), to = Stat(95))),
         )
-        // В списке только мячик: иначе «Сытость +20» нашлось бы и в строке каши.
-        showShop(ready(outcome = done, items = listOf(toy)), onDismiss = { dismissed = true })
+        // В списке только мячик: иначе «Еда +20» нашлось бы и в плитке каши.
+        showShop(ready(outcome = done, items = listOf(toy)))
 
+        // Итог — в облачке совы наверху списка, без отдельного окна (DESIGN_PLAN 3.5):
+        // фраза, «−12» и «Еда +20».
         compose.onNodeWithText("Осталось 68 монет.").assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.stat_change, text(R.string.stat_satiety), "+20")).assertIsDisplayed()
-        compose.onNodeWithText(text(R.string.action_ok)).performClick()
-
-        assertTrue(dismissed)
+        compose.onNodeWithContentDescription(text(R.string.shop_spent, "12 монет")).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.stat_change, text(R.string.stat_satiety), "+20"), substring = true).assertIsDisplayed()
     }
 
     /** ТЗ 2.5.9: показатель упёрся в границу — говорим об этом, а не «+20». */
@@ -559,14 +604,13 @@ class ScreensTest {
      * становятся только варианты, у которых есть куда вести; вариант без
      * экрана — подсказкой, чтобы не было кнопки в пустоту (ТЗ 3.4).
      */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `отказ_объясняет_и_предлагает_выход`() {
         var dismissed = false
-        val rejected = PurchaseOutcome.Rejected(itemId = food.id)
-        showShop(ready(outcome = rejected), onDismiss = { dismissed = true })
+        showShop(rejected(), onDismiss = { dismissed = true })
 
-        compose.onNodeWithText("Не хватает 20 монет.").assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.shortage_many, 20)).assertIsDisplayed()
+        compose.onNodeWithText(text(R.string.shop_buy)).assertDoesNotExist()
         compose.onNodeWithText(text(R.string.shop_option_hint, "Пересмотреть план")).assertIsDisplayed()
         compose.onNodeWithText("Выбрать подешевле").assertIsDisplayed()
         compose.onNodeWithText("Купить попозже").performClick()
@@ -584,13 +628,11 @@ class ScreensTest {
     }
 
     /** Копилка теперь есть — «взять из копилки» ведёт в неё, а не остаётся подсказкой. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `отказ_ведёт_в_копилку_когда_она_поможет`() {
         var dismissed = false
         var savings = false
-        val rejected = PurchaseOutcome.Rejected(itemId = food.id)
-        showShop(ready(outcome = rejected), onDismiss = { dismissed = true }, onSavings = { savings = true })
+        showShop(rejected(), onDismiss = { dismissed = true }, onSavings = { savings = true })
 
         compose.onNodeWithText("Взять из копилки").performClick()
 
@@ -599,12 +641,10 @@ class ScreensTest {
     }
 
     /** Экран заданий есть — «выполнить задание» ведёт в него и стоит главной кнопкой. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `отказ_ведёт_в_задания_главной_кнопкой`() {
         var tasks = false
-        val rejected = PurchaseOutcome.Rejected(itemId = food.id)
-        showShop(ready(outcome = rejected), onTasks = { tasks = true })
+        showShop(rejected(), onTasks = { tasks = true })
 
         compose.onNodeWithText(text(R.string.shop_option_hint, "Выполнить задание")).assertDoesNotExist()
         compose.onNodeWithText("Выполнить задание").performClick()
@@ -642,6 +682,30 @@ class ScreensTest {
         effects = listOf(PetEffect(PetStatKind.MOOD, 15)),
         icon = "⚽",
         gains = listOf(Change.PetStat(PetStatKind.MOOD, Stat(50), Stat(65))),
+    )
+
+    /**
+     * Отказ открывает окно того же товара, а нехватку и выходы окно берёт у
+     * самого товара (DESIGN_PLAN 3.5): «Купить» там уже нет.
+     */
+    private fun rejected() = ready(
+        outcome = PurchaseOutcome.Rejected(itemId = food.id),
+        items = listOf(
+            food.copy(
+                shortage = ItemShortage(
+                    shortfall = Coins(20),
+                    options = listOf(
+                        RecoveryChoice(RecoveryOption.DO_TASK, "Выполнить задание"),
+                        RecoveryChoice(RecoveryOption.WITHDRAW_FROM_SAVINGS, "Взять из копилки"),
+                        RecoveryChoice(RecoveryOption.ADJUST_NEXT_PLAN, "Пересмотреть план"),
+                        RecoveryChoice(RecoveryOption.CHOOSE_CHEAPER, "Выбрать подешевле"),
+                        RecoveryChoice(RecoveryOption.POSTPONE_PURCHASE, "Купить попозже"),
+                    ),
+                    recommended = RecoveryOption.DO_TASK,
+                ),
+            ),
+            toy,
+        ),
     )
 
     private fun ready(
@@ -684,12 +748,12 @@ class ScreensTest {
 
     // --- Задания (ТЗ 2.5.8) ---
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `список_заданий_по_темам_с_пометкой_пройдено`() {
         showTasks(tasksReady())
 
-        scrollToText(text(R.string.tasks_reward_available))
+        // Награда дня — чипом «Сегодня: +10» в карточке прогресса (DESIGN_PLAN 3.9).
+        scrollToText(text(R.string.tasks_reward_today, 10))
         scrollToText(text(R.string.topic_planning))
         scrollToText("Разложи сорок монет.")
         scrollToText(text(R.string.tasks_completed))
@@ -786,7 +850,6 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.task_answer)).assertIsNotEnabled()
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `три_банки_показывают_бюджет_остаток_и_кнопки`() {
         var added: SpendCategory? = null
@@ -799,8 +862,10 @@ class ScreensTest {
 
         scrollToText(text(R.string.task_step, 1, 2))
         scrollToDescription(text(R.string.budget_amount, text(R.string.category_mandatory), 15))
-        scrollToDescription("15 монет")
-        compose.onNodeWithContentDescription("Добавить в «Копилка»").performClick()
+        // Остаток — закреплённым счётчиком над кнопкой, как на плане дня (DESIGN_PLAN 3.2).
+        compose.onNodeWithContentDescription(text(R.string.budget_remainder) + ": 15 монет").assertIsDisplayed()
+        scrollToDescription(text(R.string.budget_more, text(R.string.category_savings)))
+        compose.onNodeWithContentDescription(text(R.string.budget_more, text(R.string.category_savings))).performClick()
         assertEquals(SpendCategory.SAVINGS, added)
         compose.onNodeWithText(text(R.string.task_next)).assertIsEnabled()
     }
@@ -829,7 +894,6 @@ class ScreensTest {
     }
 
     /** ТЗ 2.5.8: объяснение независимо от результата; награда — отдельной строкой. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `итог_показывает_объяснение_награду_и_питомца`() {
         var finished = false
@@ -843,14 +907,13 @@ class ScreensTest {
 
         scrollToText("Молодец, отложил!")
         scrollToText(text(R.string.task_reward_paid, "15 монет"))
-        scrollToDescription("15 монет")
         scrollToText(text(R.string.stat_change, text(R.string.stat_mood), "+5"))
-        compose.onNodeWithText(text(R.string.task_finish)).performClick()
+        // После верного ответа — «Дальше» к списку заданий (DESIGN_PLAN 3.8).
+        compose.onNodeWithText(text(R.string.task_next)).performClick()
 
         assertTrue(finished)
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `итог_без_монет_говорит_об_этом_честно`() {
         val outcome = TaskOutcomeView(correct = true, text = "Потратил всё.", reward = Coins.ZERO, changes = emptyList())
@@ -969,8 +1032,9 @@ class ScreensTest {
         showSavings(savingsReady(active = false))
 
         scrollToText(text(R.string.savings_goal_none))
-        compose.onNodeWithText(text(R.string.savings_deposit)).assertIsNotEnabled()
-        compose.onNodeWithText(text(R.string.savings_withdraw)).assertIsNotEnabled()
+        // Без цели двух бледных кнопок внизу нет вовсе: главное действие — выбрать цель.
+        compose.onNodeWithText(text(R.string.savings_deposit)).assertDoesNotExist()
+        compose.onNodeWithText(text(R.string.savings_withdraw)).assertDoesNotExist()
     }
 
     @Test
@@ -1005,6 +1069,9 @@ class ScreensTest {
         showSavings(savingsReady(draft = draft), onAdd = { added = true }, onConfirm = { confirmed = true })
 
         compose.onNodeWithText(text(R.string.savings_deposit_title)).assertIsDisplayed()
+        // F9, TalkBack: «Больше монет», а не голое «Больше» — чего больше, было неясно.
+        // Подпись общая для AmountStepper в окнах пополнения и снятия, поэтому
+        // без слова «отложить» или «взять» — оно врало бы в одном из двух окон.
         compose.onNodeWithContentDescription(text(R.string.savings_amount_less)).assertIsNotEnabled()
         compose.onNodeWithContentDescription(text(R.string.savings_amount_more)).performClick()
         assertTrue(added)
@@ -1035,6 +1102,10 @@ class ScreensTest {
         showSavings(savingsReady(draft = draft), onConfirm = { confirmed = true })
 
         compose.onNodeWithText(text(R.string.savings_withdraw_title)).assertIsDisplayed()
+        // F9: тот же AmountStepper, что и в пополнении, — подпись «+» должна
+        // остаться нейтральной («Больше монет»), а не «Отложить больше»,
+        // которое здесь, при снятии, было бы неправдой.
+        compose.onNodeWithContentDescription(text(R.string.savings_amount_more)).assertIsDisplayed()
         // Подпись и сумма склеены в один узел: текст у подписи, озвучка у суммы.
         compose.onNode(hasText(text(R.string.savings_withdraw_left)) and hasContentDescription("5 монет"))
             .assertIsDisplayed()
@@ -1177,20 +1248,33 @@ class ScreensTest {
         compose.onNodeWithText(text(R.string.budget_confirm)).assertIsNotEnabled()
     }
 
-    /** ТЗ 2.5.5: приложение не даёт распределить больше доступного. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /**
+     * ТЗ 2.5.5: приложение не даёт распределить больше доступного. «+» при
+     * этом нажимается: запрос обрезает вьюмодель, и сова объясняет, что монеты
+     * кончились (BudgetPlanningTest). Экран же говорит «Всё разложено».
+     */
     @Test
-    fun `когда_всё_распределено_плюс_недоступен`() {
+    fun `когда_всё_распределено_план_можно_подтвердить`() {
         showBudget(planning(plan = BudgetPlan(Coins(40), Coins(20), Coins(20))))
 
-        scrollToText(text(R.string.budget_distributed))
-        compose.onNodeWithContentDescription(
-            "Добавить в «Нужное»",
-        ).assertIsNotEnabled()
+        compose.onNodeWithContentDescription(text(R.string.budget_distributed)).assertIsDisplayed()
         compose.onNodeWithText(text(R.string.budget_confirm)).assertIsEnabled()
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
+    /** F9: при шрифте 2,0 справка о кошельке прокручивается вместе с банками, а не держит место над кнопкой. */
+    @Test
+    fun `при_крупном_шрифте_справка_о_кошельке_в_списке`() {
+        compose.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale = 2f)) {
+                FinnypetTheme { BudgetContent(state = planning(), onBack = {}, onSet = { _, _ -> }) }
+            }
+        }
+
+        compose.onNode(hasText(text(R.string.budget_wallet_unchanged)) and hasAnyAncestor(hasScrollAction()))
+            .assertExists()
+    }
+
     @Test
     fun `перебор_виден_и_блокирует_подтверждение`() {
         showBudget(
@@ -1206,29 +1290,31 @@ class ScreensTest {
             )
         )
 
-        scrollToText(text(R.string.budget_over))
+        // Перебор — словом и числом в закреплённом счётчике, не только цветом (ТЗ 3.6).
+        compose.onNodeWithContentDescription(text(R.string.budget_over) + " 10 монет").assertIsDisplayed()
         compose.onNodeWithText(text(R.string.budget_confirm)).assertIsNotEnabled()
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `монеты_можно_добавить_и_убрать`() {
-        var added: SpendCategory? = null
-        var removed: SpendCategory? = null
+        val sets = mutableListOf<Pair<SpendCategory, Coins>>()
         showBudget(
             state = planning(plan = BudgetPlan(Coins(10), Coins.ZERO, Coins.ZERO)),
-            onSet = { category, amount -> if (amount > Coins.ZERO) added = category else removed = category },
+            onSet = { category, amount -> sets += category to amount },
         )
 
-        compose.onNodeWithContentDescription("Добавить в «Желаемое»").performClick()
-        compose.onNodeWithContentDescription("Убрать из «Нужное»").performClick()
+        val more = text(R.string.budget_more, text(R.string.category_optional))
+        val less = text(R.string.budget_less, text(R.string.category_mandatory))
+        scrollToDescription(more)
+        compose.onNodeWithContentDescription(more).performClick()
+        scrollToDescription(less)
+        compose.onNodeWithContentDescription(less).performClick()
 
-        assertEquals(SpendCategory.OPTIONAL, added)
-        assertEquals(SpendCategory.MANDATORY, removed)
+        // «+» и «−» — на монету от того, что в банке: 0 → 1 и 10 → 9.
+        assertEquals(listOf(SpendCategory.OPTIONAL to Coins(1), SpendCategory.MANDATORY to Coins(9)), sets)
     }
 
     /** Последний абзац ТЗ 2.5.5: после подтверждения видно план рядом с фактом. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `подтверждённый_план_показывает_план_и_факт`() {
         showBudget(
@@ -1242,18 +1328,19 @@ class ScreensTest {
             )
         )
 
-        scrollToText(text(R.string.budget_started))
-        // Итог строки словами, а не жирностью (ТЗ 3.6); копилка — «отложено».
-        scrollToDescription(
-            text(R.string.category_mandatory) + ": по плану 40, потрачено 45. Сверх плана на 5 монет",
-        )
-        scrollToDescription(text(R.string.category_savings) + ": по плану 20, отложено 20. По плану")
-        scrollToDescription("85 монет")
+        // После подтверждения — три банки со словами «осталось N из M», копилка —
+        // «отложено» (DESIGN_PLAN 3.2); сравнение с фактом — в итогах дня.
+        compose.onNodeWithText(text(R.string.budget_started)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(text(R.string.budget_jar_left_of, text(R.string.category_mandatory), 0, 40))
+            .assertIsDisplayed()
+        compose.onNodeWithContentDescription(
+            text(R.string.budget_jar_description, text(R.string.category_savings), text(R.string.budget_jar_saved, 20)),
+        ).assertIsDisplayed()
+        compose.onNodeWithContentDescription("15 монет", substring = true).assertIsDisplayed()
     }
 
     // --- Прогресс и справочник (ТЗ 2.5.11) ---
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `прогресс_показывает_итоги_цель_и_задания`() {
         showProgress(
@@ -1278,15 +1365,18 @@ class ScreensTest {
             )
         )
 
-        scrollToText(text(R.string.progress_last_day, 2))
+        // Вчерашний день и задания — свёрнутые строки (DESIGN_PLAN 3.10): сначала
+        // чипы «по плану», полосы и список — по нажатию на заголовок.
+        scrollToDescription(text(R.string.category_mandatory) + ": ")
+        openFold(text(R.string.progress_last_day, 2))
         scrollToDescription(text(R.string.category_mandatory) + ": по плану 40, потрачено 35")
-        scrollToText("Самокат мечты")
+        scrollToDescription(text(R.string.main_goal_progress, "Самокат мечты", 30, 120))
+        openFold(text(R.string.tasks_progress, 1, 0))
         scrollToText("Разложи монеты")
         scrollToText(text(R.string.topic_planning))
     }
 
     /** Б22: пройденное без монет — это тренировка, а не штраф в виде «0 монет». */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `пройденное_задание_без_награды_не_показывает_0_монет`() {
         showProgress(
@@ -1308,12 +1398,12 @@ class ScreensTest {
             )
         )
 
+        openFold(text(R.string.tasks_progress, 1, 0))
         scrollToText(text(R.string.progress_task_no_reward))
         compose.onAllNodesWithContentDescription(text(R.string.coins_many, 0)).assertCountEquals(0)
     }
 
     /** Пока день не закончен и заданий нет — экран объясняет, а не пустует. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `пустой_прогресс_объясняет_что_будет_дальше`() {
         showProgress(
@@ -1330,6 +1420,7 @@ class ScreensTest {
 
         scrollToText(text(R.string.progress_no_days))
         scrollToText(text(R.string.main_goal_none))
+        openFold(text(R.string.tasks_progress, 0, 0))
         scrollToText(text(R.string.progress_no_tasks))
     }
 
@@ -1339,7 +1430,6 @@ class ScreensTest {
      * Что будет по нажатию — подписью действия, а не описанием: описание
      * заменило бы собой объяснение термина в озвучке (ТЗ 3.6).
      */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `термин_разворачивается_по_нажатию`() {
         val body = "Это сколько у тебя есть монеток."
@@ -1355,6 +1445,8 @@ class ScreensTest {
             )
         )
 
+        // Сам словарик — тоже свёрнутая строка «Что значат слова».
+        openFold(text(R.string.progress_glossary))
         compose.onAllNodesWithText(body).assertCountEquals(0)
         compose.onNode(hasClickLabel(text(R.string.progress_term_closed, "Бюджет"))).performClick()
 
@@ -1362,14 +1454,16 @@ class ScreensTest {
         compose.onNode(hasClickLabel(text(R.string.progress_term_opened, "Бюджет"))).assert(hasText(body))
     }
 
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `с_главного_экрана_можно_попасть_в_прогресс`() {
         var opened = false
-        showMain(readyState(), onProgress = { opened = true })
+        showMain(readyState().copy(growth = GrowthView(GrowthStage.YOUNG, points = 2, target = 6)), onProgress = { opened = true })
 
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Открыть мой прогресс"))
-        compose.onNodeWithText("Открыть мой прогресс").performClick()
+        // Плитка роста — звёзды и «До подростка»; ведёт в «Мой прогресс».
+        // Точное совпадение: та же фраза есть и в конце подписи имени под совой.
+        val spoken = text(R.string.main_growth_to_young) + " " + text(R.string.main_growth_points, 2, 6)
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription(spoken))
+        compose.onNodeWithContentDescription(spoken).performClick()
 
         assertTrue(opened)
     }
@@ -1380,8 +1474,8 @@ class ScreensTest {
         var opened = false
         showMain(readyState(), onHelp = { opened = true })
 
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.help_action)))
-        compose.onNodeWithText(text(R.string.help_action)).performClick()
+        // «?» — значок в шапке: подпись у него для TalkBack, не текстом.
+        compose.onNodeWithContentDescription(text(R.string.help_action)).performClick()
 
         assertTrue(opened)
     }
@@ -1452,6 +1546,19 @@ class ScreensTest {
         scrollToText(text(R.string.adult_days))
     }
 
+    /** F9, TalkBack: «Подробнее» говорит, что раскроется, и после нажатия — что свернётся. */
+    @Test
+    fun `подробнее_у_взрослого_подписано_смыслом`() {
+        showAdult(adultState().copy(about = listOf("Игра учит планировать.", "Второй абзац.")))
+
+        compose.onNode(hasScrollAction())
+            .performScrollToNode(hasContentDescription(text(R.string.adult_about_more_spoken)))
+        compose.onNodeWithContentDescription(text(R.string.adult_about_more_spoken)).performClick()
+
+        scrollToText("Второй абзац.")
+        compose.onNodeWithContentDescription(text(R.string.adult_about_less_spoken)).assertExists()
+    }
+
     /** ТЗ 2.5.12: никаких негативных оценок — только «пройдено N из M». */
     @Test
     fun `нетронутая_тема_показана_без_упрёка`() {
@@ -1508,8 +1615,7 @@ class ScreensTest {
         var opened = false
         showMain(readyState(), onAdult = { opened = true })
 
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text(R.string.adult_action)))
-        compose.onNodeWithText(text(R.string.adult_action)).performClick()
+        compose.onNodeWithContentDescription(text(R.string.adult_action)).performClick()
 
         assertTrue(opened)
     }
@@ -1586,7 +1692,6 @@ class ScreensTest {
     }
 
     /** В демонстрации чип открывает окно с обоими действиями. Выход — только с подтверждением. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `чип_демонстрации_открывает_окно_с_обоими_действиями`() {
         var played = false
@@ -1642,7 +1747,6 @@ class ScreensTest {
     // --- Итоги дня (ТЗ 2.5.9, 2.5.10) ---
 
     /** ТЗ 2.5.9: после действия видно, что изменилось, и почему. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `итоги_дня_объясняют_и_показывают_изменения`() {
         showDay(
@@ -1663,10 +1767,11 @@ class ScreensTest {
             )
         )
 
+        // Итоги — звёзды дня со словами и строки «почему» (DESIGN_PLAN 3.6).
         scrollToText("День успешно завершён.")
-        scrollToDescription(text(R.string.category_mandatory) + ": по плану 40, потрачено 35")
-        scrollToText(text(R.string.stat_change, text(R.string.stat_mood), "+15"))
-        scrollToText("Питомец стал опытнее: +6 очков роста!")
+        scrollToDescription(text(R.string.day_star_earned, text(R.string.day_star_fed)))
+        scrollToDescription(text(R.string.day_check_done, "Еда и уход — всё купили, потратили 37."))
+        scrollToText(text(R.string.day_growth_many, 6))
         scrollToText(text(R.string.day_new_stage, text(R.string.stage_young)))
         // «5 монет» вхождением нашлось бы и в «75 монет» — ищем по подписи.
         scrollToText(text(R.string.day_carry_over))
@@ -1674,7 +1779,6 @@ class ScreensTest {
     }
 
     /** Ничего не изменилось — так и говорим, а не показываем пустоту. */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `день_без_изменений_говорит_об_этом`() {
         showDay(
@@ -1695,14 +1799,16 @@ class ScreensTest {
             )
         )
 
-        scrollToText("Показатели питомца не изменились.")
+        // Звёзд нет — слоты всё равно на месте и названы словами, без упрёка.
+        scrollToDescription(text(R.string.day_star_missed, text(R.string.day_star_fed)))
+        scrollToDescription(text(R.string.day_star_missed, text(R.string.day_star_saved)))
+        scrollToText("Совет: так держать!")
     }
 
     /**
      * День не вернуть, поэтому закрытие спрашивает подтверждения: кнопка стоит
      * там же, где на других экранах стоит безобидное действие.
      */
-    @Ignore("Экран переделывается, обновим в коммите 21")
     @Test
     fun `закончить_день_спрашивает_подтверждение`() {
         var closed = false
@@ -1789,6 +1895,7 @@ class ScreensTest {
         onShop: () -> Unit = {},
         onSavings: () -> Unit = {},
         onTask: (TaskId) -> Unit = {},
+        onTasks: () -> Unit = {},
     ) {
         compose.setContent {
             FinnypetTheme {
@@ -1799,6 +1906,7 @@ class ScreensTest {
                     onShop = onShop,
                     onSavings = onSavings,
                     onTask = onTask,
+                    onTasks = onTasks,
                     onFinishDay = onFinishDay,
                     onProgress = onProgress,
                     onHelp = onHelp,
@@ -1811,6 +1919,13 @@ class ScreensTest {
     private fun scrollToText(label: String) {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(label))
         compose.onNodeWithText(label).assertIsDisplayed()
+    }
+
+    /** Раскрывает свёрнутую строку «Моего прогресса» по подписи действия заголовка. */
+    private fun openFold(title: String) {
+        val label = text(R.string.progress_term_closed, title)
+        compose.onNode(hasScrollAction()).performScrollToNode(hasClickLabel(label))
+        compose.onNode(hasClickLabel(label)).performClick()
     }
 
     /** Подпись действия у нажимаемого узла: озвучка читает её вслед за текстом. */

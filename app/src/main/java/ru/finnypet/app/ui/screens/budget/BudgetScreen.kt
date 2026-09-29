@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -176,6 +177,28 @@ private fun Planning(
     }
     val drafts = rememberPlanDrafts()
     val remainder = liveRemainder(state.plan, state.remainder, drafts)
+    // При крупном шрифте справки о кошельке и копилке уходят из закреплённой
+    // панели в список: на 360 dp при шрифте 2,0 панель занимала две трети
+    // экрана, и банки прокручивались в окне высотой в строку ползунка (F9).
+    val notesInList = LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE
+    val toSavings = state.plan.savings > Coins.ZERO
+    val savingsNote: @Composable (Modifier) -> Unit = { modifier ->
+        Text(
+            text = stringResource(R.string.budget_to_savings, coinsText(state.plan.savings)),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+    }
+    val walletNote: @Composable () -> Unit = {
+        // План — только решение: монеты ещё не потрачены, поэтому
+        // кошелёк в шапке до подтверждения не уменьшается.
+        Text(
+            text = stringResource(R.string.budget_wallet_unchanged),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 
     Screen(
         onBack = onBack,
@@ -188,13 +211,7 @@ private fun Planning(
             ButtonColumn {
                 Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny)) {
                     RemainderCounter(remainder = remainder, overBy = state.overBy)
-                    // План — только решение: монеты ещё не потрачены, поэтому
-                    // кошелёк в шапке до подтверждения не уменьшается.
-                    Text(
-                        text = stringResource(R.string.budget_wallet_unchanged),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (!notesInList) walletNote()
                 }
                 if (state.needsGoal) {
                     Text(
@@ -206,13 +223,7 @@ private fun Planning(
                 // и немая: иначе панель росла бы на строку с первой монетой в
                 // копилке, и кнопка прыгала бы вверх из-под пальца. Над кнопкой,
                 // а не под ней: так кнопка стоит у низа, как на соседних экранах.
-                val toSavings = state.plan.savings > Coins.ZERO
-                Text(
-                    text = stringResource(R.string.budget_to_savings, coinsText(state.plan.savings)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = if (toSavings) Modifier else Modifier.alpha(0f).clearAndSetSemantics {},
-                )
+                if (!notesInList) savingsNote(if (toSavings) Modifier else Modifier.alpha(0f).clearAndSetSemantics {})
                 FinnyButton(
                     text = stringResource(R.string.budget_confirm),
                     onClick = { confirming = true },
@@ -243,6 +254,11 @@ private fun Planning(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        // В списке строке копилки место держать незачем: кнопка от неё не прыгает.
+        if (notesInList) {
+            walletNote()
+            if (toSavings) savingsNote(Modifier)
         }
     }
 }

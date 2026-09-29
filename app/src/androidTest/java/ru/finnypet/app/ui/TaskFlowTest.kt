@@ -190,7 +190,7 @@ class TaskFlowTest {
         val ready = vm.awaitReady()
 
         assertEquals(TaskTopic.SAVING, ready.topic)
-        assertEquals("Сова нашла монеты. Что с ними делать?", ready.intro)
+        assertEquals("Сова нашла монеты. Что с ними делать?", ready.intro)
         assertEquals(Coins(15), ready.maxReward)
         assertTrue(ready.rewardAvailable)
         assertEquals(TaskStage.Intro, ready.stage)
@@ -326,7 +326,7 @@ class TaskFlowTest {
         vm.next()
 
         val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
-        assertEquals("Потратил больше двадцати — в другой раз посмотри на цены.", done.outcome.text)
+        assertEquals("Потратил больше двадцати — в другой раз посмотри на цены.", done.outcome.text)
         // R8: объяснение есть, монет за неверный ответ нет, хоть в исходе и записана награда.
         assertEquals(Coins.ZERO, done.outcome.reward)
     }
@@ -343,7 +343,7 @@ class TaskFlowTest {
         vm.next()
 
         val done = vm.await { it.stage is TaskStage.Done }.stage as TaskStage.Done
-        assertEquals("Уложился в двадцать!", done.outcome.text)
+        assertEquals("Уложился в двадцать!", done.outcome.text)
         assertEquals(Coins(15), done.outcome.reward)
     }
 

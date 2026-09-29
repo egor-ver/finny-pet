@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -127,11 +128,15 @@ fun FinnyButton(
                 if (reward == null) {
                     Text(text = text, style = labelStyle, textAlign = TextAlign.Center, color = onFaceColor)
                 } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                    // FlowRow, а не Row: при шрифте 2,0 «Выполнить задание» забирало
+                    // всю ширину строки, и чип «+10» пропадал; сжатый рядом с чипом
+                    // текст рвал слово. Теперь чип уходит строкой ниже (F9).
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall, Alignment.CenterHorizontally),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+                        itemVerticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(text = text, style = labelStyle, color = onFaceColor)
+                        Text(text = text, style = labelStyle, color = onFaceColor, textAlign = TextAlign.Center)
                         RewardChip(reward = reward, contentColor = onFaceColor)
                     }
                 }

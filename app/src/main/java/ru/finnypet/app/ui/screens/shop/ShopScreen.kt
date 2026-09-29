@@ -69,6 +69,7 @@ import ru.finnypet.app.ui.components.PlanningHint
 import ru.finnypet.app.ui.components.SpeechBubble
 import ru.finnypet.app.ui.components.StatChip
 import ru.finnypet.app.ui.components.coinsText
+import ru.finnypet.app.ui.components.statChangeText
 import ru.finnypet.app.ui.components.color
 import ru.finnypet.app.ui.components.fill
 import ru.finnypet.app.ui.components.label
@@ -435,11 +436,19 @@ private fun PlanJarRow(jar: ShopJar) {
 private fun ShopTile(item: ShopItemView, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val needed = item.mark == ItemMark.NEEDED_NOW
     val need = FinnyTheme.palette.need
+    // Одной фразой, название первым: по порядку на плитке TalkBack начинал с
+    // цены — «8 монет, Свежая вода», и было не понять, о чём число (F9).
+    val spoken = (
+        listOf(item.title, coinsText(item.price)) +
+            item.effects.map { statChangeText(it.stat, it.delta) } +
+            listOfNotNull(item.mark.label?.let { stringResource(it) })
+        ).joinToString(", ")
     Column(
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
         modifier = modifier
             .tile(marked = needed, markColor = need.fill)
             .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = spoken }
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .padding(Dimens.SpaceMedium),
     ) {
@@ -483,14 +492,13 @@ private fun ShopTile(item: ShopItemView, onClick: () -> Unit, modifier: Modifier
     }
 }
 
-/** Цена бейджем с монетой; для TalkBack — «12 монет» со склонением, а не «12». */
+/** Цена бейджем с монетой; TalkBack слышит её в подписи плитки — «12 монет», а не «12». */
 @Composable
 private fun PriceBadge(price: Coins) {
-    val spoken = coinsText(price)
     CoinChip(
         text = price.amount.toString(),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
+        modifier = Modifier.clearAndSetSemantics {},
     )
 }
 

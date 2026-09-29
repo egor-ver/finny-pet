@@ -142,11 +142,13 @@ class BudgetPlanningTest {
 
         viewModel.set(SpendCategory.MANDATORY, Coins(10))
         await { it.plan.mandatory == Coins(10) }
-        viewModel.set(SpendCategory.SAVINGS, Coins(5))
+        // Желаемое, а не копилка: без выбранной цели копилку не разложить
+        // (раздел 8 плана), и подтверждение было бы закрыто по другой причине.
+        viewModel.set(SpendCategory.OPTIONAL, Coins(5))
 
         val planning = await { it.plan.total == Coins(15) }
         assertEquals(Coins(10), planning.plan.mandatory)
-        assertEquals(Coins(5), planning.plan.savings)
+        assertEquals(Coins(5), planning.plan.optional)
         assertEquals(planning.available - Coins(15), planning.remainder)
         assertTrue(planning.canConfirm)
     }
@@ -224,9 +226,9 @@ class BudgetPlanningTest {
         )
         try {
             val start = withTimeout(TIMEOUT_MS) {
-                second.state.first { it is BudgetState.Planning } as BudgetState.Planning
+                second.state.first { it is BudgetState.Planning && it.available == Coins(82) } as BudgetState.Planning
             }
-            assertEquals(Coins(82), start.available)
+            assertEquals(Coins(82), start.remainder)
 
             second.set(SpendCategory.MANDATORY, Coins(81))
             val almost = withTimeout(TIMEOUT_MS) {
@@ -286,7 +288,10 @@ class BudgetPlanningTest {
         assertEquals(false, awaitPlanning().hasGoal)
     }
 
-    private suspend fun awaitPlanning(): BudgetState.Planning = await { true }
+    // Период открывается раньше, чем пишется доход дня, и первое состояние
+    // приходит со стартовыми 20 монетами — ждём, пока доход дойдёт до экрана.
+    private suspend fun awaitPlanning(): BudgetState.Planning =
+        await { it.available == balance.startingBalance + balance.periodIncome }
 
     private suspend fun await(
         condition: (BudgetState.Planning) -> Boolean,

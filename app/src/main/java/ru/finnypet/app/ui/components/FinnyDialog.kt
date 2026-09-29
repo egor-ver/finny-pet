@@ -3,6 +3,7 @@ package ru.finnypet.app.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import ru.finnypet.app.ui.theme.Dimens
 
@@ -45,10 +48,16 @@ fun FinnyDialog(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
+        // Без верхней границы `verticalScroll` не включается: окно без
+        // ограничения по высоте просто растёт вместе с контентом и на
+        // крупном шрифте выходит за край экрана — нижние кнопки становятся
+        // недостижимы (ТЗ 3.6, найдено тестом отказа покупки на Vivo, F9).
+        val maxHeight = LocalConfiguration.current.screenHeightDp.dp - Dimens.Space * 4
         Surface(
             shape = RoundedCornerShape(Dimens.CornerDialog),
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = Dimens.CardShadowElevation,
+            modifier = Modifier.heightIn(max = maxHeight),
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
