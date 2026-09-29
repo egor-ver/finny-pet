@@ -69,7 +69,7 @@ data class TaskOfDay(
     val topic: TaskTopic,
     /** Платят ли сегодня за это задание (R8): «+10» на плитке и кнопке. */
     val rewardAvailable: Boolean,
-    /** Все задания уже пройдены — предлагается повторить давнее всех. */
+    /** Все задания уже пройдены — плитка «N из N» с галочкой. */
     val allDone: Boolean,
     /** Сколько дадут за первую верную попытку дня (R8). */
     val reward: Coins,
@@ -80,6 +80,8 @@ data class TaskOfDay(
     val unsolvedToday: Boolean = false,
     /** Лимит наград дня выбран — галочка «получено»; иначе без «+10» только это задание. */
     val limitReached: Boolean = false,
+    /** Задание дня уже верно проходили — кнопка «Повторить задание» ([TaskSchedule.isRepeat]). */
+    val repeat: Boolean = false,
 )
 
 /**
@@ -226,7 +228,7 @@ class MainViewModel @Inject constructor(
                         wallet = wallet,
                         reward = taskReward,
                         income = balance.periodIncome,
-                        repeat = task?.allDone == true,
+                        repeat = task?.repeat == true,
                         eventKey = event?.key,
                         eventArgs = event?.args.orEmpty(),
                         needLeft = jars?.mandatory,
@@ -294,6 +296,7 @@ class MainViewModel @Inject constructor(
             totalCount = listed.size,
             unsolvedToday = TaskSchedule.unsolvedToday(task, completed, transactions),
             limitReached = !TaskSchedule.rewardAvailable(transactions, balance),
+            repeat = TaskSchedule.isRepeat(task, tasks, completed),
         )
     }
 

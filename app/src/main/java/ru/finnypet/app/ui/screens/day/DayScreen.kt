@@ -178,7 +178,7 @@ private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> 
             style = MaterialTheme.typography.titleMedium,
         )
         FinnyCard {
-            PlanFactBars(lines = state.lines)
+            PlanFactBars(lines = state.lines, needsMissed = state.needsMissed)
         }
         TotalsLine(state.lines)
     }

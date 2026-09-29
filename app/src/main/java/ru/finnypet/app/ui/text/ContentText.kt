@@ -10,8 +10,17 @@ import ru.finnypet.app.domain.model.Explanation
  */
 fun Map<String, String>.textOf(key: String): String {
     val text = this[key] ?: return key
-    return FIXED_NUMBER.replace(text) { numberWithWord(it.groupValues[1], it.groupValues[2]) }
+    val numbered = FIXED_NUMBER.replace(text) { numberWithWord(it.groupValues[1], it.groupValues[2]) }
+    return SHORT_WORD.replace(numbered) { "${it.groupValues[1]}$NBSP" }
 }
+
+/**
+ * Однобуквенное слово — «Я», «А», «в», «у», «и» — и пробел после него. Его
+ * заменяют неразрывным: иначе «в» или «Я» оставались в конце строки, а слово,
+ * к которому они относятся, уезжало на следующую (ревью F7: «В / копилке»,
+ * «в / пакетиках»). Буква перед ним — значит, это конец длинного слова.
+ */
+private val SHORT_WORD = Regex("""(?<![\p{L}\d])(\p{L}) """)
 
 /**
  * Число, записанное прямо в тексте истории: «{coins:40}», «{days:2}». Форма

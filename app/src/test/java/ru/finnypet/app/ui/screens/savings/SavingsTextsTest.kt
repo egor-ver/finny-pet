@@ -30,7 +30,7 @@ class SavingsTextsTest {
         val result = engine.deposit(Coins(5), Coins(45), GoalProgress(goalId = goal.id, saved = Coins(1)), goal, periodId = 1)
 
         assertEquals(
-            "Отложили в копилку: 5\u00A0монет! Всего накоплено 6, до цели осталось 34.",
+            "Отложили в\u00A0копилку: 5\u00A0монет! Всего накоплено 6, до цели осталось 34.",
             texts.textOf(result.explanation),
         )
     }

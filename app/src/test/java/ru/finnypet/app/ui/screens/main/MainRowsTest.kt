@@ -174,7 +174,8 @@ class MainRowsTest {
         val task = TaskOfDay(TaskId("a"), TaskTopic.SAVING, rewardAvailable = true, allDone = false, reward = Coins(10))
 
         assertEquals(R.string.main_task_reward, tileRewardText(task))
-        assertEquals(R.string.task_retry_note, tileRewardText(task.copy(rewardAvailable = false, unsolvedToday = true)))
+        // Плитка ведёт в список, где за другие задания ещё платят (ревью F7).
+        assertNull(tileRewardText(task.copy(rewardAvailable = false, unsolvedToday = true)))
         assertEquals(R.string.main_task_reward_taken, tileRewardText(task.copy(rewardAvailable = false, limitReached = true)))
     }
 

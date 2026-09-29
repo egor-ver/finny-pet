@@ -46,22 +46,30 @@ fun planOwl(
     cover != null && plan.mandatory.amount > cover.amount + slack -> PlanOwl(PetMood.CALM, Explanation("owl.plan.too_much"))
     goalTitle != null && !goalReached && plan.savings == Coins.ZERO ->
         PlanOwl(PetMood.CALM, Explanation("owl.plan.no_savings", mapOf("goal" to goalTitle)))
+    // «Отличный план!» при 103 неразложенных звучало как «всё готово» (ревью F7):
+    // остаток сова называет, но план не ругает — он сохранится в кошельке (F5).
+    plan.total < wallet ->
+        PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good_rest", mapOf("left" to "${wallet.amount - plan.total.amount}")))
     else -> PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good"))
 }
 
 /**
- * «Финни нужно не меньше 37: еда 22, уход 15» — сколько стоит закрыть
- * каждую потребность. `null` — потребность в магазине нечем закрыть, и
- * называть число было бы неправдой.
+ * «Положи на нужное не меньше 37 монет: 22 на еду и 15 на уход» — сколько
+ * стоит закрыть каждую потребность. Одна потребность — одна цена, без
+ * расшифровки из одного слагаемого. Обычными предложениями, а не «еда 14»
+ * (ревью F7). `null` — потребность в магазине нечем закрыть, и называть
+ * число было бы неправдой.
  */
 fun mandatoryHint(texts: Map<String, String>, coverByNeed: Map<PetStatKind, Coins>?): String? {
     if (coverByNeed == null) return null
     if (coverByNeed.isEmpty()) return texts.textOf("plan.hint.no_needs")
-    val parts = coverByNeed.entries.joinToString(", ") { (kind, price) ->
-        texts.textOf("plan.need.${kind.name}").replace("{price}", "${price.amount}")
+    coverByNeed.entries.singleOrNull()?.let { (kind, price) ->
+        return texts.textOf(Explanation("plan.hint.need.${kind.name}", mapOf("price" to "${price.amount}")))
     }
+    // Место цены в тексте названо потребностью: «{SATIETY} на еду и {CARE} на уход».
+    val prices = coverByNeed.entries.associate { (kind, price) -> kind.name to "${price.amount}" }
     val total = coverByNeed.values.sumOf { it.amount }
-    return texts.textOf(Explanation("plan.hint.needs", mapOf("total" to "$total", "parts" to parts)))
+    return texts.textOf(Explanation("plan.hint.needs", prices + ("total" to "$total")))
 }
 
 /**

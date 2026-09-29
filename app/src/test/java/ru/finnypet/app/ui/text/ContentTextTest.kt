@@ -64,7 +64,22 @@ class ContentTextTest {
     fun `одно и то же место подставляется везде`() {
         val repeated = mapOf("k" to "{n} и ещё раз {n}")
 
-        assertEquals("5 и ещё раз 5", repeated.textOf(Explanation(key = "k", args = mapOf("n" to "5"))))
+        assertEquals("5 и${NBSP}ещё раз 5", repeated.textOf(Explanation(key = "k", args = mapOf("n" to "5"))))
+    }
+
+    /**
+     * Ревью F7: «Я», «в», «у» оставались в конце строки — «В / копилке»,
+     * «в / пакетиках». После однобуквенного слова пробел неразрывный, а внутри
+     * и в конце длинных слов («Сова», «коплю») пробелы обычные.
+     */
+    @Test
+    fun `однобуквенное слово не остаётся в конце строки`() {
+        val words = mapOf("k" to "А я коплю. В копилке «Нужное» в пакетиках у меня, как и было.")
+
+        assertEquals(
+            "А${NBSP}я${NBSP}коплю. В${NBSP}копилке «Нужное» в${NBSP}пакетиках у${NBSP}меня, как и${NBSP}было.",
+            words.textOf("k"),
+        )
     }
 
     /** Контрольная точка 4 плана: нигде нет «81 монет». */
@@ -114,7 +129,7 @@ class ContentTextTest {
         )
 
         assertEquals(
-            "Коплю на комиксы за 40${NBSP}монет, будут через 2${NBSP}дня, а не 1${NBSP}день и не 5${NBSP}дней. Монета: 21${NBSP}монета.",
+            "Коплю на комиксы за 40${NBSP}монет, будут через 2${NBSP}дня, а${NBSP}не 1${NBSP}день и${NBSP}не 5${NBSP}дней. Монета: 21${NBSP}монета.",
             words.textOf("story"),
         )
     }
@@ -123,7 +138,7 @@ class ContentTextTest {
     fun `число в тексте склоняется и в объяснении с аргументами`() {
         val words = mapOf("k" to "Дадут {coins:reward}, а было {coins:3}.", "word.coins.FEW" to "монеты", "word.coins.MANY" to "монет")
 
-        assertEquals("Дадут 10${NBSP}монет, а было 3${NBSP}монеты.", words.textOf(Explanation("k", mapOf("reward" to "10"))))
+        assertEquals("Дадут 10${NBSP}монет, а${NBSP}было 3${NBSP}монеты.", words.textOf(Explanation("k", mapOf("reward" to "10"))))
     }
 
     @Test

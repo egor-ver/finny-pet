@@ -72,6 +72,14 @@ object TaskSchedule {
         correctPasses(listed(tasks), completed).mapTo(mutableSetOf()) { it.taskId }
 
     /**
+     * Задание дня — повтор уже верно пройденного: кнопка «Повторить задание».
+     * Разбор к «все пройдены» не относится (AD-7), и ребёнок видит его впервые —
+     * «Повторить» на нём было неправдой (ревью F7).
+     */
+    fun isRepeat(task: LearningTask, tasks: List<LearningTask>, completed: List<CompletedTask>): Boolean =
+        task.id in passed(tasks, completed)
+
+    /**
      * Задание дня для главного экрана.
      *
      * Разбор — первым, пока сова грустит из-за своего показателя или если его

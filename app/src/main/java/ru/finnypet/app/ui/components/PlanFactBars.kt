@@ -83,9 +83,9 @@ fun planFactFractions(planned: Coins, actual: Coins): PlanFactFractions {
  * лежат внутри сворачиваемой строки, и вторая карточка в карточке была бы лишней.
  */
 @Composable
-fun PlanFactBars(lines: List<BudgetLine>, modifier: Modifier = Modifier) {
+fun PlanFactBars(lines: List<BudgetLine>, modifier: Modifier = Modifier, needsMissed: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.Space), modifier = modifier.fillMaxWidth()) {
-        lines.forEach { line -> PlanFactRow(line) }
+        lines.forEach { line -> PlanFactRow(line, needsMissed) }
     }
 }
 
@@ -94,12 +94,12 @@ fun PlanFactBars(lines: List<BudgetLine>, modifier: Modifier = Modifier) {
  * — а не цветом или длиной: ТЗ 3.6 запрещает передавать смысл только видом.
  */
 @Composable
-private fun PlanFactRow(line: BudgetLine) {
+private fun PlanFactRow(line: BudgetLine, needsMissed: Boolean) {
     val title = stringResource(line.category.label)
     val factLabel = stringResource(
         if (line.category == SpendCategory.SAVINGS) R.string.budget_saved else R.string.budget_fact,
     )
-    val status = statusOf(line)
+    val status = if (needsMissedNote(line, needsMissed)) stringResource(R.string.budget_status_needs_missed) else statusOf(line)
     val spoken = stringResource(
         R.string.budget_line,
         title,
@@ -197,6 +197,15 @@ fun planFactStatus(line: BudgetLine): PlanFactStatus = when {
     line.category == SpendCategory.SAVINGS -> PlanFactStatus.SHORT
     else -> PlanFactStatus.OVER
 }
+
+/**
+ * «Нужное 14 из 29 · По плану», а сова ложится голодной — ребёнок видел в этом
+ * противоречие (ревью F7, трижды). План и правда не превышен (R3, звезда та
+ * же), но строка «Нужное» при незакрытых еде или уходе говорит о них, а не
+ * «по плану»: ровно то, что утром скажет итог дня.
+ */
+fun needsMissedNote(line: BudgetLine, needsMissed: Boolean): Boolean =
+    needsMissed && line.category == SpendCategory.MANDATORY && planFactStatus(line) == PlanFactStatus.OK
 
 @Composable
 private fun statusOf(line: BudgetLine): String {

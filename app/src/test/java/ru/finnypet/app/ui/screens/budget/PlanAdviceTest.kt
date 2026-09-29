@@ -93,7 +93,7 @@ class PlanAdviceTest {
     fun `цель собрана — отложить на неё не предлагает`() {
         assertEquals(PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good")), owl(plan(38, 10, 0), reached = true))
         assertEquals(
-            "А на цель «Набор комиксов» не отложим?",
+            "А\u00A0на цель «Набор комиксов» не отложим?",
             texts.textOf(Explanation("owl.plan.no_savings", mapOf("goal" to "Набор комиксов"))),
         )
     }
@@ -112,7 +112,19 @@ class PlanAdviceTest {
     /** Потребность нечем закрыть в магазине — о нужном сова молчит, а не выдумывает число. */
     @Test
     fun `цена потребностей неизвестна — о нужном ни слова`() {
-        assertEquals(Explanation("owl.plan.good"), owl(plan(0, 10, 8), cover = null).phrase)
+        assertEquals("owl.plan.good_rest", owl(plan(0, 10, 8), cover = null).phrase.key)
+    }
+
+    /** Ревью F7: «Отличный план!» при 103 неразложенных звучало как «всё готово». */
+    @Test
+    fun `неразложенный остаток сова называет, но план хвалит`() {
+        val owl = owl(plan(38, 2, 0), reached = true)
+
+        assertEquals(PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good_rest", mapOf("left" to "8"))), owl)
+        assertEquals(
+            "Хороший план! Не разложено: 8 монет. Остаток можно добавить в банки или оставить в кошельке.",
+            texts.textOf(owl.phrase).replace(NBSP, ' '),
+        )
     }
 
     // --- Пояснения под банками ---
@@ -120,8 +132,21 @@ class PlanAdviceTest {
     @Test
     fun `нужное — сколько стоит каждая потребность`() {
         assertEquals(
-            "На нужное — не меньше 37: еда 22, уход 15",
-            mandatoryHint(texts, mapOf(PetStatKind.SATIETY to Coins(22), PetStatKind.CARE to Coins(15))),
+            "Положи на нужное не меньше 37 монет: 22 на еду и 15 на уход.",
+            mandatoryHint(texts, mapOf(PetStatKind.SATIETY to Coins(22), PetStatKind.CARE to Coins(15)))?.replace(NBSP, ' '),
+        )
+    }
+
+    /** Ревью F7: «На нужное — не меньше 14: еда 14» — телеграфом и с повтором одного числа. */
+    @Test
+    fun `нужное — одна потребность одним предложением`() {
+        assertEquals(
+            "Еда стоит 14 монет — положи на нужное не меньше.",
+            mandatoryHint(texts, mapOf(PetStatKind.SATIETY to Coins(14)))?.replace(NBSP, ' '),
+        )
+        assertEquals(
+            "Уход стоит 15 монет — положи на нужное не меньше.",
+            mandatoryHint(texts, mapOf(PetStatKind.CARE to Coins(15)))?.replace(NBSP, ' '),
         )
     }
 
@@ -147,10 +172,10 @@ class PlanAdviceTest {
     /** Раздел 8 плана: копилка 16 из 40, по 8 в день — три дня. */
     @Test
     fun `копилка — срок до цели при такой сумме`() {
-        assertEquals("Если откладывать по 8 в день — цель «Комиксы» через 3 дня.", savingsHint(texts, Coins(8), "Комиксы", days = 3))
-        assertEquals("Если откладывать по 24 в день — цель «Комиксы» через 1 день.", savingsHint(texts, Coins(24), "Комиксы", days = 1))
-        assertEquals("Если откладывать по 1 в день — цель «Комиксы» через 24 дня.", savingsHint(texts, Coins(1), "Комиксы", days = 24))
-        assertEquals("Если откладывать по 2 в день — цель «Комиксы» через 12 дней.", savingsHint(texts, Coins(2), "Комиксы", days = 12))
+        assertEquals("Если откладывать по 8 в\u00A0день — цель «Комиксы» через 3 дня.", savingsHint(texts, Coins(8), "Комиксы", days = 3))
+        assertEquals("Если откладывать по 24 в\u00A0день — цель «Комиксы» через 1 день.", savingsHint(texts, Coins(24), "Комиксы", days = 1))
+        assertEquals("Если откладывать по 1 в\u00A0день — цель «Комиксы» через 24 дня.", savingsHint(texts, Coins(1), "Комиксы", days = 24))
+        assertEquals("Если откладывать по 2 в\u00A0день — цель «Комиксы» через 12 дней.", savingsHint(texts, Coins(2), "Комиксы", days = 12))
     }
 
     @Test
@@ -165,11 +190,15 @@ class PlanAdviceTest {
     fun `у каждой фразы совы на плане есть текст`() {
         val keys = listOf(
             owl(plan(0, 0, 0)), owl(plan(3, 0, 0)), owl(plan(47, 0, 1)), owl(plan(38, 10, 0)),
-            owl(plan(38, 2, 8)), owl(plan(38, 2, 8), hitLimit = true),
+            owl(plan(38, 2, 8)), owl(plan(38, 2, 8), hitLimit = true), owl(plan(38, 2, 0), reached = true),
         ).map { it.phrase.key }
 
         val missing = keys.filterNot(texts::containsKey)
         assertTrue("Нет текста в explanations.json для фраз: $missing", missing.isEmpty())
+    }
+
+    private companion object {
+        const val NBSP = '\u00A0'
     }
 
     private fun plan(mandatory: Int, optional: Int, savings: Int) =

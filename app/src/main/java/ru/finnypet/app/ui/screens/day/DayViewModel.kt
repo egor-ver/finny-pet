@@ -95,6 +95,8 @@ sealed interface DayState {
         val closing: Boolean = false,
         /** «Я ещё голодный. Уложить так?» (R14); `null` — переспрашивать не о чем. */
         val warning: String? = null,
+        /** Еда или уход не закрыты — строка «Нужное» не говорит «по плану» ([needsMissedNote]). */
+        val needsMissed: Boolean = false,
     ) : DayState
 
     data class Closed(val summary: DaySummary) : DayState
@@ -268,8 +270,9 @@ class DayViewModel @Inject constructor(
                 ) { plan, transactions, wallet, done, isWorking ->
                     val cheapestNeeded = petState.cheapestNeeded(pet.state, pack.shop)
                     val canBuy = cheapestNeeded != null && wallet.covers(cheapestNeeded)
-                    val warning = sleepWarning(petState.needsOf(pet.state), canBuy)?.let(texts::textOf)
-                    stateOf(period, plan, transactions, done, isWorking, warning)
+                    val needs = petState.needsOf(pet.state)
+                    val warning = sleepWarning(needs, canBuy)?.let(texts::textOf)
+                    stateOf(period, plan, transactions, done, isWorking, warning, needsMissed = needs.isNotEmpty())
                 }
             }
         }
@@ -281,6 +284,7 @@ class DayViewModel @Inject constructor(
         done: DaySummary?,
         isWorking: Boolean,
         warning: String?,
+        needsMissed: Boolean,
     ): DayState = when {
         // Итоги показываются, пока ребёнок сам не уйдёт: день уже следующий,
         // но экран обязан объяснить, чем закончился прошлый (ТЗ 2.5.9).
@@ -300,6 +304,7 @@ class DayViewModel @Inject constructor(
                 },
                 closing = isWorking,
                 warning = warning,
+                needsMissed = needsMissed,
             )
         }
     }

@@ -1,6 +1,8 @@
 package ru.finnypet.app.ui.components
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import ru.finnypet.app.domain.model.Coins
 import ru.finnypet.app.domain.model.SpendCategory
@@ -63,6 +65,18 @@ class PlanFactBarsTest {
     fun `трата сверх плана — сверх плана, в пределах — по плану`() {
         assertEquals(PlanFactStatus.OVER, planFactStatus(BudgetLine(SpendCategory.OPTIONAL, Coins(19), Coins(24), followed = false)))
         assertEquals(PlanFactStatus.OK, planFactStatus(BudgetLine(SpendCategory.OPTIONAL, Coins(0), Coins(0), followed = true)))
+    }
+
+    /** Ревью F7: «Нужное 14 из 29 · По плану», а уход не куплен и сова ложится голодной. */
+    @Test
+    fun `нужное не закрыто — строка «Нужное» говорит о еде и уходе, а не «по плану»`() {
+        val mandatory = BudgetLine(SpendCategory.MANDATORY, Coins(29), Coins(14), followed = true)
+        val optional = BudgetLine(SpendCategory.OPTIONAL, Coins(0), Coins(0), followed = true)
+
+        assertTrue(needsMissedNote(mandatory, needsMissed = true))
+        assertFalse(needsMissedNote(mandatory, needsMissed = false))
+        assertFalse(needsMissedNote(optional, needsMissed = true))
+        assertFalse(needsMissedNote(mandatory.copy(actual = Coins(35), followed = false), needsMissed = true))
     }
 
     private fun savings(planned: Int, actual: Int) =

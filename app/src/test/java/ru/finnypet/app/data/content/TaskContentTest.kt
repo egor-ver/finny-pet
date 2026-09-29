@@ -137,9 +137,9 @@ class TaskContentTest {
     /** Ревью F7: сыт — от еды и питья вместе, вопрос говорит это заранее, а не только разбор ошибки. */
     @Test
     fun `разбор — вопрос говорит, что нужны и еда, и питьё`() {
-        assertTrue("и еда, и питьё" in pack.texts.textOf("task.review_hungry.step1"))
+        assertTrue("и${NBSP}еда, и${NBSP}питьё" in pack.texts.textOf("task.review_hungry.step1"))
         assertEquals("task.review_hungry.otherwise" to false, explain("review-hungry-owl", basket("food-porridge" to 14)))
-        assertTrue("и еда, и питьё" in pack.texts.textOf("task.review_hungry.otherwise"))
+        assertTrue("и${NBSP}еда, и${NBSP}питьё" in pack.texts.textOf("task.review_hungry.otherwise"))
     }
 
     /** Ревью F7: верно всё от 12 до 30 в копилке — фраза не называет «12 лежат», это ложь при 30. */
@@ -223,9 +223,9 @@ class TaskContentTest {
     fun `ярмарка — вопрос называет комиксы, варианты одной формы`() {
         val prompt = pack.texts.textOf("task.save_fair_temptation.step1")
         assertTrue(prompt, "комиксы за 40${NBSP}монет" in prompt)
-        assertTrue(prompt, "когда я смогу купить комиксы?" in prompt)
+        assertTrue(prompt, "когда я${NBSP}смогу купить комиксы?" in prompt)
         assertEquals(
-            listOf("Через 3${NBSP}дня — на день позже", "Через 4${NBSP}дня — на 2${NBSP}дня позже", "Через 2${NBSP}дня — как и было"),
+            listOf("Через 3${NBSP}дня — на день позже", "Через 4${NBSP}дня — на 2${NBSP}дня позже", "Через 2${NBSP}дня — как и${NBSP}было"),
             listOf("one_day_longer", "two_days_longer", "no_change").map { pack.texts.textOf("task.choice.$it") },
         )
     }

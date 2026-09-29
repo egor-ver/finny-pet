@@ -203,7 +203,7 @@ class DayChecksTest {
             dayTip(checks, spent, shop, goalCollected = false),
         )
         assertEquals(
-            "Совет: корми меня каждый день. Обычно еда стоит 8–14, а сегодня пришлось 22.",
+            "Совет: корми меня каждый день. Обычно еда стоит 8–14, а\u00A0сегодня пришлось 22.",
             texts.textOf(dayTip(checks, spent, shop, goalCollected = false)),
         )
     }
@@ -231,7 +231,7 @@ class DayChecksTest {
         assertEquals("day.tip.goal_collected", dayTip(unplanned, Coins(8), shop, goalCollected = true).key)
         assertEquals("day.tip.savings", dayTip(unplanned, Coins(8), shop, goalCollected = false).key)
         assertEquals(
-            "Совет: на цель уже хватает — её можно купить в копилке, а потом выбрать новую.",
+            "Совет: на цель уже хватает — её можно купить в\u00A0копилке, а\u00A0потом выбрать новую.",
             texts.textOf(dayTip(unplanned, Coins(8), shop, goalCollected = true)),
         )
     }
@@ -266,9 +266,9 @@ class DayChecksTest {
         val lines = checks.map { texts.textOf(it.text) }
 
         assertFalse(checks[1].done)
-        assertEquals("Нужное и желаемое — по плану. Звезда будет, когда еда и уход куплены.", lines[1])
-        lines.forEach { line -> assertFalse("Не безлично: $line", Regex("""(^|\s)(я|мне|меня)(\s|$)""").containsMatchIn(line.lowercase())) }
-        assertEquals("Копилка +8 — монеты уже ближе к цели.", lines[2])
+        assertEquals("Нужное и\u00A0желаемое — по плану. Звезда будет, когда еда и\u00A0уход куплены.", lines[1])
+        lines.forEach { line -> assertFalse("Не безлично: $line", Regex("""(^|[\s\u00A0])(я|мне|меня)([\s\u00A0]|$)""").containsMatchIn(line.lowercase())) }
+        assertEquals("Копилка +8 — монеты уже ближе к\u00A0цели.", lines[2])
         assertFalse("незакрыт" in lines[2] || "звёзд" in lines[2])
         assertEquals("Звёзды растут, только когда питомец сыт. Прогресс никуда не делся.", texts.textOf("growth.no_points"))
     }
@@ -343,7 +343,7 @@ class DayChecksTest {
     @Test
     fun `итог дня по плану не спорит с копилкой больше плана`() {
         assertEquals(
-            "Всё по плану: потратили не больше задуманного, а отложили не меньше!",
+            "Всё по плану: потратили не больше задуманного, а\u00A0отложили не меньше!",
             texts.textOf("period.plan_followed"),
         )
     }

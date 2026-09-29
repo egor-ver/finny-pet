@@ -75,7 +75,6 @@ import ru.finnypet.app.ui.components.icons.FinnyIcons
 import ru.finnypet.app.ui.components.label
 import ru.finnypet.app.ui.components.needLabel
 import ru.finnypet.app.ui.components.starsText
-import ru.finnypet.app.ui.screens.tasks.noCoinsNote
 import ru.finnypet.app.ui.sound.Sound
 import ru.finnypet.app.ui.sound.SoundOnce
 import ru.finnypet.app.ui.theme.Dimens
@@ -382,9 +381,9 @@ private fun DayButtons(
     onShop: () -> Unit,
     onSleep: () -> Unit,
 ) {
-    // Все пройдены — награда за повтор: «Выполнить задание +10» рядом с
-    // плиткой «6 из 6» выглядело ошибкой (ревью F4-fix).
-    val taskText = stringResource(if (task?.allDone == true) R.string.main_task_repeat_action else R.string.main_task_action)
+    // Повтор пройденного: «Выполнить задание +10» рядом с плиткой «6 из 6»
+    // выглядело ошибкой (ревью F4-fix). Разбор — не повтор, даже когда все пройдены.
+    val taskText = stringResource(if (task?.repeat == true) R.string.main_task_repeat_action else R.string.main_task_action)
     val planText = stringResource(R.string.budget_action_plan)
     val shopText = stringResource(R.string.shop_action)
     val sleepText = stringResource(R.string.main_action_sleep)
@@ -897,12 +896,12 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
     if (task == null) return
     val title = stringResource(R.string.tasks_title)
     val progress = stringResource(R.string.main_tasks_progress, task.completedCount, task.totalCount)
-    val reward = stringResource(tileRewardText(task))
+    val reward = tileRewardText(task)?.let { " ${stringResource(it)}" }.orEmpty()
     val spoken = if (task.allDone) {
-        val repeat = if (task.rewardAvailable) " $reward" else ""
+        val repeat = if (task.rewardAvailable) reward else ""
         "$title: $progress. ${stringResource(R.string.main_task_all_done)}$repeat"
     } else {
-        "$title: $progress. $reward"
+        "$title: $progress.$reward"
     }
     FinnyCard(
         modifier = modifier
@@ -939,12 +938,14 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
 
 /**
  * Что плитка говорит про монеты. Галочка «получено» — только при выбранном
- * лимите: после ошибки утром монет не давали, без них лишь это задание (R8).
+ * лимите. После ошибки утром монет не давали, без них лишь задание дня (R8),
+ * а плитка ведёт в список, где за другие ещё платят, — там она о монетах
+ * молчит: «за это задание монет не будет» сказано в самом задании (ревью F7).
  */
-internal fun tileRewardText(task: TaskOfDay): Int = when {
+internal fun tileRewardText(task: TaskOfDay): Int? = when {
     task.rewardAvailable -> R.string.main_task_reward
     task.limitReached -> R.string.main_task_reward_taken
-    else -> noCoinsNote(limitReached = false)
+    else -> null
 }
 
 private val PetStatKind.tutorialTarget: TutorialTarget

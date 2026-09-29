@@ -246,6 +246,23 @@ class TaskScheduleTest {
         assertEquals(listOf(TaskId("a")), TaskSchedule.listed(tasks).map { it.id })
     }
 
+    /**
+     * Ревью F7: у разбора на главном была кнопка «Повторить задание», хотя
+     * ребёнок видел его впервые, — «все пройдены» относится к шести заданиям.
+     */
+    @Test
+    fun `повтор — только уже пройденное задание дня, разбор не повтор`() {
+        val review = task("review", review = true)
+        val tasks = listOf(task("a"), task("b"), review)
+        val allPassed = listOf(passed("a", 10), passed("b", 20))
+
+        val day = dayTask(tasks, allPassed, today, pet = hungry)
+        assertEquals(TaskId("review"), day?.id)
+        assertFalse(TaskSchedule.isRepeat(day!!, tasks, allPassed))
+        assertTrue(TaskSchedule.isRepeat(dayTask(tasks, allPassed)!!, tasks, allPassed))
+        assertFalse(TaskSchedule.isRepeat(tasks[1], tasks, listOf(passed("a", 10))))
+    }
+
     /** R9, раздел 4 плана, утро дня 3: сова грустит — задание дня разбор. */
     @Test
     fun `сова грустит от голода — задание дня разбор`() {
