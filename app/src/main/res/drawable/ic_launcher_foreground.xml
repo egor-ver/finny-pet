@@ -1,67 +1,209 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Иконка приложения — сова, по палитре окраса «cream» из pets.json и
-    форме, упрощённой из геометрии Owl.kt/docs/prototypes/owl.js (не
-    картинка ИИ, свой рисунок — см. docs/licenses.md).
+    Иконка приложения — сова с монеткой в крыльях, в тёплых тонах окраса
+    «cream» из pets.json — та же сова, что и в игре. Свой векторный
+    рисунок, исходник — docs/prototypes/launcher_icon.svg (группа
+    foreground), см. docs/licenses.md.
+    Сова нарисована в поле 100×100 и группой ужата (×0.58, сдвиг 25/24.5)
+    внутрь безопасной зоны r=33: лаунчеры режут всё, что за ней, маской
+    круга или «капли», и прежняя сова теряла уши.
+    Координаты градиентов — в системе группы, как userSpaceOnUse в SVG.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Ушки -->
-    <path
-        android:fillColor="#F0D4AE"
-        android:pathData="M32,36 L40,18 L48,34 Z" />
-    <path
-        android:fillColor="#F0D4AE"
-        android:pathData="M60,34 L68,18 L76,36 Z" />
-    <!-- Голова -->
-    <path
-        android:fillColor="#F0D4AE"
-        android:strokeColor="#C8996A"
-        android:strokeWidth="1.5"
-        android:pathData="M24,58 A30,30 0 1,0 84,58 A30,30 0 1,0 24,58 Z" />
-    <!-- Морда -->
-    <path
-        android:fillColor="#FFF5E6"
-        android:pathData="M33,66 A21,16 0 1,0 75,66 A21,16 0 1,0 33,66 Z" />
-    <!-- Глаза -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:strokeColor="#C8996A"
-        android:strokeWidth="1.2"
-        android:pathData="M29,56 A11,11 0 1,0 51,56 A11,11 0 1,0 29,56 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:strokeColor="#C8996A"
-        android:strokeWidth="1.2"
-        android:pathData="M57,56 A11,11 0 1,0 79,56 A11,11 0 1,0 57,56 Z" />
-    <!-- Зрачки -->
-    <path
-        android:fillColor="#2A2320"
-        android:pathData="M34,58 A6,6 0 1,0 46,58 A6,6 0 1,0 34,58 Z" />
-    <path
-        android:fillColor="#2A2320"
-        android:pathData="M62,58 A6,6 0 1,0 74,58 A6,6 0 1,0 62,58 Z" />
-    <!-- Блики -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M36,54 A2,2 0 1,0 40,54 A2,2 0 1,0 36,54 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M64,54 A2,2 0 1,0 68,54 A2,2 0 1,0 64,54 Z" />
-    <!-- Румянец -->
-    <path
-        android:fillColor="#F7A1B5"
-        android:fillAlpha="0.55"
-        android:pathData="M33,70 A7,4 0 1,0 47,70 A7,4 0 1,0 33,70 Z" />
-    <path
-        android:fillColor="#F7A1B5"
-        android:fillAlpha="0.55"
-        android:pathData="M61,70 A7,4 0 1,0 75,70 A7,4 0 1,0 61,70 Z" />
-    <!-- Клюв -->
-    <path
-        android:fillColor="#F4A340"
-        android:pathData="M54,64 L61,72 L54,80 L47,72 Z" />
+    <group
+        android:translateX="25"
+        android:translateY="24.5"
+        android:scaleX="0.58"
+        android:scaleY="0.58">
+        <!-- Тень -->
+        <path
+            android:fillColor="#000000"
+            android:fillAlpha="0.18"
+            android:pathData="M27,95.5 A23,3.5 0 1,0 73,95.5 A23,3.5 0 1,0 27,95.5 Z" />
+        <!-- Ушки -->
+        <path
+            android:fillColor="#F4DBB8"
+            android:pathData="M26 30 C22 20 19 12 17 5 C27 8 36 14 42 21 Z" />
+        <path
+            android:fillColor="#F4DBB8"
+            android:pathData="M74 30 C78 20 81 12 83 5 C73 8 64 14 58 21 Z" />
+        <path
+            android:fillColor="#E7B98A"
+            android:pathData="M27 25 C25.5 19 23.5 14 22 10.5 C28 13.5 32.5 16.5 36 20 Z" />
+        <path
+            android:fillColor="#E7B98A"
+            android:pathData="M73 25 C74.5 19 76.5 14 78 10.5 C72 13.5 67.5 16.5 64 20 Z" />
+        <!-- Тело -->
+        <path android:pathData="M50 16 C72 16 84 36 84 58 C84 82 70 94 50 94 C30 94 16 82 16 58 C16 36 28 16 50 16 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="16"
+                    android:endX="0"
+                    android:endY="94">
+                    <item android:offset="0" android:color="#FFF8E2C2" />
+                    <item android:offset="1" android:color="#FFE9C697" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- Хохолок -->
+        <path
+            android:fillColor="#F4DBB8"
+            android:pathData="M44 18.5 Q46 11 50 15.5 Q54 11 56 18.5 Q50 16 44 18.5 Z" />
+        <!-- Блик на макушке -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeAlpha="0.5"
+            android:strokeWidth="2.4"
+            android:strokeLineCap="round"
+            android:pathData="M30 30 Q36 21 46 19" />
+        <!-- Животик с пёрышками -->
+        <path
+            android:fillColor="#FFF7EA"
+            android:pathData="M29,73 A21,19 0 1,0 71,73 A21,19 0 1,0 29,73 Z" />
+        <path
+            android:strokeColor="#EDD2AA"
+            android:strokeWidth="1.6"
+            android:strokeLineCap="round"
+            android:pathData="M38 63 q3.5 3 7 0 M46.5 63 q3.5 3 7 0 M55 63 q3.5 3 7 0 M42 69 q3.5 3 7 0 M51 69 q3.5 3 7 0" />
+        <!-- Лапки -->
+        <path
+            android:fillColor="#F4A340"
+            android:pathData="M36.5 93.5 Q36.5 90 42 90 Q47.5 90 47.5 93.5 Q47.5 96.5 42 96.5 Q36.5 96.5 36.5 93.5 Z" />
+        <path
+            android:fillColor="#F4A340"
+            android:pathData="M52.5 93.5 Q52.5 90 58 90 Q63.5 90 63.5 93.5 Q63.5 96.5 58 96.5 Q52.5 96.5 52.5 93.5 Z" />
+        <path
+            android:strokeColor="#D9822B"
+            android:strokeWidth="1"
+            android:strokeLineCap="round"
+            android:pathData="M40 96.3 v-2 M44 96.3 v-2 M56 96.3 v-2 M60 96.3 v-2" />
+        <!-- Монетка -->
+        <path
+            android:strokeColor="#D39222"
+            android:strokeWidth="2"
+            android:pathData="M39.5,80 A10.5,10.5 0 1,0 60.5,80 A10.5,10.5 0 1,0 39.5,80 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="radial"
+                    android:centerX="46"
+                    android:centerY="76"
+                    android:gradientRadius="14">
+                    <item android:offset="0" android:color="#FFFFE98F" />
+                    <item android:offset="1" android:color="#FFF0B429" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:strokeColor="#E5A92E"
+            android:strokeWidth="1.2"
+            android:pathData="M43,80 A7,7 0 1,0 57,80 A7,7 0 1,0 43,80 Z" />
+        <path
+            android:strokeColor="#FFF6CC"
+            android:strokeWidth="1.6"
+            android:strokeLineCap="round"
+            android:pathData="M43.5 77 A7.5 7.5 0 0 1 47.5 72.8" />
+        <!-- Крылья обнимают монетку -->
+        <path android:pathData="M19 49 C8 61 11 82 41 83 C32 74 27 61 19 49 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="50"
+                    android:endX="0"
+                    android:endY="84">
+                    <item android:offset="0" android:color="#FFDDB98C" />
+                    <item android:offset="1" android:color="#FFC79B69" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M81 49 C92 61 89 82 59 83 C68 74 73 61 81 49 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="50"
+                    android:endX="0"
+                    android:endY="84">
+                    <item android:offset="0" android:color="#FFDDB98C" />
+                    <item android:offset="1" android:color="#FFC79B69" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:strokeColor="#BF9160"
+            android:strokeWidth="1.2"
+            android:strokeLineCap="round"
+            android:pathData="M17.5 64 Q22 72 30 77 M19 72 Q25 78 33 80.5" />
+        <path
+            android:strokeColor="#BF9160"
+            android:strokeWidth="1.2"
+            android:strokeLineCap="round"
+            android:pathData="M82.5 64 Q78 72 70 77 M81 72 Q75 78 67 80.5" />
+        <!-- Лицевой диск -->
+        <path
+            android:fillColor="#FFF7EA"
+            android:pathData="M50 29 C44 23 20 23 20 42 C20 56 36 59.5 50 56 C64 59.5 80 56 80 42 C80 23 56 23 50 29 Z" />
+        <!-- Глаза: ободок, белок, радужка, зрачок, блики -->
+        <path
+            android:fillColor="#D6A56F"
+            android:pathData="M22.5,42 A13.5,13.5 0 1,0 49.5,42 A13.5,13.5 0 1,0 22.5,42 Z" />
+        <path
+            android:fillColor="#D6A56F"
+            android:pathData="M50.5,42 A13.5,13.5 0 1,0 77.5,42 A13.5,13.5 0 1,0 50.5,42 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M24.7,42 A11.3,11.3 0 1,0 47.3,42 A11.3,11.3 0 1,0 24.7,42 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M52.7,42 A11.3,11.3 0 1,0 75.3,42 A11.3,11.3 0 1,0 52.7,42 Z" />
+        <path
+            android:fillColor="#5A3A22"
+            android:pathData="M29.7,43 A8.3,8.3 0 1,0 46.3,43 A8.3,8.3 0 1,0 29.7,43 Z" />
+        <path
+            android:fillColor="#5A3A22"
+            android:pathData="M53.7,43 A8.3,8.3 0 1,0 70.3,43 A8.3,8.3 0 1,0 53.7,43 Z" />
+        <path
+            android:fillColor="#231B17"
+            android:pathData="M31.6,43.3 A6.4,6.4 0 1,0 44.4,43.3 A6.4,6.4 0 1,0 31.6,43.3 Z" />
+        <path
+            android:fillColor="#231B17"
+            android:pathData="M55.6,43.3 A6.4,6.4 0 1,0 68.4,43.3 A6.4,6.4 0 1,0 55.6,43.3 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M32.3,39.6 A3,3 0 1,0 38.3,39.6 A3,3 0 1,0 32.3,39.6 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M56.3,39.6 A3,3 0 1,0 62.3,39.6 A3,3 0 1,0 56.3,39.6 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M39.6,47 A1.4,1.4 0 1,0 42.4,47 A1.4,1.4 0 1,0 39.6,47 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M63.6,47 A1.4,1.4 0 1,0 66.4,47 A1.4,1.4 0 1,0 63.6,47 Z" />
+        <!-- Щёчки -->
+        <path
+            android:fillColor="#F79BB0"
+            android:fillAlpha="0.65"
+            android:pathData="M21,56 A5,3 0 1,0 31,56 A5,3 0 1,0 21,56 Z" />
+        <path
+            android:fillColor="#F79BB0"
+            android:fillAlpha="0.65"
+            android:pathData="M69,56 A5,3 0 1,0 79,56 A5,3 0 1,0 69,56 Z" />
+        <!-- Клюв -->
+        <path
+            android:fillColor="#F4A340"
+            android:pathData="M45.5 52.5 Q50 49.5 54.5 52.5 Q52.5 57.5 50 60.5 Q47.5 57.5 45.5 52.5 Z" />
+        <path
+            android:strokeColor="#FFD08A"
+            android:strokeWidth="1.1"
+            android:strokeLineCap="round"
+            android:pathData="M46.8 52.6 Q50 51 53.2 52.6" />
+    </group>
 </vector>

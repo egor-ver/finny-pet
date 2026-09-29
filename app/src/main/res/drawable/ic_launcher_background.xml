@@ -1,14 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Фон адаптивной иконки — сплошной зелёный (GreenPrimary из Color.kt):
-    в приложении этот оттенок обозначает рост и накопления.
+    Фон адаптивной иконки — зелёный (оттенок GreenPrimary из Color.kt: в
+    приложении он обозначает рост и накопления) с радиальным градиентом,
+    мягким кругом за совой и звёздочками. Свой рисунок, исходник —
+    docs/prototypes/launcher_icon.svg (группа background), см. docs/licenses.md.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="46"
+                android:gradientRadius="62">
+                <item android:offset="0" android:color="#FF34A873" />
+                <item android:offset="0.55" android:color="#FF1F7A53" />
+                <item android:offset="1" android:color="#FF134D35" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Мягкий круг за совой -->
     <path
-        android:fillColor="#1B6B4A"
-        android:pathData="M0,0h108v108h-108z" />
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.07"
+        android:pathData="M25,54 A29,29 0 1,0 83,54 A29,29 0 1,0 25,54 Z" />
+    <!-- Звёздочки -->
+    <path
+        android:fillColor="#FFD95A"
+        android:pathData="M81 33 Q82 37.5 86.5 38.5 Q82 39.5 81 44 Q80 39.5 75.5 38.5 Q80 37.5 81 33 Z" />
+    <path
+        android:fillColor="#FFD95A"
+        android:fillAlpha="0.85"
+        android:pathData="M27.5 63 Q28.2 66 31 66.7 Q28.2 67.4 27.5 70.4 Q26.8 67.4 24 66.7 Q26.8 66 27.5 63 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.7"
+        android:pathData="M32 34 Q32.5 35.8 34.3 36.3 Q32.5 36.8 32 38.6 Q31.5 36.8 29.7 36.3 Q31.5 35.8 32 34 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6"
+        android:pathData="M76.8,68 A1.2,1.2 0 1,0 79.2,68 A1.2,1.2 0 1,0 76.8,68 Z" />
 </vector>
