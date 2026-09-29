@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -51,6 +53,7 @@ import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.Jar
 import ru.finnypet.app.ui.components.LabelledLine
 import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.OneWordText
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.OwlRole
@@ -417,6 +420,9 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
             .defaultMinSize(minHeight = Dimens.TouchTarget)
             .then(mark),
     ) {
+        // При крупном шрифте цена — под названием, а не справа: в оставшейся
+        // между ценой и тарелкой ширине на 360 dp «Самокат» рвался посреди слова (F8).
+        val priceBelow = LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
@@ -428,6 +434,9 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
                 modifier = Modifier.weight(1f),
             ) {
                 Text(text = goal.title, style = MaterialTheme.typography.titleMedium)
+                if (priceBelow) {
+                    MoneyAmount(amount = goal.price)
+                }
                 if (goal.isActive || goal.isBought) {
                     val labelRes = when {
                         // Активна и куплена — значит копит на ещё один экземпляр (L5).
@@ -442,11 +451,12 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
                     )
                 }
                 if (goal.saved > Coins.ZERO) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    // FlowRow переносит сумму целиком под «Накоплено», а не по цифре (F8).
+                    FlowRow(
+                        itemVerticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
                     ) {
-                        Text(
+                        OneWordText(
                             text = stringResource(R.string.main_savings),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -455,7 +465,9 @@ private fun GoalRow(goal: GoalView, selectable: Boolean, onClick: () -> Unit) {
                     }
                 }
             }
-            MoneyAmount(amount = goal.price)
+            if (!priceBelow) {
+                MoneyAmount(amount = goal.price)
+            }
         }
     }
 }

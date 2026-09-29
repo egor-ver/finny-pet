@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -54,6 +55,7 @@ import ru.finnypet.app.ui.components.Heading
 import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.Jar
 import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.OneWordText
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlLook
 import ru.finnypet.app.ui.components.OwlRole
@@ -178,7 +180,8 @@ private fun StagePath(owl: OwlLook) {
                         modifier = if (current) Modifier else Modifier.alpha(SILHOUETTE_ALPHA),
                     )
                 }
-                Text(
+                // В трети 360 dp при шрифте 2,0 «детёныш» иначе рвался посреди слова (F8).
+                OneWordText(
                     text = stringResource(stage.label),
                     style = if (current) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
                     color = if (current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -219,37 +222,62 @@ private fun GoalCard(goal: GoalSummary?) {
     val spoken = "$saidSaved. " +
         if (reached) stringResource(R.string.main_goal_reached) else "${stringResource(R.string.main_goal_left)} ${coinsText(left)}"
     FinnyCard(modifier = Modifier.clearAndSetSemantics { contentDescription = spoken }) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
-        ) {
-            ItemIcon(icon = goal.icon, category = SpendCategory.SAVINGS)
-            Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
-                Text(text = goal.title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = goalSavedText(goal.saved, goal.price),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                if (reached) {
-                    Text(
-                        text = stringResource(R.string.main_goal_reached),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = SpendCategory.SAVINGS.color,
-                    )
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
-                        Text(
-                            text = stringResource(R.string.main_goal_left),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        MoneyAmount(amount = left, style = MaterialTheme.typography.titleSmall)
-                    }
-                }
+        // При крупном шрифте значок и банка — строкой сверху, текст под ними во
+        // всю ширину: между ними на 360 dp «Настольная» рвалась посреди слова (F8).
+        if (LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                ItemIcon(icon = goal.icon, category = SpendCategory.SAVINGS)
+                Spacer(modifier = Modifier.weight(1f))
+                GoalJar(goal)
             }
-            Jar(level = goal.fraction, color = SpendCategory.SAVINGS.fill, modifier = Modifier.size(GOAL_JAR_WIDTH, GOAL_JAR_HEIGHT))
+            GoalLines(goal = goal, reached = reached, left = left)
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceMedium),
+            ) {
+                ItemIcon(icon = goal.icon, category = SpendCategory.SAVINGS)
+                GoalLines(goal = goal, reached = reached, left = left, modifier = Modifier.weight(1f))
+                GoalJar(goal)
+            }
         }
     }
+}
+
+@Composable
+private fun GoalLines(goal: GoalSummary, reached: Boolean, left: Coins, modifier: Modifier = Modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = modifier) {
+        Text(text = goal.title, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = goalSavedText(goal.saved, goal.price),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (reached) {
+            Text(
+                text = stringResource(R.string.main_goal_reached),
+                style = MaterialTheme.typography.titleSmall,
+                color = SpendCategory.SAVINGS.color,
+            )
+        } else {
+            // FlowRow переносит сумму целиком под «Осталось», а не по цифре (F8).
+            FlowRow(
+                itemVerticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+            ) {
+                Text(
+                    text = stringResource(R.string.main_goal_left),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                MoneyAmount(amount = left, style = MaterialTheme.typography.titleSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalJar(goal: GoalSummary) {
+    Jar(level = goal.fraction, color = SpendCategory.SAVINGS.fill, modifier = Modifier.size(GOAL_JAR_WIDTH, GOAL_JAR_HEIGHT))
 }
 
 /**

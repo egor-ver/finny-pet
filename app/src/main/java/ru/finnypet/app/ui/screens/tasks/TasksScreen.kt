@@ -37,6 +37,7 @@ import ru.finnypet.app.ui.components.FinnyButton
 import ru.finnypet.app.ui.components.FinnyCard
 import ru.finnypet.app.ui.components.FinnyListScaffold
 import ru.finnypet.app.ui.components.FinnyScaffold
+import ru.finnypet.app.ui.components.OneWordText
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.SegmentLine
@@ -188,7 +189,8 @@ private fun TopicHeader(group: TaskGroup) {
             },
     ) {
         TopicPlate(topic = group.topic)
-        Text(
+        // Название темы — одно слово: при шрифте 2,0 «Планирование» рвалось посреди (F8).
+        OneWordText(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),

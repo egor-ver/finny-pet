@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -60,6 +61,7 @@ import ru.finnypet.app.ui.components.FinnySecondaryButton
 import ru.finnypet.app.ui.components.GrowthView
 import ru.finnypet.app.ui.components.ItemIcon
 import ru.finnypet.app.ui.components.MoneyAmount
+import ru.finnypet.app.ui.components.OneWordText
 import ru.finnypet.app.ui.components.Owl
 import ru.finnypet.app.ui.components.OwlRole
 import ru.finnypet.app.ui.components.ProgressLine
@@ -540,14 +542,23 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
         verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
         modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
     ) {
-        Icon(imageVector = kind.icon, contentDescription = null, tint = kind.direction.fill)
-        // Цвет направления, которое показатель пополняет (DESIGN_PLAN 2.1):
-        // еда и уход — «Нужное», радость — «Желаемое».
-        ProgressLine(
-            fraction = stat.value.toFloat() / Stat.RANGE.last,
-            color = kind.direction.fill,
-        )
-        Text(text = label, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+        // Значок слева от полосы, а не над ней: так ряд показателей ниже на 24 dp,
+        // и на 360 dp нижний ряд плиток не уходит под кнопки (F8).
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny),
+        ) {
+            Icon(imageVector = kind.icon, contentDescription = null, tint = kind.direction.fill, modifier = Modifier.size(JAR_ICON))
+            // Цвет направления, которое показатель пополняет (DESIGN_PLAN 2.1):
+            // еда и уход — «Нужное», радость — «Желаемое».
+            ProgressLine(
+                fraction = stat.value.toFloat() / Stat.RANGE.last,
+                color = kind.direction.fill,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        // В трети 360 dp при шрифте 2,0 «Радость» иначе рвалась посреди слова (F8).
+        OneWordText(text = label, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
         if (needed) {
             Box(
                 modifier = Modifier
@@ -557,7 +568,7 @@ private fun PetStat(kind: PetStatKind, stat: Stat, needed: Boolean, modifier: Mo
             ) {
                 // Чип — стилем меток (DESIGN_PLAN 2.2, 16/20): ниже строки
                 // текста, и ряд показателей не выталкивает плитки под кнопки.
-                Text(
+                OneWordText(
                     text = need,
                     style = MaterialTheme.typography.labelMedium,
                     color = kind.direction.color,
@@ -665,6 +676,36 @@ private fun TileGrid(
     onProgress: () -> Unit,
     onTasks: () -> Unit,
 ) {
+    // При крупном шрифте — столбец во всю ширину, как товары магазина: в
+    // половине 360 dp подписи плиток рвались посреди слова, а «2 из 6»
+    // уходило под кнопки (F8).
+    if (LocalDensity.current.fontScale > Dimens.WIDE_FONT_SCALE) {
+        Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
+            PlanTile(
+                jars = state.jars?.shownWithin(state.balance),
+                onOpen = onPlan,
+                modifier = Modifier.fillMaxWidth().tutorialTarget(targets, TutorialTarget.PLAN_TILE),
+            )
+            SavingsTile(
+                savings = state.savings,
+                onOpen = onSavings,
+                modifier = Modifier.fillMaxWidth().tutorialTarget(targets, TutorialTarget.SAVINGS_TILE),
+            )
+            GrowthTile(
+                grownMessage = state.grownMessage,
+                growthPoints = state.growthPoints,
+                growth = state.growth,
+                onOpen = onProgress,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            TasksTile(
+                task = state.task,
+                onOpen = onTasks,
+                modifier = Modifier.fillMaxWidth().tutorialTarget(targets, TutorialTarget.TASKS_TILE),
+            )
+        }
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall)) {
         Row(horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             PlanTile(
@@ -918,22 +959,30 @@ private fun TasksTile(task: TaskOfDay?, onOpen: () -> Unit, modifier: Modifier =
             modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(imageVector = FinnyIcons.Tasks, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            // «+10» и галочка — в строке с «2 из 6», а не отдельным столбцом справа:
+            // столбец отнимал у «Задания» ширину, и на 360 dp слово рвалось (F8).
+            // FlowRow переносит «+10» целиком, если строке тесно.
             Column(verticalArrangement = Arrangement.spacedBy(Dimens.SpaceTiny), modifier = Modifier.weight(1f)) {
                 Text(text = title, style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    text = progress,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            if (task.rewardAvailable) {
-                Text(
-                    text = "+${task.reward.amount}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            } else if (task.limitReached) {
-                Icon(imageVector = FinnyIcons.Check, contentDescription = null)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.SpaceSmall),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = progress,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (task.rewardAvailable) {
+                        Text(
+                            text = "+${task.reward.amount}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    } else if (task.limitReached) {
+                        Icon(imageVector = FinnyIcons.Check, contentDescription = null)
+                    }
+                }
             }
         }
     }
