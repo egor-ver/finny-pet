@@ -210,7 +210,6 @@ app/
   src/androidTest/ тесты хранилища, экранов и доступности
 docs/
   ARCHITECTURE_DECISIONS.md     архитектурные решения
-  PLAN_V3.md, DESIGN_PLAN.md    план работ и дизайна
   licenses.md                   права на материалы
   screenshots/                  снимки экранов для README
 gradle/libs.versions.toml       версии библиотек
