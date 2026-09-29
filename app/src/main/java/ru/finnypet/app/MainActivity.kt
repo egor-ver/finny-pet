@@ -2,6 +2,8 @@ package ru.finnypet.app
 
 import android.media.AudioManager
 import android.os.Bundle
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +41,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var audio: GameAudio
 
+    /** Первый экран получил данные — можно убирать системную заставку. */
+    private var contentReady = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -49,6 +55,10 @@ class MainActivity : ComponentActivity() {
         // мелодия не должна зазвучать при возврате даже на миг (AD-17).
         lifecycleScope.launch { settings.observeSoundEnabled().collect(audio::setSoundEnabled) }
         lifecycleScope.launch { settings.observeMusicEnabled().collect(audio::setMusicEnabled) }
+        // После пересоздания стек переходов восстанавливается, и сверху может
+        // оказаться не главный — ждать его данных нельзя, окно не нарисуется.
+        contentReady = savedInstanceState != null
+        holdSplashUntilReady()
         setContent {
             // Настройки доступности читаются один раз на всё приложение и
             // раздаются через CompositionLocal: ТЗ 3.6 требует, чтобы звук
@@ -79,12 +89,38 @@ class MainActivity : ComponentActivity() {
                                 .background(MaterialTheme.colorScheme.background),
                         )
 
-                        Startup.NoProfile -> FinnyNavHost(startDestination = CreatePet)
-                        Startup.HasProfile -> FinnyNavHost(startDestination = Main())
+                        Startup.NoProfile -> {
+                            SideEffect { contentReady = true }
+                            FinnyNavHost(startDestination = CreatePet)
+                        }
+
+                        Startup.HasProfile -> FinnyNavHost(
+                            startDestination = Main(),
+                            onMainShown = { contentReady = true },
+                        )
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Системная заставка (сова на зелёном) уходит с первым кадром окна. Без
+     * задержки кадра после неё секунды шли пустой фон старта и пустая шапка
+     * загрузки главного: чтение профиля и дня на холодном старте долгое.
+     * Пока [contentReady] ложно, кадр не рисуется и заставка остаётся.
+     */
+    private fun holdSplashUntilReady() {
+        val content = findViewById<View>(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (!contentReady) return false
+                    content.viewTreeObserver.removeOnPreDrawListener(this)
+                    return true
+                }
+            },
+        )
     }
 
     // onResume/onPause, а не onStart/onStop: погасший экран на части телефонов

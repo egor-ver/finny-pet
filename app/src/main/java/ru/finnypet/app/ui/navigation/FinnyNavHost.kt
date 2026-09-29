@@ -39,12 +39,15 @@ import ru.finnypet.app.ui.theme.LocalAnimationsEnabled
  *
  * Стартовый экран задаётся снаружи: при сохранённом профиле приложение
  * открывается сразу на главном (ТЗ 2.5.13, шаг 11 Приложения А).
+ * [onMainShown] сообщает, что главный получил данные: до этого держится
+ * системная заставка.
  */
 @Composable
 fun FinnyNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     startDestination: Route = CreatePet,
+    onMainShown: () -> Unit = {},
 ) {
     val motion = LocalAnimationsEnabled.current
     NavHost(
@@ -67,6 +70,7 @@ fun FinnyNavHost(
         composable<Main> { entry ->
             MainScreen(
                 startTutorial = entry.toRoute<Main>().tutorial,
+                onShown = onMainShown,
                 onPlan = { navController.navigateOnce(Budget) },
                 onShop = { navController.navigateOnce(Shop) },
                 onSavings = { navController.navigateOnce(Savings) },

@@ -138,6 +138,7 @@ private fun Screen(
     onBack: (() -> Unit)?,
     title: String = stringResource(R.string.day_title),
     bottomBar: (@Composable () -> Unit)? = null,
+    centered: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     FinnyScaffold(
@@ -145,6 +146,7 @@ private fun Screen(
         onBack = onBack,
         bottomBar = bottomBar,
         spacing = Dimens.SpaceMedium,
+        centered = centered,
         content = content,
     )
 }
@@ -161,8 +163,11 @@ private fun Screen(
 private fun Running(state: DayState.Running, onBack: () -> Unit, onClose: () -> Unit) {
     var asking by rememberSaveable { mutableStateOf(false) }
 
+    // Итоги короче экрана: по центру высоты, а не прижаты к верху с пустой
+    // половиной до кнопки (DESIGN_PLAN §1 п. 6).
     Screen(
         onBack = onBack,
+        centered = true,
         bottomBar = {
             ButtonColumn {
                 FinnyButton(

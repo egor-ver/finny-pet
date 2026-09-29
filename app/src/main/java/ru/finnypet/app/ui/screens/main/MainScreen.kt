@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -104,9 +105,11 @@ fun MainScreen(
     onTasks: () -> Unit,
     onFinishDay: () -> Unit,
     banner: @Composable () -> Unit = {},
+    onShown: () -> Unit = {},
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    if (state !is MainState.Loading) SideEffect(onShown)
     var tutorialStep by rememberSaveable { mutableStateOf(if (startTutorial) 0 else null) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     if (settingsOpen) SettingsDialog(onDismiss = { settingsOpen = false })
