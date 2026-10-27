@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Облачной копии нет: профиль ребёнка хранится только на устройстве.
+        allowBackup — до Android 12, правила — после.
+    -->
+    <application
+        android:name=".FinnyApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        tools:ignore="DataExtractionRules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Finnypet">
+        <!--
+            adjustResize оставлен намеренно: на Android 8-10 отступ под
+            клавиатуру доходит до Compose только с ним. На более новых
+            версиях отступ приходит сам, и режим ни на что не влияет.
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/launcher_label"
+            android:theme="@style/Theme.Finnypet"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,50 @@
+package ru.finnypet.app.domain.repository
+
+import kotlinx.coroutines.flow.Flow
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GoalId
+import ru.finnypet.app.domain.model.GoalProgress
+import ru.finnypet.app.domain.model.ProfileId
+
+/**
+ * Накопления по финансовым целям.
+ */
+interface SavingsRepository {
+
+    suspend fun progress(profileId: ProfileId, goalId: GoalId): GoalProgress
+
+    suspend fun activeProgress(profileId: ProfileId): GoalProgress?
+
+    fun observeActive(profileId: ProfileId): Flow<GoalProgress?>
+
+    suspend fun save(profileId: ProfileId, progress: GoalProgress)
+
+    /** Делает цель активной, снимая отметку со всех прочих одной транзакцией. */
+    suspend fun setActive(profileId: ProfileId, progress: GoalProgress)
+
+    suspend fun all(profileId: ProfileId): List<GoalProgress>
+
+    /**
+     * Прогресс по всем целям, которые ребёнок когда-либо открывал. Экран
+     * копилки показывает накопленное рядом с каждой целью, а не только с
+     * активной: отложенное на прежнюю цель не должно пропадать из виду.
+     */
+    fun observeAll(profileId: ProfileId): Flow<List<GoalProgress>>
+
+    /**
+     * Средняя сумма пополнения по цели — основа расчёта срока её достижения.
+     *
+     * ТЗ требует, чтобы расчёт был понятным и опирался именно на среднюю
+     * сумму регулярного пополнения, поэтому снятия в неё не входят. Ноль
+     * означает, что пополнений ещё не было и срок посчитать не из чего.
+     */
+    suspend fun averageDeposit(profileId: ProfileId, goalId: GoalId): Coins
+
+    /**
+     * Купленные цели по порядку первой покупки. Цель без некупленных
+     * соседей можно собирать повторно — тогда в истории окажется
+     * несколько операций покупки одной цели, но в списке она одна: иначе
+     * рядом с совой встали бы две одинаковые вещи.
+     */
+    fun observeBought(profileId: ProfileId): Flow<List<GoalId>>
+}

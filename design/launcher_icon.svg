@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 108 108">
+  <defs>
+    <radialGradient id="bg" cx="54" cy="46" r="62" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34A873"/>
+      <stop offset="0.55" stop-color="#1F7A53"/>
+      <stop offset="1" stop-color="#134D35"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="16" x2="0" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8E2C2"/>
+      <stop offset="1" stop-color="#E9C697"/>
+    </linearGradient>
+    <linearGradient id="wing" x1="0" y1="50" x2="0" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#DDB98C"/>
+      <stop offset="1" stop-color="#C79B69"/>
+    </linearGradient>
+    <radialGradient id="coin" cx="46" cy="76" r="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE98F"/>
+      <stop offset="1" stop-color="#F0B429"/>
+    </radialGradient>
+  </defs>
+  <!-- Слой background -->
+  <g id="background">
+    <rect width="108" height="108" fill="url(#bg)"/>
+    <circle cx="54" cy="54" r="29" fill="#FFFFFF" fill-opacity="0.07"/>
+    <path d="M81 33 Q82 37.5 86.5 38.5 Q82 39.5 81 44 Q80 39.5 75.5 38.5 Q80 37.5 81 33 Z" fill="#FFD95A"/>
+    <path d="M27.5 63 Q28.2 66 31 66.7 Q28.2 67.4 27.5 70.4 Q26.8 67.4 24 66.7 Q26.8 66 27.5 63 Z" fill="#FFD95A" fill-opacity="0.85"/>
+    <path d="M32 34 Q32.5 35.8 34.3 36.3 Q32.5 36.8 32 38.6 Q31.5 36.8 29.7 36.3 Q31.5 35.8 32 34 Z" fill="#FFFFFF" fill-opacity="0.7"/>
+    <circle cx="78" cy="68" r="1.2" fill="#FFFFFF" fill-opacity="0.6"/>
+  </g>
+  <!-- Слой foreground: сова в безопасной зоне r=33 -->
+  <g id="foreground" transform="translate(25 24.5) scale(0.58)">
+    <ellipse cx="50" cy="95.5" rx="23" ry="3.5" fill="#000000" fill-opacity="0.18"/>
+    <!-- Ушки -->
+    <path d="M26 30 C22 20 19 12 17 5 C27 8 36 14 42 21 Z" fill="#F4DBB8"/>
+    <path d="M74 30 C78 20 81 12 83 5 C73 8 64 14 58 21 Z" fill="#F4DBB8"/>
+    <path d="M27 25 C25.5 19 23.5 14 22 10.5 C28 13.5 32.5 16.5 36 20 Z" fill="#E7B98A"/>
+    <path d="M73 25 C74.5 19 76.5 14 78 10.5 C72 13.5 67.5 16.5 64 20 Z" fill="#E7B98A"/>
+    <!-- Тело -->
+    <path d="M50 16 C72 16 84 36 84 58 C84 82 70 94 50 94 C30 94 16 82 16 58 C16 36 28 16 50 16 Z" fill="url(#body)"/>
+    <!-- Хохолок -->
+    <path d="M44 18.5 Q46 11 50 15.5 Q54 11 56 18.5 Q50 16 44 18.5 Z" fill="#F4DBB8"/>
+    <!-- Блик на макушке -->
+    <path d="M30 30 Q36 21 46 19" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- Животик с пёрышками -->
+    <ellipse cx="50" cy="73" rx="21" ry="19" fill="#FFF7EA"/>
+    <path d="M38 63 q3.5 3 7 0 M46.5 63 q3.5 3 7 0 M55 63 q3.5 3 7 0 M42 69 q3.5 3 7 0 M51 69 q3.5 3 7 0" fill="none" stroke="#EDD2AA" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Лапки -->
+    <path d="M36.5 93.5 Q36.5 90 42 90 Q47.5 90 47.5 93.5 Q47.5 96.5 42 96.5 Q36.5 96.5 36.5 93.5 Z" fill="#F4A340"/>
+    <path d="M52.5 93.5 Q52.5 90 58 90 Q63.5 90 63.5 93.5 Q63.5 96.5 58 96.5 Q52.5 96.5 52.5 93.5 Z" fill="#F4A340"/>
+    <path d="M40 96.3 v-2 M44 96.3 v-2 M56 96.3 v-2 M60 96.3 v-2" stroke="#D9822B" stroke-width="1" stroke-linecap="round"/>
+    <!-- Монетка -->
+    <circle cx="50" cy="80" r="10.5" fill="url(#coin)" stroke="#D39222" stroke-width="2"/>
+    <circle cx="50" cy="80" r="7" fill="none" stroke="#E5A92E" stroke-width="1.2"/>
+    <path d="M43.5 77 A7.5 7.5 0 0 1 47.5 72.8" fill="none" stroke="#FFF6CC" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Крылья обнимают монетку -->
+    <path d="M19 49 C8 61 11 82 41 83 C32 74 27 61 19 49 Z" fill="url(#wing)"/>
+    <path d="M81 49 C92 61 89 82 59 83 C68 74 73 61 81 49 Z" fill="url(#wing)"/>
+    <path d="M17.5 64 Q22 72 30 77 M19 72 Q25 78 33 80.5" fill="none" stroke="#BF9160" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M82.5 64 Q78 72 70 77 M81 72 Q75 78 67 80.5" fill="none" stroke="#BF9160" stroke-width="1.2" stroke-linecap="round"/>
+    <!-- Лицевой диск -->
+    <path d="M50 29 C44 23 20 23 20 42 C20 56 36 59.5 50 56 C64 59.5 80 56 80 42 C80 23 56 23 50 29 Z" fill="#FFF7EA"/>
+    <!-- Глаза -->
+    <circle cx="36" cy="42" r="13.5" fill="#D6A56F"/>
+    <circle cx="64" cy="42" r="13.5" fill="#D6A56F"/>
+    <circle cx="36" cy="42" r="11.3" fill="#FFFFFF"/>
+    <circle cx="64" cy="42" r="11.3" fill="#FFFFFF"/>
+    <circle cx="38" cy="43" r="8.3" fill="#5A3A22"/>
+    <circle cx="62" cy="43" r="8.3" fill="#5A3A22"/>
+    <circle cx="38" cy="43.3" r="6.4" fill="#231B17"/>
+    <circle cx="62" cy="43.3" r="6.4" fill="#231B17"/>
+    <circle cx="35.3" cy="39.6" r="3" fill="#FFFFFF"/>
+    <circle cx="59.3" cy="39.6" r="3" fill="#FFFFFF"/>
+    <circle cx="41" cy="47" r="1.4" fill="#FFFFFF"/>
+    <circle cx="65" cy="47" r="1.4" fill="#FFFFFF"/>
+    <!-- Щёчки -->
+    <ellipse cx="26" cy="56" rx="5" ry="3" fill="#F79BB0" fill-opacity="0.65"/>
+    <ellipse cx="74" cy="56" rx="5" ry="3" fill="#F79BB0" fill-opacity="0.65"/>
+    <!-- Клюв -->
+    <path d="M45.5 52.5 Q50 49.5 54.5 52.5 Q52.5 57.5 50 60.5 Q47.5 57.5 45.5 52.5 Z" fill="#F4A340"/>
+    <path d="M46.8 52.6 Q50 51 53.2 52.6" fill="none" stroke="#FFD08A" stroke-width="1.1" stroke-linecap="round"/>
+  </g>
+</svg>

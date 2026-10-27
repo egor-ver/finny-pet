@@ -1,0 +1,260 @@
+{
+  "tasks": [
+    {
+      "id": "plan-pocket-money",
+      "topic": "PLANNING",
+      "titleKey": "task.plan_pocket_money.intro",
+      "steps": [
+        {
+          "type": "THREE_JARS",
+          "promptKey": "task.plan_pocket_money.step1",
+          "totalCoins": 40,
+          "jars": [
+            { "id": "mandatory", "labelKey": "task.jar.mandatory" },
+            { "id": "wants", "labelKey": "task.jar.wants" },
+            { "id": "savings", "labelKey": "task.jar.savings" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "JARS_DISTRIBUTION", "minMandatory": 25 },
+          "explanationKey": "task.plan_pocket_money.saved",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.plan_pocket_money.otherwise"
+        },
+        {
+          "id": "no-reserve",
+          "condition": { "type": "JARS_DISTRIBUTION", "minMandatory": 15 },
+          "explanationKey": "task.plan_pocket_money.no_reserve"
+        }
+      ]
+    },
+    {
+      "id": "plan-school-supplies",
+      "topic": "PLANNING",
+      "titleKey": "task.plan_school_supplies.intro",
+      "steps": [
+        {
+          "type": "SHELF",
+          "promptKey": "task.plan_school_supplies.step1",
+          "budget": 30,
+          "items": [
+            { "id": "keychain", "titleKey": "task.item.keychain", "price": 12, "icon": "🔦" },
+            { "id": "notebook", "titleKey": "task.item.notebook", "price": 8, "isMandatory": true, "icon": "📓" },
+            { "id": "markers", "titleKey": "task.item.markers", "price": 13, "icon": "🖍️" },
+            { "id": "pens", "titleKey": "task.item.pens", "price": 6, "isMandatory": true, "icon": "🖊️" },
+            { "id": "sparkle-pad", "titleKey": "task.item.sparkle_pad", "price": 10, "icon": "📔" },
+            { "id": "ruler", "titleKey": "task.item.ruler", "price": 7, "isMandatory": true, "icon": "📏" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "BASKET_CONTAINS_ALL", "requiredItemIds": ["notebook", "pens", "ruler"] },
+          "explanationKey": "task.plan_school_supplies.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.plan_school_supplies.otherwise"
+        },
+        {
+          "id": "keychain-first",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "keychain" },
+          "explanationKey": "task.plan_school_supplies.extra_first"
+        },
+        {
+          "id": "pad-first",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "sparkle-pad" },
+          "explanationKey": "task.plan_school_supplies.extra_first"
+        },
+        {
+          "id": "markers-first",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "markers" },
+          "explanationKey": "task.plan_school_supplies.extra_first"
+        }
+      ]
+    },
+    {
+      "id": "save-gift-coins",
+      "topic": "SAVING",
+      "titleKey": "task.save_gift_coins.intro",
+      "steps": [
+        {
+          "type": "THREE_JARS",
+          "promptKey": "task.save_gift_coins.step1",
+          "totalCoins": 30,
+          "jars": [
+            { "id": "savings", "labelKey": "task.jar.savings" },
+            { "id": "wants", "labelKey": "task.jar.wants" },
+            { "id": "mandatory", "labelKey": "task.jar.mandatory" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "JARS_DISTRIBUTION", "minSavings": 12 },
+          "explanationKey": "task.save_gift_coins.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.save_gift_coins.otherwise"
+        },
+        {
+          "id": "saved-little",
+          "condition": { "type": "JARS_DISTRIBUTION", "minSavings": 1 },
+          "explanationKey": "task.save_gift_coins.saved_little"
+        }
+      ]
+    },
+    {
+      "id": "save-fair-temptation",
+      "topic": "SAVING",
+      "titleKey": "task.save_fair_temptation.intro",
+      "steps": [
+        {
+          "type": "CHOICE",
+          "promptKey": "task.save_fair_temptation.step1",
+          "options": [
+            { "id": "one_day_longer", "textKey": "task.choice.one_day_longer" },
+            { "id": "two_days_longer", "textKey": "task.choice.two_days_longer" },
+            { "id": "no_change", "textKey": "task.choice.no_change" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "SELECTED_OPTION", "optionId": "two_days_longer" },
+          "explanationKey": "task.save_fair_temptation.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.save_fair_temptation.otherwise"
+        }
+      ]
+    },
+    {
+      "id": "pay-smart-pack",
+      "topic": "PAYMENTS",
+      "titleKey": "task.pay_smart_pack.intro",
+      "steps": [
+        {
+          "type": "SHELF",
+          "promptKey": "task.pay_smart_pack.step1",
+          "budget": 25,
+          "items": [
+            { "id": "feed_cartoon", "titleKey": "task.item.feed_cartoon", "price": 10, "isMandatory": true, "icon": "🌟" },
+            { "id": "feed_day", "titleKey": "task.item.feed_day", "price": 7, "isMandatory": true, "icon": "🥣" },
+            { "id": "feed_two", "titleKey": "task.item.feed_two", "price": 15, "isMandatory": true, "icon": "🥫" },
+            { "id": "feed_big", "titleKey": "task.item.feed_big", "price": 18, "isMandatory": true, "icon": "📦" },
+            { "id": "lollipop", "titleKey": "task.item.lollipop", "price": 5, "icon": "🍭" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "feed_big" },
+          "explanationKey": "task.pay_smart_pack.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.pay_smart_pack.otherwise"
+        },
+        {
+          "id": "two-days",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "feed_two" },
+          "explanationKey": "task.pay_smart_pack.two_days"
+        },
+        {
+          "id": "cartoon",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "feed_cartoon" },
+          "explanationKey": "task.pay_smart_pack.cartoon"
+        },
+        {
+          "id": "one-day",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "feed_day" },
+          "explanationKey": "task.pay_smart_pack.day"
+        }
+      ]
+    },
+    {
+      "id": "pay-cinema-cashier",
+      "topic": "PAYMENTS",
+      "titleKey": "task.pay_cinema_cashier.intro",
+      "steps": [
+        {
+          "type": "CHOICE",
+          "promptKey": "task.pay_cinema_cashier.step1",
+          "options": [
+            { "id": "combo_with_cup", "textKey": "task.choice.combo_with_cup" },
+            { "id": "only_ticket", "textKey": "task.choice.only_ticket" },
+            { "id": "ticket_popcorn", "textKey": "task.choice.ticket_popcorn" }
+          ]
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "SELECTED_OPTION", "optionId": "only_ticket" },
+          "explanationKey": "task.pay_cinema_cashier.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.pay_cinema_cashier.otherwise"
+        },
+        {
+          "id": "combo",
+          "condition": { "type": "SELECTED_OPTION", "optionId": "combo_with_cup" },
+          "explanationKey": "task.pay_cinema_cashier.combo"
+        }
+      ]
+    },
+    {
+      "id": "review-hungry-owl",
+      "topic": "PLANNING",
+      "titleKey": "task.review_hungry.intro",
+      "showWhen": { "type": "PET_SAD", "stat": "SATIETY" },
+      "steps": [
+        {
+          "type": "PICK_ITEMS",
+          "promptKey": "task.review_hungry.step1",
+          "itemIds": ["toy-ball", "food-porridge", "treat-berry", "water-fresh", "sticker-star"],
+          "budget": 25
+        }
+      ],
+      "outcomes": [
+        {
+          "condition": { "type": "BASKET_CONTAINS_ALL", "requiredItemIds": ["food-porridge", "water-fresh"] },
+          "explanationKey": "task.review_hungry.success",
+          "correct": true
+        },
+        {
+          "condition": { "type": "OTHERWISE" },
+          "explanationKey": "task.review_hungry.otherwise"
+        },
+        {
+          "id": "ball",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "toy-ball" },
+          "explanationKey": "task.review_hungry.ball"
+        },
+        {
+          "id": "berry",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "treat-berry" },
+          "explanationKey": "task.review_hungry.berry"
+        },
+        {
+          "id": "sticker",
+          "condition": { "type": "BASKET_CONTAINS", "itemId": "sticker-star" },
+          "explanationKey": "task.review_hungry.sticker"
+        }
+      ]
+    }
+  ]
+}

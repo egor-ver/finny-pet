@@ -1,0 +1,449 @@
+package ru.finnypet.app.domain
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import ru.finnypet.app.data.content.AssetContentRepository
+import ru.finnypet.app.data.content.ContentParser
+import ru.finnypet.app.data.local.FinnyDatabase
+import ru.finnypet.app.data.repository.DayRecorderImpl
+import ru.finnypet.app.data.repository.OutcomeRecorderImpl
+import ru.finnypet.app.data.repository.PeriodRepositoryImpl
+import ru.finnypet.app.data.repository.ProfileRepositoryImpl
+import ru.finnypet.app.data.repository.SavingsRepositoryImpl
+import ru.finnypet.app.data.repository.SettingsRepositoryImpl
+import ru.finnypet.app.data.repository.TaskProgressRepositoryImpl
+import ru.finnypet.app.domain.economy.BudgetEngine
+import ru.finnypet.app.domain.economy.GameClock
+import ru.finnypet.app.domain.economy.GrowthEngine
+import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.economy.PurchaseResult
+import ru.finnypet.app.domain.economy.SavingsEngine
+import ru.finnypet.app.domain.economy.TaskEngine
+import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.BudgetPlan
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GrowthStage
+import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.Profile
+import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.domain.model.TaskId
+import ru.finnypet.app.domain.model.Transaction
+import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.domain.repository.ActionOutcome
+import ru.finnypet.app.domain.usecase.AfterDemo
+import ru.finnypet.app.domain.usecase.CloseDay
+import ru.finnypet.app.domain.usecase.ConfirmPlan
+import ru.finnypet.app.domain.usecase.ExitDemo
+import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.domain.usecase.PlayDemoDay
+import ru.finnypet.app.domain.usecase.StartDemo
+import ru.finnypet.app.ui.screens.demo.DemoViewModel
+import java.io.File
+
+/**
+ * Демонстрационный режим на живой базе и настоящем контент-паке:
+ * игра ребёнка не страдает, а пять дней доводят питомца до последней стадии.
+ */
+@RunWith(AndroidJUnit4::class)
+class DemoModeTest {
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    // Часы обязаны идти вперёд между операциями (TaskScheduleTest доказывает
+    // минимальное правило: dayStart нового периода не должен совпадать с
+    // completedAt прошлого). Одна и та же застывшая отметка на весь прогон —
+    // это и была ошибка: разбор навсегда застревал заданием дня.
+    private var tick = FIXED_TIME
+    private val clock = GameClock { tick++ }
+    private val content = AssetContentRepository(context, ContentParser())
+    private val balance = content.pack().balance
+
+    private lateinit var storeFile: File
+    private lateinit var store: DataStore<Preferences>
+    private lateinit var db: FinnyDatabase
+    private lateinit var profiles: ProfileRepositoryImpl
+    private lateinit var periods: PeriodRepositoryImpl
+    private lateinit var savings: SavingsRepositoryImpl
+    private lateinit var settings: SettingsRepositoryImpl
+    private lateinit var tasks: TaskProgressRepositoryImpl
+    private lateinit var startDemo: StartDemo
+    private lateinit var exitDemo: ExitDemo
+    private lateinit var playDay: PlayDemoDay
+    private lateinit var openPeriod: OpenPeriodIfNeeded
+    private lateinit var periodEngine: PeriodEngine
+    private lateinit var recorder: OutcomeRecorderImpl
+    private lateinit var confirmPlan: ConfirmPlan
+
+    @Before
+    fun setUp() {
+        storeFile = File(context.cacheDir, "demo-${System.nanoTime()}.preferences_pb")
+        store = PreferenceDataStoreFactory.create { storeFile }
+        db = Room.inMemoryDatabaseBuilder(context, FinnyDatabase::class.java).build()
+        profiles = ProfileRepositoryImpl(database = db, store = store, balance = balance, clock = clock)
+        periods = PeriodRepositoryImpl(
+            periods = db.periods(),
+            plans = db.budgetPlans(),
+            transactions = db.transactions(),
+        )
+        savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
+        settings = SettingsRepositoryImpl(store)
+        tasks = TaskProgressRepositoryImpl(db.taskProgress(), clock)
+
+        periodEngine = PeriodEngine(
+            budget = BudgetEngine(),
+            pet = PetStateEngine(balance),
+            growth = GrowthEngine(balance),
+            balance = balance,
+            clock = clock,
+        )
+        startDemo = StartDemo(profiles, settings)
+        exitDemo = ExitDemo(profiles, settings)
+        recorder = OutcomeRecorderImpl(
+            database = db,
+            petState = PetStateEngine(balance),
+            taskProgress = tasks,
+        )
+        openPeriod = OpenPeriodIfNeeded(
+            periods, WalletEngine(clock), balance, content.pack().events, recorder, clock,
+        )
+        confirmPlan = ConfirmPlan(
+            openPeriod = openPeriod,
+            periods = periods,
+            savings = savings,
+            content = content,
+            budget = BudgetEngine(),
+            periodEngine = periodEngine,
+            savingsEngine = SavingsEngine(clock),
+            recorder = recorder,
+        )
+        playDay = PlayDemoDay(
+            profiles = profiles,
+            periods = periods,
+            savings = savings,
+            tasks = tasks,
+            content = content,
+            openPeriod = openPeriod,
+            closeDay = CloseDay(periods, profiles, periodEngine, DayRecorderImpl(db)),
+            confirmPlan = confirmPlan,
+            wallet = WalletEngine(clock),
+            taskEngine = TaskEngine(clock),
+            pet = PetStateEngine(balance),
+            periodEngine = periodEngine,
+            recorder = recorder,
+        )
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+        storeFile.delete()
+    }
+
+    @Test
+    fun запуск_заводит_и_делает_активным_тестовый_профиль() = runBlocking {
+        val own = createOwnGame()
+
+        val demo = startDemo()
+
+        assertTrue(demo.isTest)
+        assertNotEquals(own.id, demo.id)
+        assertEquals(demo.id, profiles.active()?.id)
+    }
+
+    /** Сброс к исходному состоянию: повторный запуск начинает демонстрацию заново. */
+    @Test
+    fun повторный_запуск_сбрасывает_демонстрацию() = runBlocking {
+        createOwnGame()
+        val first = startDemo()
+        playDay()
+        playDay()
+        assertEquals(3, periods.count(first.id))
+
+        val second = startDemo()
+
+        assertNotEquals(first.id, second.id)
+        assertNull("прежний тестовый профиль должен быть снесён", profiles.byId(first.id))
+        assertEquals(0, periods.count(second.id))
+    }
+
+    @Test
+    fun игра_ребёнка_переживает_вход_сброс_и_выход() = runBlocking {
+        val own = createOwnGame()
+        val ownPeriods = periods.count(own.id)
+
+        startDemo()
+        startDemo()
+        val after = exitDemo()
+
+        assertEquals(AfterDemo.OWN_GAME, after)
+        assertEquals(own.id, profiles.active()?.id)
+        assertEquals(ownPeriods, periods.count(own.id))
+        assertNotNull(profiles.pet(own.id))
+    }
+
+    @Test
+    fun выход_сносит_тестовый_профиль() = runBlocking {
+        createOwnGame()
+        val demo = startDemo()
+
+        exitDemo()
+
+        assertNull(profiles.byId(demo.id))
+        assertNull(profiles.testProfile())
+    }
+
+    /** Двойное «Выйти»: второй вызов метки возврата не найдёт, но игру ребёнка не теряет. */
+    @Test
+    fun повторный_выход_оставляет_свою_игру() = runBlocking {
+        val own = createOwnGame()
+        startDemo()
+        exitDemo()
+
+        assertEquals(AfterDemo.OWN_GAME, exitDemo())
+        assertEquals(own.id, profiles.active()?.id)
+    }
+
+    /** Чистая установка: возвращаться некуда, экран обязан увести на знакомство. */
+    @Test
+    fun без_своей_игры_выход_ведёт_на_знакомство() = runBlocking {
+        startDemo()
+
+        assertEquals(AfterDemo.ONBOARDING, exitDemo())
+        assertNull(profiles.active())
+    }
+
+    @Test
+    fun без_своей_игры_вьюмодель_ставит_факт_для_знакомства() = runBlocking {
+        startDemo()
+        val model = DemoViewModel(profiles, playDay, exitDemo)
+
+        model.exit()
+
+        withTimeout(TIMEOUT_MS) { model.needsOnboarding.first { it } }
+        assertNull(profiles.testProfile())
+    }
+
+    /**
+     * Пять игровых периодов и три стадии развития.
+     * Дни проживаются настоящими движками, а не подставляются в базу.
+     * Очки по дням (3, 3, 6, 9, 12): второй день —
+     * с ошибкой, без прироста, дни 4–5 несут события и всё равно растят.
+     */
+    @Test
+    fun пять_дней_подряд_доводят_питомца_до_последней_стадии() = runBlocking {
+        val demo = startDemo()
+
+        val points = (1..DEMO_DAYS).map {
+            playDay()
+            profiles.pet(demo.id)!!.growth.points
+        }
+
+        assertEquals(listOf(3, 3, 6, 9, 12), points)
+        // Закрытых дней пять, плюс шестой открыт под продолжение игры.
+        assertEquals(DEMO_DAYS, periods.lastClosed(demo.id)?.number)
+        assertEquals(DEMO_DAYS + 1, periods.count(demo.id))
+        assertEquals(GrowthStage.GROWN, profiles.pet(demo.id)?.growth?.stage)
+        // Каждый день — новое задание: в разделе взрослого темы не нулевые.
+        assertEquals(DEMO_DAYS, tasks.completedIds(demo.id).size)
+    }
+
+    @Test
+    fun события_следующего_дня_готовы_сразу_после_нажатия_демо() = runBlocking {
+        val demo = startDemo()
+        repeat(3) { playDay() }
+
+        val fourth = periods.current(demo.id)!!
+        assertEquals(4, fourth.number)
+        val care = periods.transactions(fourth.id).single { it.type == TransactionType.EVENT_CARE }
+        assertEquals(Coins(10), care.amount)
+        val state = profiles.pet(demo.id)!!.state
+        openPeriod(demo.id)
+        assertEquals(state, profiles.pet(demo.id)!!.state)
+        assertEquals(1, periods.transactions(fourth.id).count { it.type == TransactionType.EVENT_CARE })
+
+        playDay()
+        val fifth = periods.current(demo.id)!!
+        assertEquals(5, fifth.number)
+        assertEquals(Coins(8), periods.transactions(fifth.id)
+            .single { it.type == TransactionType.INCOME_GIFT }.amount)
+    }
+
+    /** Второй день с ошибкой — роста нет, сова грустит, утром разбор. */
+    @Test
+    fun второй_день_демо_с_ошибкой_и_разбором_наутро() = runBlocking {
+        val demo = startDemo()
+        playDay()
+        val afterFirst = profiles.pet(demo.id)!!.growth
+
+        playDay()
+
+        val second = periods.lastClosed(demo.id)!!
+        val fact = periodEngine.factOf(periods.transactions(second.id))
+        assertEquals(Coins.ZERO, fact.amountFor(SpendCategory.MANDATORY))
+        assertEquals(afterFirst, profiles.pet(demo.id)!!.growth)
+        assertTrue(profiles.pet(demo.id)!!.state.satiety < Stat(balance.sadThreshold))
+
+        playDay()
+
+        assertTrue(TaskId("review-hungry-owl") in tasks.completedIds(demo.id))
+    }
+
+    @Test
+    fun прожитый_день_проходит_весь_цикл() = runBlocking {
+        val demo = startDemo()
+
+        playDay()
+
+        val first = periods.lastClosed(demo.id)!!
+        val transactions = periods.transactions(first.id)
+        val fact = periodEngine.factOf(transactions)
+        assertTrue("задание не принесло монет", transactions.any { it.type == TransactionType.INCOME_TASK })
+        assertTrue("обязательное не куплено", fact.amountFor(SpendCategory.MANDATORY) > Coins.ZERO)
+        assertTrue("желаемое не куплено", fact.amountFor(SpendCategory.OPTIONAL) > Coins.ZERO)
+        assertTrue("в копилку не отложено", savings.activeProgress(demo.id)!!.saved > Coins.ZERO)
+    }
+
+    /** Если первая цель уже куплена, демо копит на следующую, а не переизбирает купленную. */
+    @Test
+    fun демо_обходит_купленную_цель_и_берёт_следующую() = runBlocking {
+        val demo = startDemo()
+        val goals = content.pack().goals
+        val bought = goals.first()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        periods.addTransaction(
+            Transaction(
+                id = 0,
+                periodId = period.id,
+                type = TransactionType.GOAL_PURCHASE,
+                amount = Coins.ZERO,
+                reasonKey = "savings.goal_bought",
+                createdAt = FIXED_TIME,
+                goalId = bought.id,
+            )
+        )
+
+        playDay()
+
+        assertNotEquals(bought.id, savings.activeProgress(demo.id)?.goalId)
+    }
+
+    /** День уже идёт, а плана нет: демонстрация доигрывает его, а не падает. */
+    @Test
+    fun идущий_день_без_плана_проживается() = runBlocking {
+        val demo = startDemo()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        periods.save(periodEngine.confirmPlan(period))
+
+        playDay()
+
+        assertEquals(1, periods.lastClosed(demo.id)?.number)
+    }
+
+    /**
+     * Раньше демо пересчитывало покупки от кошелька заново, и от
+     * ручного плана оставалось только число рядом с настоящими покупками.
+     * Здесь план ниже цены закрытия потребностей — вода по карману (8 из 10),
+     * витамины уже нет: сова остаётся голодной по уходу, и рост дня —
+     * настоящий ноль, а не совпадение с эталоном.
+     */
+    @Test
+    fun ручной_план_решает_что_купит_демо() = runBlocking {
+        val demo = startDemo()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        val manual = BudgetPlan(mandatory = Coins(10), optional = Coins(5), savings = Coins(20))
+        periods.savePlan(period.id, manual)
+
+        playDay()
+
+        val closed = periods.lastClosed(demo.id)!!
+        assertEquals(manual, periods.plan(closed.id))
+        val fact = periodEngine.factOf(periods.transactions(closed.id))
+        assertEquals(Coins(8), fact.amountFor(SpendCategory.MANDATORY))
+        assertEquals(Coins.ZERO, fact.amountFor(SpendCategory.OPTIONAL))
+        assertEquals(Coins(20), fact.amountFor(SpendCategory.SAVINGS))
+        assertEquals(0, profiles.pet(demo.id)!!.growth.points)
+    }
+
+    /**
+     * Раньше желаемое считалось от всего `plan.optional`, не зная
+     * про покупки, которые эксперт уже сделал руками до нажатия «Прожить
+     * день» — наклейка покупалась второй раз, и факт желаемого превышал план.
+     */
+    @Test
+    fun ручная_покупка_до_кнопки_не_дублируется_демо() = runBlocking {
+        val demo = startDemo()
+        val period = OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(demo.id)
+        // Магазин открыт только после подтверждённого плана,
+        // поэтому эксперт сначала подтверждает план и лишь потом покупает. План —
+        // в доход дня (35): без выбранной цели копилка ноль.
+        val manual = BudgetPlan(mandatory = Coins(23), optional = Coins(11), savings = Coins.ZERO)
+        periods.savePlan(period.id, manual)
+        check(confirmPlan(demo.id))
+        val sticker = content.pack().shop.single { it.id == ItemId("sticker-star") }
+        val bought = WalletEngine(clock).purchase(sticker, periods.balance(period), period.id)
+        check(bought is PurchaseResult.Success)
+        recorder.record(demo.id, ActionOutcome(transaction = bought.transaction, effects = bought.effects))
+
+        playDay()
+
+        val closed = periods.lastClosed(demo.id)!!
+        assertEquals(1, periods.transactions(closed.id).count { it.itemId == sticker.id })
+        val fact = periodEngine.factOf(periods.transactions(closed.id))
+        assertTrue(
+            "факт желаемого ${fact.amountFor(SpendCategory.OPTIONAL).amount} больше плана ${manual.optional.amount}",
+            fact.amountFor(SpendCategory.OPTIONAL) <= manual.optional,
+        )
+    }
+
+    /** Даже если активна игра ребёнка, день проживает только тестовый профиль. */
+    @Test
+    fun прожить_день_не_трогает_игру_ребёнка() = runBlocking {
+        val own = createOwnGame()
+        val demo = startDemo()
+        profiles.setActive(own.id)
+        val ownPeriod = periods.current(own.id)!!
+        val ownBalance = periods.balance(ownPeriod)
+
+        playDay()
+
+        assertEquals(ownPeriod, periods.current(own.id))
+        assertEquals(ownBalance, periods.balance(ownPeriod))
+        assertEquals(1, periods.lastClosed(demo.id)?.number)
+    }
+
+    private suspend fun createOwnGame(): Profile {
+        val own = profiles.create(
+            childName = "Егор",
+            petName = "Пушок",
+            appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        )
+        OpenPeriodIfNeeded(periods, WalletEngine(clock), balance)(own.id)
+        return own
+    }
+
+    private companion object {
+        const val FIXED_TIME = 1_700_000_000_000L
+        const val DEMO_DAYS = 5
+        const val TIMEOUT_MS = 5_000L
+    }
+}

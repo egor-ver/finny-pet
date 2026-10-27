@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Системная заставка Android 12+ висит, пока грузится игра. Без явных
+        значений она брала белый фон темы, и на Vivo несколько секунд был
+        пустой белый экран без совы. Здесь — сова с иконки на зелёном
+        (средний цвет градиента фона иконки), одинаково в светлой и тёмной
+        теме. На Android 8–11 системной заставки нет, этот файл не читается.
+    -->
+    <style name="Theme.Finnypet" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#FF1F7A53</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

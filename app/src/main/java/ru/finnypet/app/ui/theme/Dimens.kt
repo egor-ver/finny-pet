@@ -1,0 +1,56 @@
+package ru.finnypet.app.ui.theme
+
+import androidx.compose.ui.unit.dp
+
+/**
+ * Размеры, общие для всех экранов.
+ *
+ * Нужны, чтобы отступы и размеры кнопок не расходились от экрана к экрану:
+ * ТЗ требует единообразия навигации и расположения кнопки возврата.
+ */
+object Dimens {
+
+    /**
+     * Минимальный размер того, по чему ребёнок нажимает.
+     *
+     * ТЗ рекомендует не меньше 48x48 dp. Все кнопки и нажимаемые
+     * карточки обязаны проходить по этому размеру, даже если рисунок
+     * внутри мельче.
+     */
+    val TouchTarget = 48.dp
+
+    val SpaceTiny = 4.dp
+    val SpaceSmall = 8.dp
+    val SpaceMedium = 12.dp
+    val Space = 16.dp
+
+    /** Поля экрана. На 360 dp по ширине это оставляет 328 dp содержимого. */
+    val ScreenPadding = 16.dp
+
+    /**
+     * Старое скругление. Экраны, ещё не переведённые на систему форм, продолжают использовать его; общие компоненты —
+     * [CornerCard]/[CornerTile]/[CornerDialog] ниже.
+     */
+    val Corner = 16.dp
+
+    val BarHeight = 12.dp
+
+    /**
+     * Выше этого масштаба шрифта плитки товаров (полка задания, магазин) идут
+     * в один столбец, а не в два: в половине ширины 360 dp длинные названия
+     * рвались бы посреди слова.
+     */
+    const val WIDE_FONT_SCALE = 1.3f
+
+    // Формы, тени, кнопки
+    val CornerCard = 24.dp
+    val CornerTile = 20.dp
+    val CornerDialog = 28.dp
+    val CardShadowElevation = 2.dp
+
+    /** Нижняя граница высоты лицевой грани кнопки; текст может растить её дальше. */
+    val ButtonHeight = 56.dp
+    val ButtonDepth = 4.dp
+    val ButtonPressOffset = 2.dp
+    val ButtonBorderWidth = 2.dp
+}

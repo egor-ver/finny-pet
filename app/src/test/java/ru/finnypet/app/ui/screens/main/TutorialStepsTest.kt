@@ -1,0 +1,262 @@
+package ru.finnypet.app.ui.screens.main
+
+import androidx.compose.ui.geometry.Rect
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import ru.finnypet.app.data.content.ContentParser
+import ru.finnypet.app.data.content.RealContent
+import ru.finnypet.app.ui.screens.main.TutorialTarget.CARE
+import ru.finnypet.app.ui.screens.main.TutorialTarget.MOOD
+import ru.finnypet.app.ui.screens.main.TutorialTarget.PLAN_BUTTON
+import ru.finnypet.app.ui.screens.main.TutorialTarget.PLAN_TILE
+import ru.finnypet.app.ui.screens.main.TutorialTarget.SATIETY
+import ru.finnypet.app.ui.screens.main.TutorialTarget.SAVINGS_TILE
+import ru.finnypet.app.ui.screens.main.TutorialTarget.SETTINGS
+import ru.finnypet.app.ui.screens.main.TutorialTarget.TASKS_TILE
+import ru.finnypet.app.ui.screens.main.TutorialTarget.TASK_BUTTON
+import ru.finnypet.app.ui.screens.main.TutorialTarget.WALLET
+
+/**
+ * Обучение поверх главного: семь шагов, среди
+ * них «нужное», «желаемое» и «отложить», шаг 6 — про план дня, последний — про
+ * настройки; подсветка переходит на запасной элемент, если основного нет в
+ * этой фазе дня; облачко не закрывает цель.
+ */
+class TutorialStepsTest {
+
+    private val texts = ContentParser().parse(RealContent.raw()).texts
+
+    @Test
+    fun `семь шагов, и у каждого есть реплика совы в контент-паке`() {
+        assertEquals(7, TUTORIAL_STEPS.size)
+        TUTORIAL_STEPS.forEach { step ->
+            val text = texts[step.textKey]
+            assertTrue("нет текста ${step.textKey}", !text.isNullOrBlank())
+            // Чисел в обучении нет: при пустой цели и нулевых суммах текст не врёт.
+            assertFalse("подстановка в ${step.textKey}: $text", text!!.contains('{'))
+        }
+    }
+
+    /** Нужное, желаемое и отложить — обязательные шаги обучения. */
+    @Test
+    fun `шаги нужного, желаемого и копилки показывают свои элементы`() {
+        val all = TUTORIAL_STEPS.map { step -> step.spots.map { it.main } }
+        assertEquals(listOf(SATIETY, CARE), all[2])
+        assertEquals(listOf(MOOD), all[3])
+        assertEquals(listOf(SAVINGS_TILE), all[4])
+    }
+
+    /** День начинают с плана — шаг 6 показывает на него. */
+    @Test
+    fun `шаг 6 — план дня, запасная — плитка План`() {
+        val everything = TutorialTarget.entries.toSet()
+        assertEquals(listOf(PLAN_BUTTON), TUTORIAL_STEPS[5].resolve(everything))
+        assertEquals(listOf(PLAN_TILE), TUTORIAL_STEPS[5].resolve(everything - PLAN_BUTTON))
+    }
+
+    /** Последний шаг — где выключить звуки, мелодию и движение, со стрелкой к шестерёнке. */
+    @Test
+    fun `последний шаг — настройки`() {
+        val last = TUTORIAL_STEPS.last()
+        assertEquals("tutorial.step.7", last.textKey)
+        assertEquals(listOf(SETTINGS), last.resolve(TutorialTarget.entries.toSet()))
+        assertTrue(last.arrow)
+    }
+
+    /**
+     * К кнопке плана стрелка шла бы по кнопке задания
+     * (между ними 12 dp) — на шаге 6 только подсветка и облачко, у остальных стрелка есть.
+     */
+    @Test
+    fun `на шаге плана стрелки нет, на остальных есть`() {
+        assertEquals(listOf(true, true, true, true, true, false, true), TUTORIAL_STEPS.map { it.arrow })
+    }
+
+    @Test
+    fun `первый экран новой игры здоровается`() {
+        assertTrue(!texts["owl.say.hello"].isNullOrBlank())
+    }
+
+    @Test
+    fun `утром подсвечиваются кнопки задания и плана`() {
+        val everything = TutorialTarget.entries.toSet()
+        assertEquals(listOf(WALLET, TASK_BUTTON), TUTORIAL_STEPS[1].resolve(everything))
+        assertEquals(listOf(PLAN_BUTTON), TUTORIAL_STEPS[5].resolve(everything))
+    }
+
+    /** По «?» после плана кнопок задания и плана нет — показываем на плитки. */
+    @Test
+    fun `без кнопок дня — запасные плитки`() {
+        val afterPlan = TutorialTarget.entries.toSet() - TASK_BUTTON - PLAN_BUTTON
+        assertEquals(listOf(WALLET, TASKS_TILE), TUTORIAL_STEPS[1].resolve(afterPlan))
+        assertEquals(listOf(PLAN_TILE), TUTORIAL_STEPS[5].resolve(afterPlan))
+    }
+
+    /** Заданий в контент-паке нет — плитки тоже нет, шаг идёт без этой стрелки. */
+    @Test
+    fun `нет ни основного, ни запасного — подсветка пропускается`() {
+        val noTasks = TutorialTarget.entries.toSet() - TASK_BUTTON - TASKS_TILE
+        assertEquals(listOf(WALLET), TUTORIAL_STEPS[1].resolve(noTasks))
+        assertEquals(emptyList<TutorialTarget>(), TUTORIAL_STEPS[0].resolve(emptySet()))
+    }
+
+    @Test
+    fun `дальше по шагам, после последнего обучение закрывается`() {
+        assertEquals(1, nextTutorialStep(0))
+        assertEquals(5, nextTutorialStep(4))
+        assertEquals(6, nextTutorialStep(5))
+        assertNull(nextTutorialStep(6))
+    }
+
+    /**
+     * Шаг про план: кнопка плана в самом низу. Облачко встаёт
+     * вплотную над ней, оставив место на стрелку, а не посреди экрана —
+     * иначе стрелка шла бы сквозь кнопку задания и плитки.
+     */
+    @Test
+    fun `цель внизу — облачко вплотную над ней`() {
+        val top = panelTop(listOf(600f..700f), panelHeight = 300f, height = 800f, reach = 28f)
+        assertEquals(600f - 28f - 300f, top, 0.01f)
+    }
+
+    @Test
+    fun `цель вверху — облачко вплотную под ней`() {
+        val top = panelTop(listOf(0f..60f), panelHeight = 300f, height = 800f, reach = 28f)
+        assertEquals(60f + 28f, top, 0.01f)
+    }
+
+    /** Цель посреди экрана: облачко в большем промежутке и вплотную к цели. */
+    @Test
+    fun `цель посередине — облачко вплотную в большем промежутке`() {
+        val top = panelTop(listOf(500f..560f), panelHeight = 300f, height = 800f, reach = 28f)
+        assertEquals(500f - 28f - 300f, top, 0.01f)
+    }
+
+    /** Шаг «доход»: кошелёк сверху и кнопка задания снизу — облачко между ними. */
+    @Test
+    fun `цели сверху и снизу — облачко посередине`() {
+        val top = panelTop(listOf(0f..60f, 680f..760f), panelHeight = 300f, height = 800f, reach = 28f)
+        assertEquals(220f, top, 0.01f)
+    }
+
+    /**
+     * Кнопки шага стоят на месте сверху (до 150), облачко ниже
+     * них. Кошелёк над кнопками промежутков не делит: облачко встаёт вплотную
+     * к кнопке задания внизу, а не посередине между ней и кошельком.
+     */
+    @Test
+    fun `кнопки шага сверху — облачко под ними, кошелёк над ними не в счёт`() {
+        val top = panelTop(listOf(0f..60f, 680f..760f), panelHeight = 300f, height = 800f, reach = 28f, from = 150f)
+        assertEquals(680f - 28f - 300f, top, 0.01f)
+    }
+
+    @Test
+    fun `кнопки шага сверху — облачко не заходит на них`() {
+        assertEquals(150f, panelTop(listOf(700f..800f), panelHeight = 600f, height = 800f, reach = 28f, from = 150f), 0.01f)
+        val top = panelTop(listOf(170f..230f), panelHeight = 300f, height = 800f, reach = 28f, from = 150f)
+        assertEquals(230f + 28f, top, 0.01f)
+    }
+
+    @Test
+    fun `без целей — облачко по центру`() {
+        assertEquals(250f, panelTop(emptyList(), panelHeight = 300f, height = 800f, reach = 28f), 0.01f)
+    }
+
+    /** Крупный шрифт: облачко выше свободного места — не за краем экрана, кнопки видны. */
+    @Test
+    fun `облачко не помещается — остаётся в пределах экрана`() {
+        val top = panelTop(listOf(300f..400f), panelHeight = 700f, height = 800f, reach = 28f)
+        assertTrue("за краем: $top", top >= 0f && top + 700f <= 800f)
+        assertEquals(0f, panelTop(listOf(0f..800f), panelHeight = 900f, height = 800f, reach = 28f), 0.01f)
+    }
+
+    /** Кошелёк над облачком: дуга выходит из верха облачка, кончик — у нижнего края выреза. */
+    @Test
+    fun `цель выше — стрелка из верха облачка к нижнему краю выреза`() {
+        val bubble = Rect(140f, 300f, 344f, 540f)
+        val wallet = Rect(10f, 10f, 100f, 70f)
+        val arc = arrowArc(bubble, wallet, inset = 28f, gap = 2f)!!
+
+        assertEquals(bubble.top, arc.start.y, 0.01f)
+        assertTrue(arc.start.x in 168f..316f)
+        assertEquals(wallet.bottom + 2f, arc.tip.y, 0.01f)
+        assertTrue(arc.tip.x in 38f..72f)
+        // Одна дуга без перегиба: изгиб между началом и кончиком, выход отвесный.
+        assertEquals(arc.start.x, arc.control.x, 0.01f)
+        assertTrue(arc.control.y < arc.start.y && arc.control.y > arc.tip.y)
+    }
+
+    /** Кнопка задания под облачком: стрелка из низа облачка, кнопки внутри облачка ей не мешают. */
+    @Test
+    fun `цель ниже — стрелка из низа облачка к верхнему краю выреза`() {
+        val bubble = Rect(140f, 100f, 344f, 340f)
+        val button = Rect(10f, 620f, 350f, 690f)
+        val arc = arrowArc(bubble, button, inset = 28f, gap = 2f)!!
+
+        assertEquals(bubble.bottom, arc.start.y, 0.01f)
+        assertEquals(button.top - 2f, arc.tip.y, 0.01f)
+        // Широкая цель прямо под облачком — стрелка отвесная, без лишнего изгиба.
+        assertEquals(arc.start.x, arc.tip.x, 0.01f)
+    }
+
+    /**
+     * К шестерёнке справа вверху стрелка идёт мимо «Играть!» в левой
+     * половине ряда кнопок, а к кошельку слева — упёрлась бы в кнопки и не рисуется.
+     */
+    @Test
+    fun `стрелка сквозь кнопки шага не проходит, мимо них — проходит`() {
+        val bubble = Rect(140f, 300f, 344f, 540f)
+        val gear = arrowArc(bubble, Rect(245f, 10f, 293f, 58f), inset = 28f, gap = 2f)!!
+        val wallet = arrowArc(bubble, Rect(10f, 10f, 150f, 58f), inset = 28f, gap = 2f)!!
+        val play = Rect(16f, 80f, 176f, 140f)
+        val bothButtons = Rect(16f, 80f, 344f, 140f)
+
+        assertFalse(gear.crosses(play, margin = 7f))
+        assertTrue(gear.crosses(bothButtons, margin = 7f))
+        assertTrue(wallet.crosses(play, margin = 7f))
+    }
+
+    /** Цель ниже кнопок шага — стрелка между облачком и целью, кнопки выше неё. */
+    @Test
+    fun `стрелка ниже кнопок их не пересекает`() {
+        val arc = arrowArc(Rect(140f, 200f, 344f, 400f), Rect(10f, 620f, 350f, 690f), inset = 28f, gap = 2f)!!
+        assertFalse(arc.crosses(Rect(16f, 80f, 344f, 140f), margin = 7f))
+    }
+
+    @Test
+    fun `вырез на одной высоте с облачком — стрелки нет`() {
+        assertNull(arrowArc(Rect(140f, 300f, 344f, 540f), Rect(10f, 400f, 100f, 460f), inset = 28f, gap = 2f))
+    }
+
+    /** Узкая цель уже двух отступов — кончик по её середине, а не исключение. */
+    @Test
+    fun `узкая цель — кончик по середине`() {
+        val arc = arrowArc(Rect(140f, 300f, 344f, 540f), Rect(20f, 10f, 60f, 70f), inset = 28f, gap = 2f)!!
+        assertEquals(40f, arc.tip.x, 0.01f)
+    }
+
+    /**
+     * Пока вырез едет к новой цели, стрелки нет — на шаге 2 она тянулась
+     * вверх к вырезу, поднимавшемуся от копилки к кошельку, и пропадала.
+     */
+    @Test
+    fun `вырез ещё едет — стрелки нет, доехал — есть`() {
+        val savings = Rect(184f, 440f, 344f, 525f)
+        val wallet = Rect(16f, 38f, 90f, 82f)
+        val taskButton = Rect(16f, 625f, 344f, 680f)
+        val halfway = Rect(100f, 240f, 217f, 304f)
+
+        assertFalse(cutoutsArrived(shown = listOf(savings, taskButton), targets = listOf(wallet, taskButton)))
+        assertFalse(cutoutsArrived(shown = listOf(halfway, taskButton), targets = listOf(wallet, taskButton)))
+        assertTrue(cutoutsArrived(shown = listOf(wallet, taskButton), targets = listOf(wallet, taskButton)))
+    }
+
+    /** Шаг без целей на экране — «доехал» сразу: стрелок всё равно нет, облачко на месте. */
+    @Test
+    fun `без целей вырезы на месте`() {
+        assertTrue(cutoutsArrived(shown = emptyList(), targets = emptyList()))
+    }
+}

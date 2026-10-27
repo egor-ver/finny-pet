@@ -1,0 +1,432 @@
+package ru.finnypet.app.ui
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.viewModelScope
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import ru.finnypet.app.data.local.FinnyDatabase
+import ru.finnypet.app.data.repository.OutcomeRecorderImpl
+import ru.finnypet.app.data.repository.PeriodRepositoryImpl
+import ru.finnypet.app.data.repository.ProfileRepositoryImpl
+import ru.finnypet.app.data.repository.SavingsRepositoryImpl
+import ru.finnypet.app.data.repository.TaskProgressRepositoryImpl
+import ru.finnypet.app.domain.content.ContentOption
+import ru.finnypet.app.domain.content.ContentPack
+import ru.finnypet.app.domain.content.PetOptions
+import ru.finnypet.app.domain.economy.BudgetEngine
+import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.GameClock
+import ru.finnypet.app.domain.economy.GrowthEngine
+import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.BudgetPlan
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GoalId
+import ru.finnypet.app.domain.model.GoalProgress
+import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.PetAppearance
+import ru.finnypet.app.domain.model.PetState
+import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.domain.model.ShopItem
+import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Stat
+import ru.finnypet.app.domain.model.TransactionType
+import ru.finnypet.app.domain.repository.ContentRepository
+import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.ui.screens.shop.PurchaseOutcome
+import ru.finnypet.app.ui.screens.shop.ShopState
+import ru.finnypet.app.ui.screens.shop.ShopViewModel
+import java.io.File
+
+/**
+ * Проверяет покупку целиком: от нажатия до операции в базе и изменённого
+ * питомца.
+ *
+ * Экранные тесты показывают вёрстку на выдуманном состоянии, а здесь работает
+ * настоящая цепочка — вьюмодель, репозитории, SQLite. Без неё осталось бы
+ * непроверенным главное: что деньги списываются ровно один раз, а отказ не
+ * трогает ни баланс, ни питомца.
+ */
+@RunWith(AndroidJUnit4::class)
+class ShopPurchaseTest {
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val balance = GameBalance.PLACEHOLDER
+    private val clock = GameClock { FIXED_TIME }
+
+    private val food = ShopItem(
+        id = ItemId("food"),
+        titleKey = "shop.food",
+        price = Coins(12),
+        category = SpendCategory.MANDATORY,
+        effects = listOf(PetEffect(PetStatKind.SATIETY, 20)),
+    )
+    private val toy = ShopItem(
+        id = ItemId("toy"),
+        titleKey = "shop.toy",
+        price = Coins(18),
+        category = SpendCategory.OPTIONAL,
+        effects = listOf(PetEffect(PetStatKind.MOOD, 15)),
+        isToy = true,
+    )
+
+    /** Дороже всего дня: 20 + 60 = 80 — не хватит. */
+    private val castle = ShopItem(
+        id = ItemId("castle"),
+        titleKey = "shop.castle",
+        price = Coins(100),
+        category = SpendCategory.OPTIONAL,
+    )
+
+    /** Хватает на одну покупку, на две — нет. */
+    private val swing = ShopItem(
+        id = ItemId("swing"),
+        titleKey = "shop.swing",
+        price = Coins(50),
+        category = SpendCategory.OPTIONAL,
+    )
+
+    /** Обязательное и не по карману: сюда домен предлагает копилку. */
+    private val vet = ShopItem(
+        id = ItemId("vet"),
+        titleKey = "shop.vet",
+        price = Coins(100),
+        category = SpendCategory.MANDATORY,
+        effects = listOf(PetEffect(PetStatKind.CARE, 30)),
+    )
+
+    private lateinit var storeFile: File
+    private lateinit var store: DataStore<Preferences>
+    private lateinit var db: FinnyDatabase
+    private lateinit var profiles: ProfileRepositoryImpl
+    private lateinit var periods: PeriodRepositoryImpl
+    private lateinit var savings: SavingsRepositoryImpl
+    private lateinit var viewModel: ShopViewModel
+    private var profileId: ProfileId = ProfileId("не создан")
+
+    @Before
+    fun setUp() = runBlocking {
+        storeFile = File(context.cacheDir, "shop-${System.nanoTime()}.preferences_pb")
+        store = PreferenceDataStoreFactory.create { storeFile }
+        db = Room.inMemoryDatabaseBuilder(context, FinnyDatabase::class.java).build()
+        profiles = ProfileRepositoryImpl(
+            database = db,
+            store = store,
+            balance = balance,
+            clock = clock,
+        )
+        periods = PeriodRepositoryImpl(
+            periods = db.periods(),
+            plans = db.budgetPlans(),
+            transactions = db.transactions(),
+        )
+        profileId = profiles.create(
+            childName = "Егор",
+            petName = "Пушок",
+            appearance = PetAppearance(bodyId = "owl", colorId = "cream", accessoryId = null),
+        ).id
+        savings = SavingsRepositoryImpl(goals = db.goalProgress(), transactions = db.transactions())
+        viewModel = ShopViewModel(
+            profiles = profiles,
+            periods = periods,
+            savings = savings,
+            openPeriod = OpenPeriodIfNeeded(
+                periods = periods,
+                wallet = WalletEngine(clock),
+                balance = balance,
+            ),
+            wallet = WalletEngine(clock),
+            periodEngine = periodEngine(),
+            recorder = OutcomeRecorderImpl(database = db, petState = PetStateEngine(balance), taskProgress = TaskProgressRepositoryImpl(db.taskProgress(), clock)),
+            balance = balance,
+            petState = PetStateEngine(balance),
+            content = content(),
+        )
+    }
+
+    @After
+    fun tearDown() {
+        // Сначала останавливаем вьюмодель: её подписка на базу переживает
+        // закрытие и падает на «Database is closed».
+        // Отменить и дождаться: отмена не прерывает запрос, который уже ушёл
+        // в SQLite, и закрытая под ним база уронила бы весь прогон.
+        viewModel.viewModelScope.cancel()
+        runBlocking { viewModel.viewModelScope.coroutineContext[Job]?.join() }
+        db.close()
+        storeFile.delete()
+    }
+
+    @Test
+    fun товары_показываются_с_названиями_из_контента() = runBlocking {
+        // Ждём именно баланс с доходом: экран готов раньше, чем начисление
+        // дойдёт до подписчиков, и на быстром устройстве проверка ловила
+        // стартовый остаток без дохода дня.
+        val ready = await { it.balance == balance.startingBalance + balance.periodIncome }
+
+        assertEquals(
+            listOf("Вкусная каша", "Яркий мячик", "Замок", "Качели", "Ветеринар"),
+            ready.items.map { it.title },
+        )
+    }
+
+    /** Пока сумма распределяется, тратить её нельзя. */
+    @Test
+    fun пока_день_планируется_покупка_не_проходит() = runBlocking {
+        val planning = awaitReady()
+        assertEquals(false, planning.canBuy)
+
+        viewModel.buy(food.id)
+
+        // Отказа тоже нет: экран сам не даёт нажать. Ждём, чтобы поймать
+        // покупку, если бы она всё-таки прошла.
+        assertNull(settle().outcome)
+        assertEquals(emptyList<TransactionType>(), purchases())
+    }
+
+    @Test
+    fun покупка_списывает_деньги_и_меняет_питомца() = runBlocking {
+        startDay()
+        val before = awaitReady()
+
+        viewModel.buy(food.id)
+
+        val done = awaitOutcome<PurchaseOutcome.Done>()
+        assertEquals(food.id, done.itemId)
+        assertEquals("Осталось 68 монет.", done.text)
+        assertEquals(food.effects, done.effects)
+        // Каша — не игрушка: сова с ней не «играет».
+        assertNull(done.toyPhrase)
+        val initial = Stat(balance.initialStat)
+        assertEquals(
+            listOf(Change.PetStat(PetStatKind.SATIETY, from = initial, to = initial + 20)),
+            done.changes,
+        )
+
+        val after = await { it.balance == before.balance - food.price }
+        assertEquals(Coins(68), after.balance)
+
+        val period = periods.current(profileId)!!
+        val purchase = periods.transactions(period.id).single { !it.type.isIncome }
+        assertEquals(TransactionType.PURCHASE_MANDATORY, purchase.type)
+        assertEquals(food.price, purchase.amount)
+        assertEquals(food.id, purchase.itemId)
+
+        val pet = profiles.pet(profileId)!!
+        assertEquals(Stat(balance.initialStat + 20), pet.state.satiety)
+        assertEquals(Stat(balance.initialStat), pet.state.mood)
+    }
+
+    /** Игрушка — короткая фраза из контент-пака с именем питомца, а не жёсткая строка. */
+    @Test
+    fun покупка_игрушки_показывает_как_питомец_играет() = runBlocking {
+        startDay()
+        awaitReady()
+
+        viewModel.buy(toy.id)
+
+        val done = awaitOutcome<PurchaseOutcome.Done>()
+        assertEquals("Пушок играет с новой игрушкой!", done.toyPhrase)
+    }
+
+    /**
+     * Объясняется то, что случилось на самом деле. Показатель у
+     * верхней границы не растёт, и обещанные «+20» превращаются в ничего —
+     * об этом и надо сказать, а не повторить обещание.
+     */
+    @Test
+    fun у_границы_показателя_изменений_нет() = runBlocking {
+        startDay()
+        val pet = profiles.pet(profileId)!!
+        profiles.savePet(profileId, pet.state.with(PetStatKind.SATIETY, Stat.MAX), pet.growth)
+        awaitReady()
+
+        viewModel.buy(food.id)
+
+        val done = awaitOutcome<PurchaseOutcome.Done>()
+        assertEquals(food.effects, done.effects)
+        assertEquals(emptyList<Change.PetStat>(), done.changes)
+        assertEquals(Stat.MAX, profiles.pet(profileId)!!.state.satiety)
+    }
+
+    /**
+     * Нехватка и выход видны в окне товара ещё до
+     * «Купить» — и ничего не списано: запись идёт только при покупке.
+     */
+    @Test
+    fun нехватка_видна_заранее_и_ничего_не_списывает() = runBlocking {
+        startDay()
+        // Нехватка считается от кошелька на экране — ждём, пока доход дня дойдёт до него.
+        val before = await { it.balance == balance.startingBalance + balance.periodIncome }
+
+        val shortage = before.items.single { it.id == castle.id }.shortage!!
+        assertEquals(Coins(20), shortage.shortfall)
+        assertEquals(
+            listOf(RecoveryOption.DO_TASK, RecoveryOption.POSTPONE_PURCHASE, RecoveryOption.CHOOSE_CHEAPER),
+            shortage.options.map { it.option },
+        )
+        assertEquals("Выполнить задание", shortage.options.first().label)
+        assertEquals(RecoveryOption.DO_TASK, shortage.recommended)
+        // По карману — окно с «Купить», без нехватки.
+        assertNull(before.items.single { it.id == food.id }.shortage)
+        assertEquals(emptyList<TransactionType>(), purchases())
+
+        viewModel.buy(castle.id)
+
+        assertEquals(castle.id, awaitOutcome<PurchaseOutcome.Rejected>().itemId)
+        assertEquals(before.balance, settle().balance)
+        assertEquals(emptyList<TransactionType>(), purchases())
+        assertEquals(Stat(balance.initialStat), profiles.pet(profileId)!!.state.mood)
+    }
+
+    /**
+     * Копилка попадает в варианты выхода только для обязательного и только
+     * если в ней хватает на недостачу — значит, вьюмодель обязана передать
+     * домену настоящую сумму накоплений, а не ноль.
+     */
+    @Test
+    fun при_нехватке_на_обязательное_предлагается_копилка() = runBlocking {
+        startDay()
+        savings.save(profileId, GoalProgress(goalId = GoalId("bike"), saved = Coins(30), isActive = true))
+
+        // Копилка наблюдается: варианты окна товара обновляются сами, без покупки.
+        val shortage = await { state -> state.items.single { it.id == vet.id }.shortage?.options?.size == 3 }
+            .items.single { it.id == vet.id }.shortage!!
+        assertEquals(
+            listOf(RecoveryOption.DO_TASK, RecoveryOption.WITHDRAW_FROM_SAVINGS, RecoveryOption.CHOOSE_CHEAPER),
+            shortage.options.map { it.option },
+        )
+        assertEquals("Взять из копилки", shortage.options[1].label)
+    }
+
+    /**
+     * Два быстрых нажатия при деньгах на одну покупку. Экран отстаёт от
+     * базы на время записи, и без очереди обе покупки прочитали бы полный
+     * баланс — списалось бы дважды.
+     */
+    @Test
+    fun две_быстрых_покупки_списывают_одну() = runBlocking {
+        startDay()
+        awaitReady()
+
+        viewModel.buy(swing.id)
+        viewModel.buy(swing.id)
+
+        awaitOutcome<PurchaseOutcome.Rejected>()
+        assertEquals(listOf(TransactionType.PURCHASE_OPTIONAL), purchases())
+        assertEquals(Coins(30), settle().balance)
+    }
+
+    @Test
+    fun итог_закрывается() = runBlocking {
+        startDay()
+        awaitReady()
+        viewModel.buy(toy.id)
+        awaitOutcome<PurchaseOutcome.Done>()
+
+        viewModel.dismiss()
+
+        assertNull(await { it.outcome == null }.outcome)
+    }
+
+    /**
+     * План без предела на желаемое: здесь проверяются деньги и запись покупки.
+     * Мягкий план в подтверждении покупки — экранный расчёт,
+     * проверяется в ShopAdviceTest, домен от плана не зависит.
+     */
+    private suspend fun startDay() {
+        val period = withTimeout(TIMEOUT_MS) {
+            periods.observeCurrent(profileId).first { it != null }!!
+        }
+        periods.savePlan(period.id, BudgetPlan(mandatory = Coins.ZERO, optional = Coins(1_000), savings = Coins.ZERO))
+        periods.save(periodEngine().confirmPlan(period))
+    }
+
+    private suspend fun purchases(): List<TransactionType> {
+        val period = periods.current(profileId)!!
+        return periods.transactions(period.id).map { it.type }.filterNot { it.isIncome }
+    }
+
+    private suspend fun awaitReady(): ShopState.Ready = await { true }
+
+    /**
+     * Проверка «ничего не случилось» — единственная, где приходится ждать
+     * по часам: нет события, которого можно дождаться.
+     */
+    private suspend fun settle(): ShopState.Ready {
+        delay(SETTLE_MS)
+        return awaitReady()
+    }
+
+    private suspend inline fun <reified T : PurchaseOutcome> awaitOutcome(): T =
+        await { it.outcome is T }.outcome as T
+
+    private suspend fun await(
+        condition: (ShopState.Ready) -> Boolean,
+    ): ShopState.Ready = withTimeout(TIMEOUT_MS) {
+        viewModel.state.first { it is ShopState.Ready && condition(it) }
+    } as ShopState.Ready
+
+    private fun content(): ContentRepository = object : ContentRepository {
+        override fun pack() = ContentPack(
+            balance = balance,
+            pets = PetOptions(
+                bodies = listOf(ContentOption("owl", "pet.body.owl")),
+                colors = listOf(testColor()),
+                accessories = emptyList(),
+            ),
+            shop = listOf(food, toy, castle, swing, vet),
+            goals = emptyList(),
+            tasks = emptyList(),
+            glossary = emptyList(),
+            texts = mapOf(
+                "shop.food" to "Вкусная каша",
+                "shop.toy" to "Яркий мячик",
+                "shop.castle" to "Замок",
+                "shop.swing" to "Качели",
+                "shop.vet" to "Ветеринар",
+                "purchase.done" to "Осталось {balance} монет.",
+                "purchase.rejected" to "Не хватает {shortfall} монет.",
+                "shop.toy.playing" to "{name} играет с новой игрушкой!",
+                "recovery.DO_TASK" to "Выполнить задание",
+                "recovery.POSTPONE_PURCHASE" to "Купить попозже",
+                "recovery.WITHDRAW_FROM_SAVINGS" to "Взять из копилки",
+                "recovery.CHOOSE_CHEAPER" to "Выбрать подешевле",
+            ),
+        )
+    }
+
+    private fun periodEngine() = PeriodEngine(
+        budget = BudgetEngine(),
+        pet = PetStateEngine(balance),
+        growth = GrowthEngine(balance),
+        balance = balance,
+        clock = clock,
+    )
+
+    private companion object {
+        const val FIXED_TIME = 1_700_000_000_000L
+        const val TIMEOUT_MS = 5_000L
+        const val SETTLE_MS = 300L
+    }
+}

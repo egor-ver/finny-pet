@@ -1,0 +1,111 @@
+{
+  "items": [
+    {
+      "id": "food-porridge",
+      "icon": "🥣",
+      "titleKey": "shop.food_porridge",
+      "price": 14,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "SATIETY",
+          "delta": 25
+        }
+      ]
+    },
+    {
+      "id": "water-fresh",
+      "icon": "💧",
+      "titleKey": "shop.water_fresh",
+      "price": 8,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "SATIETY",
+          "delta": 15
+        }
+      ]
+    },
+    {
+      "id": "care-brush",
+      "icon": "🪥",
+      "titleKey": "shop.care_brush",
+      "price": 18,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "CARE",
+          "delta": 25
+        }
+      ]
+    },
+    {
+      "id": "care-vitamins",
+      "icon": "💊",
+      "titleKey": "shop.care_vitamins",
+      "price": 15,
+      "category": "MANDATORY",
+      "effects": [
+        {
+          "stat": "CARE",
+          "delta": 20
+        }
+      ]
+    },
+    {
+      "id": "treat-berry",
+      "icon": "🫐",
+      "titleKey": "shop.treat_berry",
+      "price": 12,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 15
+        }
+      ]
+    },
+    {
+      "id": "sticker-star",
+      "icon": "⭐",
+      "titleKey": "shop.sticker_star",
+      "price": 10,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 10
+        }
+      ]
+    },
+    {
+      "id": "toy-ball",
+      "icon": "⚽",
+      "titleKey": "shop.toy_ball",
+      "price": 24,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 25
+        }
+      ],
+      "isToy": true
+    },
+    {
+      "id": "toy-book",
+      "icon": "📘",
+      "titleKey": "shop.toy_book",
+      "price": 32,
+      "category": "OPTIONAL",
+      "effects": [
+        {
+          "stat": "MOOD",
+          "delta": 35
+        }
+      ],
+      "isToy": true
+    }
+  ]
+}
+        

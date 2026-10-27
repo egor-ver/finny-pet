@@ -1,0 +1,378 @@
+package ru.finnypet.app.ui.screens.shop
+
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import ru.finnypet.app.domain.economy.GameBalance
+import ru.finnypet.app.domain.economy.PetStateEngine
+import ru.finnypet.app.domain.economy.PeriodEngine
+import ru.finnypet.app.domain.economy.PurchaseResult
+import ru.finnypet.app.domain.economy.WalletEngine
+import ru.finnypet.app.domain.model.Change
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.GamePeriod
+import ru.finnypet.app.domain.model.ItemId
+import ru.finnypet.app.domain.model.PeriodStatus
+import ru.finnypet.app.domain.model.Pet
+import ru.finnypet.app.domain.model.PetState
+import ru.finnypet.app.domain.model.Profile
+import ru.finnypet.app.domain.model.PetEffect
+import ru.finnypet.app.domain.model.ProfileId
+import ru.finnypet.app.domain.model.RecoveryOption
+import ru.finnypet.app.domain.model.ShopItem
+import ru.finnypet.app.domain.model.SpendCategory
+import ru.finnypet.app.domain.model.Transaction
+import ru.finnypet.app.domain.repository.ActionOutcome
+import ru.finnypet.app.domain.repository.ContentRepository
+import ru.finnypet.app.domain.repository.OutcomeRecorder
+import ru.finnypet.app.domain.repository.PeriodRepository
+import ru.finnypet.app.domain.repository.ProfileRepository
+import ru.finnypet.app.ui.components.OwlLook
+import ru.finnypet.app.ui.components.owlDescription
+import ru.finnypet.app.ui.components.owlLook
+import ru.finnypet.app.ui.components.wellbeing
+import ru.finnypet.app.ui.screens.ProfileViewModel
+import ru.finnypet.app.ui.screens.main.JarsLeft
+import ru.finnypet.app.ui.screens.main.jarsLeft
+import ru.finnypet.app.ui.screens.main.shownWithin
+import ru.finnypet.app.domain.repository.SavingsRepository
+import ru.finnypet.app.domain.usecase.OpenPeriodIfNeeded
+import ru.finnypet.app.domain.usecase.TaskSchedule
+import ru.finnypet.app.ui.text.textOf
+import javax.inject.Inject
+
+/**
+ * Товар как его видит экран: готовое название, цена, направление, влияние на
+ * питомца. [mark] — метка на карточке; [warning] — фраза совы в окне покупки
+ * для нужного, которое ей пока не нужно. [needsCostAfter] — цена
+ * самого дешёвого набора, закрывающего потребности совы, если этот товар уже
+ * куплен («доступность нужного»); ноль — нечего закрывать.
+ * [shortage] — товар не по карману: окно товара сразу показывает нехватку и
+ * варианты вместо «Купить»; `null` — кошелька хватает.
+ * [gains] — что покупка изменит у питомца сейчас, с учётом верхней границы
+ * ([petGains]); [effects] — что товар даёт вообще, для плитки.
+ */
+data class ShopItemView(
+    val id: ItemId,
+    val title: String,
+    val price: Coins,
+    val category: SpendCategory,
+    val effects: List<PetEffect>,
+    val icon: String,
+    val mark: ItemMark = ItemMark.NONE,
+    val warning: String? = null,
+    val needsCostAfter: Coins = Coins.ZERO,
+    val shortage: ItemShortage? = null,
+    val gains: List<Change.PetStat> = emptyList(),
+)
+
+/** Вариант выхода при нехватке денег с подписью из контент-пака. */
+data class RecoveryChoice(
+    val option: RecoveryOption,
+    val label: String,
+)
+
+/**
+ * Сколько не хватает и что можно сделать — ровно те варианты, что домен
+ * даёт при отказе ([WalletEngine.purchase]). [recommended] — вариант, который
+ * домен считает лучшим: он становится главной кнопкой.
+ */
+data class ItemShortage(
+    val shortfall: Coins,
+    val options: List<RecoveryChoice>,
+    val recommended: RecoveryOption?,
+)
+
+/**
+ * Итог попытки купить.
+ *
+ * Лежит в состоянии, а не улетает событием: экран читает его после поворота
+ * и показывает, пока ребёнок сам не закроет. Объяснение обязательно в обоих
+ * случаях — ТЗ требуют объяснить и покупку, и отказ: покупку —
+ * облачко совы, отказ — окно товара с нехваткой ([ShopItemView.shortage]).
+ */
+sealed interface PurchaseOutcome {
+
+    /**
+     * [changes] — что на самом деле изменилось, а не что обещал товар:
+     * показатель у верхней границы не растёт, и говорить ребёнку «+15»
+     * при неподвижной полосе было бы обманом. [effects] нужны,
+     * чтобы отличить «товар ни на что не влияет» от «влияет, но упёрлось».
+     */
+    data class Done(
+        /** Номер покупки за жизнь экрана: две одинаковые покупки подряд — два полёта монет, а не один. */
+        val number: Int,
+        /** Куда летят монеты из кошелька — к плитке купленного товара. */
+        val itemId: ItemId,
+        val text: String,
+        val price: Coins,
+        val effects: List<PetEffect>,
+        val changes: List<Change.PetStat>,
+        /**
+         * Игрушка: короткая фраза из контент-пака о том, что питомец играет с
+         * ней, — не только цифры. `null` — товар не игрушка. Слова
+         * собраны здесь, а не в экране: там нет доступа к контент-паку и
+         * имени питомца.
+         */
+        val toyPhrase: String? = null,
+    ) : PurchaseOutcome
+
+    /**
+     * Кошелёк не покрыл цену уже после «Купить» — например, второе быстрое
+     * нажатие, когда первая покупка забрала монеты. Экран снова открывает
+     * окно этого товара: нехватку и варианты он уже показывает по
+     * [ShopItemView.shortage], второго окна отказа нет.
+     */
+    data class Rejected(val itemId: ItemId) : PurchaseOutcome
+}
+
+sealed interface ShopState {
+
+    data object Loading : ShopState
+
+    data object Failed : ShopState
+
+    data class Ready(
+        val items: List<ShopItemView>,
+        val balance: Coins,
+        /**
+         * Покупать можно только когда день идёт. Пока он планируется, трата
+         * испортила бы сравнение плана с фактом: ребёнок распределял бы
+         * сумму, которой уже нет.
+         */
+        val canBuy: Boolean,
+        /** Сова и её фраза: что ей нужно сейчас. */
+        val owl: OwlLook,
+        val phrase: String,
+        /** Сколько по плану ещё осталось; `null` — план не подтверждён. */
+        val jars: JarsLeft? = null,
+        /** Банки нужного и желаемого над товарами; пусто — план не подтверждён. */
+        val planJars: List<ShopJar> = emptyList(),
+        /**
+         * Покупка показывается в облачке совы, а не окном: ребёнок видит,
+         * что изменилось, и сразу выбирает дальше.
+         */
+        val outcome: PurchaseOutcome? = null,
+    ) : ShopState
+}
+
+/**
+ * Магазин: список товаров, покупка со списанием и записью
+ * операции, отказ при нехватке денег с объяснением и вариантами выхода.
+ *
+ * Считает домен: [WalletEngine] решает, хватает ли, и собирает операцию;
+ * операцию и влияние на питомца одной транзакцией пишет [OutcomeRecorder].
+ * Здесь только чтение базы и тексты.
+ */
+@HiltViewModel
+class ShopViewModel @Inject constructor(
+    profiles: ProfileRepository,
+    private val periods: PeriodRepository,
+    private val savings: SavingsRepository,
+    private val openPeriod: OpenPeriodIfNeeded,
+    private val wallet: WalletEngine,
+    private val periodEngine: PeriodEngine,
+    private val recorder: OutcomeRecorder,
+    private val balance: GameBalance,
+    private val petState: PetStateEngine,
+    content: ContentRepository,
+) : ProfileViewModel(profiles) {
+
+    private val items: List<ShopItem> = content.pack().shop
+    private val pets = content.pack().pets
+    private val texts: Map<String, String> = content.pack().texts
+
+    private val outcome = MutableStateFlow<PurchaseOutcome?>(null)
+    private var purchases = 0
+
+    /**
+     * Покупки идут по одной. Два быстрых нажатия при деньгах на одну покупку
+     * иначе прочитали бы один и тот же баланс и списали бы его дважды.
+     */
+    private val buying = Mutex()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val state: StateFlow<ShopState> =
+        combine(profiles.observeActive(), failed) { profile, isFailed -> profile to isFailed }
+            .flatMapLatest { (profile, isFailed) ->
+                when {
+                    isFailed -> flowOf(ShopState.Failed)
+                    profile == null -> flowOf(ShopState.Loading)
+                    else -> forProfile(profile)
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+                initialValue = ShopState.Loading,
+            )
+
+    init {
+        // В магазин можно попасть и после перезапуска приложения, когда
+        // главный экран не успел открыть игровой день.
+        act { openPeriod(it) }
+    }
+
+    fun retry() = retryWith { openPeriod(it) }
+
+    fun buy(itemId: ItemId) {
+        act { profileId ->
+            buying.withLock { purchase(profileId, itemId) }
+        }
+    }
+
+    fun dismiss() {
+        outcome.value = null
+    }
+
+    /** «{name} листает новую энциклопедию!» — фраза своя у каждой игрушки ([toyPhraseKey]). */
+    private suspend fun toyPhraseFor(profileId: ProfileId, item: ShopItem): String {
+        val petName = profiles.byId(profileId)?.petName.orEmpty()
+        return texts.textOf(toyPhraseKey(item)).replace("{name}", petName)
+    }
+
+    /**
+     * Баланс и копилка берутся из базы в момент покупки, а не из состояния
+     * экрана: экран отстаёт от базы на время записи.
+     */
+    private suspend fun purchase(profileId: ProfileId, itemId: ItemId) {
+        val item = items.firstOrNull { it.id == itemId } ?: return
+        val period = periods.current(profileId) ?: return
+        if (period.status != PeriodStatus.RUNNING) return
+
+        val saved = savings.activeProgress(profileId)?.saved ?: Coins.ZERO
+        val result = attempt(item, periods.balance(period), period.id, saved, periods.transactions(period.id))
+        outcome.value = when (result) {
+            is PurchaseResult.Success -> {
+                val changes = recorder.record(
+                    profileId,
+                    ActionOutcome(transaction = result.transaction, effects = result.effects),
+                )
+                PurchaseOutcome.Done(
+                    number = ++purchases,
+                    itemId = item.id,
+                    text = texts.textOf(result.explanation),
+                    price = item.price,
+                    effects = result.effects,
+                    changes = changes,
+                    toyPhrase = if (item.isToy) toyPhraseFor(profileId, item) else null,
+                )
+            }
+
+            // Ничего не записано: запись идёт только в ветке покупки.
+            is PurchaseResult.Rejected -> PurchaseOutcome.Rejected(item.id)
+        }
+    }
+
+    /**
+     * Одна и та же проверка для покупки и для окна товара заранее
+     *: нехватку и варианты показывает тот же отказ домена,
+     * который пришёл бы после «Купить».
+     */
+    private fun attempt(
+        item: ShopItem,
+        coins: Coins,
+        periodId: Long,
+        saved: Coins,
+        transactions: List<Transaction>,
+    ): PurchaseResult = wallet.purchase(
+        item = item,
+        currentBalance = coins,
+        periodId = periodId,
+        savings = saved,
+        // «Выполнить задание» обещает монеты — только пока лимит дня не выбран.
+        taskRewardAvailable = TaskSchedule.rewardAvailable(transactions, balance),
+    )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun forProfile(profile: Profile): Flow<ShopState> = combine(
+        periods.observeCurrent(profile.id),
+        profiles.observePet(profile.id),
+    ) { period, pet -> period to pet }
+        .flatMapLatest { (period, pet) ->
+            if (period == null || pet == null) {
+                flowOf(ShopState.Loading)
+            } else {
+                // Операции и план — ради остатков по банкам и меток «не в плане»;
+                // операции и копилка — ещё и ради вариантов при нехватке монет.
+                combine(
+                    periods.observeBalance(period),
+                    periods.observeTransactions(period.id),
+                    periods.observePlan(period.id),
+                    savings.observeActive(profile.id),
+                    outcome,
+                ) { coins, transactions, plan, goal, outcome ->
+                    val saved = goal?.saved ?: Coins.ZERO
+                    val fact = periodEngine.factOf(transactions)
+                    val jars = jarsLeft(period.status, plan, fact)
+                    val planJars = if (jars != null && plan != null) shopJars(plan, fact, jars.shownWithin(coins)) else emptyList()
+                    ready(profile, pet, period, coins, jars, planJars, outcome) { item ->
+                        // Отказ считается только для того, что не по карману: удачная
+                        // проверка собрала бы операцию покупки, которой нет.
+                        if (coins.covers(item.price)) null else shortageOf(attempt(item, coins, period.id, saved, transactions), texts)
+                    }
+                }
+            }
+        }
+
+    private fun ready(
+        profile: Profile,
+        pet: Pet,
+        period: GamePeriod,
+        coins: Coins,
+        jars: JarsLeft?,
+        planJars: List<ShopJar>,
+        outcome: PurchaseOutcome?,
+        shortage: (ShopItem) -> ItemShortage?,
+    ): ShopState.Ready {
+        val mood = petState.moodOf(pet.state)
+        return ShopState.Ready(
+            items = items.map { viewOf(it, pet.state, jars, shortage(it)) },
+            balance = coins,
+            canBuy = period.status == PeriodStatus.RUNNING,
+            owl = owlLook(
+                pets = pets,
+                appearance = profile.appearance,
+                stage = pet.growth.stage,
+                mood = mood,
+                description = owlDescription(texts, profile.petName, mood, petState.sadAbout(pet.state)),
+                wellbeing = pet.state.wellbeing,
+            ),
+            phrase = texts.textOf(shopPhrase(petState.needsOf(pet.state), petState.startWith(pet.state, items, jars?.mandatory))),
+            jars = jars,
+            planJars = planJars,
+            outcome = outcome,
+        )
+    }
+
+    private fun viewOf(item: ShopItem, state: PetState, jars: JarsLeft?, shortage: ItemShortage?): ShopItemView {
+        val mark = markOf(item, petState.neededNow(state, item), jars?.optional)
+        return ShopItemView(
+            id = item.id,
+            title = texts.textOf(item.titleKey),
+            price = item.price,
+            category = item.category,
+            effects = item.effects,
+            icon = item.icon,
+            mark = mark,
+            warning = notNeededPhrase(item)?.takeIf { mark == ItemMark.NOT_NEEDED }?.let(texts::textOf),
+            needsCostAfter = needsCostAfter(petState, state, item, items),
+            shortage = shortage,
+            gains = petGains(petState, state, item),
+        )
+    }
+
+    private companion object {
+        const val STOP_TIMEOUT_MS = 5_000L
+    }
+}

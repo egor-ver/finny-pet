@@ -1,0 +1,107 @@
+package ru.finnypet.app.ui.screens.budget
+
+import ru.finnypet.app.domain.model.BudgetPlan
+import ru.finnypet.app.domain.model.Coins
+import ru.finnypet.app.domain.model.Explanation
+import ru.finnypet.app.domain.model.PetMood
+import ru.finnypet.app.domain.model.PetStatKind
+import ru.finnypet.app.domain.model.ShopItem
+import ru.finnypet.app.ui.text.textOf
+import ru.finnypet.app.ui.text.wordFormOf
+
+/** Как сова смотрит на план и что говорит. */
+data class PlanOwl(val mood: PetMood, val phrase: Explanation)
+
+/**
+ * Сова отвечает на каждое движение ползунка. Грустит она только от плана,
+ * в котором ей не хватит на потребности: это последствие, которое ребёнок
+ * видит до решения, а не после.
+ *
+ * [cover] — цена закрытия потребностей, `null` — в магазине их не закрыть
+ * целиком, тогда о нужном сова молчит. [hitLimit] — ползунок только что
+ * упёрся в конец кошелька. [goalTitle] — цель, `null` — её нет;
+ * [goalReached] — она уже собрана, и звать копить на неё незачем.
+ */
+fun planOwl(
+    plan: BudgetPlan,
+    wallet: Coins,
+    cover: Coins?,
+    slack: Int,
+    goalTitle: String?,
+    goalReached: Boolean,
+    hitLimit: Boolean,
+): PlanOwl = when {
+    hitLimit -> PlanOwl(PetMood.CALM, Explanation("owl.plan.limit"))
+    // Утро без грусти: пока ребёнок ничего не разложил, сова не судит план.
+    plan.total == Coins.ZERO -> PlanOwl(PetMood.CALM, Explanation("owl.plan.start", mapOf("wallet" to "${wallet.amount}")))
+    // Нужное не тронуто, но разложить ещё есть что (в плане осталось место) —
+    // рано грустить: ребёнок мог начать с копилки и вернуться к нужному
+    // следующим ходом. Но и молчать нельзя: план уже можно подтвердить,
+    // и о нехватке на еду и уход сова предупреждает сразу, только спокойно.
+    cover != null && cover > Coins.ZERO && plan.mandatory == Coins.ZERO && plan.total < wallet ->
+        PlanOwl(PetMood.CALM, Explanation("owl.plan.not_enough", mapOf("need" to "${cover.amount}")))
+    cover != null && plan.mandatory < cover ->
+        PlanOwl(PetMood.SAD, Explanation("owl.plan.not_enough", mapOf("need" to "${cover.amount}")))
+    // Лазейка «всё в нужное»: план соблюдён, а выбора не было.
+    cover != null && plan.mandatory.amount > cover.amount + slack -> PlanOwl(PetMood.CALM, Explanation("owl.plan.too_much"))
+    goalTitle != null && !goalReached && plan.savings == Coins.ZERO ->
+        PlanOwl(PetMood.CALM, Explanation("owl.plan.no_savings", mapOf("goal" to goalTitle)))
+    // «Отличный план!» при 103 неразложенных звучало как «всё готово»:
+    // остаток сова называет, но план не ругает — он сохранится в кошельке.
+    plan.total < wallet ->
+        PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good_rest", mapOf("left" to "${wallet.amount - plan.total.amount}")))
+    else -> PlanOwl(PetMood.HAPPY, Explanation("owl.plan.good"))
+}
+
+/**
+ * «Положи на нужное не меньше 37 монет: 22 на еду и 15 на уход» — сколько
+ * стоит закрыть каждую потребность. Одна потребность — одна цена, без
+ * расшифровки из одного слагаемого. Обычными предложениями, а не «еда 14»
+ *. `null` — потребность в магазине нечем закрыть, и называть
+ * число было бы неправдой.
+ */
+fun mandatoryHint(texts: Map<String, String>, coverByNeed: Map<PetStatKind, Coins>?): String? {
+    if (coverByNeed == null) return null
+    if (coverByNeed.isEmpty()) return texts.textOf("plan.hint.no_needs")
+    coverByNeed.entries.singleOrNull()?.let { (kind, price) ->
+        return texts.textOf(Explanation("plan.hint.need.${kind.name}", mapOf("price" to "${price.amount}")))
+    }
+    // Место цены в тексте названо потребностью: «{SATIETY} на еду и {CARE} на уход».
+    val prices = coverByNeed.entries.associate { (kind, price) -> kind.name to "${price.amount}" }
+    val total = coverByNeed.values.sumOf { it.amount }
+    return texts.textOf(Explanation("plan.hint.needs", prices + ("total" to "$total")))
+}
+
+/**
+ * Что можно купить на желаемое — самое дорогое, на что хватает: так видно,
+ * на что именно ребёнок копит внутри дня. Ноль — не ошибка (термины ТЗ).
+ * Название без эмодзи: картинка товара — на тарелке в магазине, а в
+ * строке подсказки она выбивалась из текста.
+ */
+fun optionalHint(texts: Map<String, String>, amount: Coins, wants: List<ShopItem>): String {
+    if (amount == Coins.ZERO) return texts.textOf("plan.hint.optional_zero")
+    val best = wants.filter { amount.covers(it.price) }.maxByOrNull { it.price }
+    if (best != null) {
+        return texts.textOf(Explanation("plan.hint.optional_enough", mapOf("item" to texts.textOf(best.titleKey))))
+    }
+    val cheapest = wants.minOfOrNull { it.price } ?: return texts.textOf("plan.hint.optional_zero")
+    return texts.textOf(Explanation("plan.hint.optional_none", mapOf("price" to "${cheapest.amount}")))
+}
+
+/**
+ * «Если откладывать по 8 в день — цель «Комиксы» через 3 дня». Название в
+ * кавычках, как в других фразах о цели: посреди фразы «— Настольная игра»
+ * с большой буквы читалось как начало предложения. Срок — условие, а
+ * не обещание: считается от того, что ребёнок кладёт сейчас.
+ * [days] — сколько дней до цели при такой сумме, `null` — цели нет.
+ */
+fun savingsHint(texts: Map<String, String>, amount: Coins, goalTitle: String?, days: Int?): String? {
+    if (goalTitle == null) return null
+    val args = mapOf("goal" to goalTitle, "amount" to "${amount.amount}", "days" to "$days")
+    val key = when {
+        days == 0 -> "plan.hint.savings_reached"
+        amount == Coins.ZERO || days == null -> "plan.hint.savings_zero"
+        else -> "plan.hint.savings_days.${wordFormOf(days).name}"
+    }
+    return texts.textOf(Explanation(key, args))
+}
